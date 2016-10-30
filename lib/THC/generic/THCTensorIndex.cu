@@ -29,7 +29,7 @@ void THCTensor_(indexCopy)(THCState *state, THCTensor *dst, int dim, THCudaLongT
   ptrdiff_t numIndices = THCudaLongTensor_nElement(state, indices);
 
   long srcDims = THCTensor_(nDimension)(state, src);
-  cudaStream_t stream = THCState_getCurrentStream(state);
+  hipStream_t stream = THCState_getCurrentStream(state);
 
   THArgCheck(THCudaLongTensor_nDimension(state, indices) == 1, 3,
              "expecting vector of indices");
@@ -157,7 +157,7 @@ void THCTensor_(indexAdd)(THCState *state, THCTensor *dst, int dim, THCudaLongTe
   ptrdiff_t numIndices = THCudaLongTensor_nElement(state, indices);
 
   long srcDims = THCTensor_(nDimension)(state, src);
-  cudaStream_t stream = THCState_getCurrentStream(state);
+  hipStream_t stream = THCState_getCurrentStream(state);
 
   THArgCheck(THCudaLongTensor_nDimension(state, indices) == 1, 3,
              "expecting vector of indices");
@@ -282,7 +282,7 @@ void THCTensor_(indexFill)(THCState *state, THCTensor *dst, int dim, THCudaLongT
   ptrdiff_t numIndices = THCudaLongTensor_nElement(state, indices);
 
   long srcDims = THCTensor_(nDimension)(state, dst);
-  cudaStream_t stream = THCState_getCurrentStream(state);
+  hipStream_t stream = THCState_getCurrentStream(state);
 
   THArgCheck(THCudaLongTensor_nDimension(state, indices) == 1, 3,
              "expecting vector of indices");
@@ -399,7 +399,7 @@ void THCTensor_(indexSelect)(THCState *state, THCTensor *dst, THCTensor *src, in
   ptrdiff_t numIndices = THCudaLongTensor_nElement(state, indices);
 
   long srcDims = THCTensor_(nDimension)(state, src);
-  cudaStream_t stream = THCState_getCurrentStream(state);
+  hipStream_t stream = THCState_getCurrentStream(state);
 
   THArgCheck(THCudaLongTensor_nDimension(state, indices) == 1, 3,
              "expecting vector of indices");

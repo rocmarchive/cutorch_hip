@@ -12,7 +12,7 @@ THCTensor_(fill)(THCState* state, THCTensor *self_, real value)
     THArgCheck(false, 1, CUTORCH_DIM_WARNING);
   }
 
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 }
 
 THC_API void
@@ -20,7 +20,7 @@ THCTensor_(zero)(THCState *state, THCTensor *self_)
 {
   THAssert(THCTensor_(checkGPU)(state, 1, self_));
   if (THCTensor_(isContiguous)(state, self_)) {
-    THCudaCheck(cudaMemsetAsync(THCTensor_(data)(state, self_),
+    THCudaCheck(hipMemsetAsync(THCTensor_(data)(state, self_),
                                 0,
                                 sizeof(real) * THCTensor_(nElement)(state, self_),
                                 THCState_getCurrentStream(state)));
@@ -32,7 +32,7 @@ THCTensor_(zero)(THCState *state, THCTensor *self_)
     }
   }
 
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 }
 
 THC_API void

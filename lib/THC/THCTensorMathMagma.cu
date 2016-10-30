@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #include "THCGeneral.h"
 #include "THCTensorMath.h"
 #include "THCTensorCopy.h"
@@ -45,7 +46,7 @@ static void THCudaTensor_copyArray1d(THCState *state, THCudaTensor *self, float 
   long stride[1] = { 1 };
   THCudaTensor_rawResize(state, self, 1, size, stride);
   size_t len = k * sizeof(float);
-  THCudaCheck(cudaMemcpy(self->storage->data + self->storageOffset, src, len, cudaMemcpyHostToDevice));
+  THCudaCheck(hipMemcpy(self->storage->data + self->storageOffset, src, len, hipMemcpyHostToDevice));
 }
 
 static void THCudaTensor_copyArray2d(THCState *state, THCudaTensor *self, float *src, int m, int n)
@@ -54,7 +55,7 @@ static void THCudaTensor_copyArray2d(THCState *state, THCudaTensor *self, float 
   long stride[2] = { 1, m };
   THCudaTensor_rawResize(state, self, 2, size, stride);
   size_t len = m * n * sizeof(float);
-  THCudaCheck(cudaMemcpy(self->storage->data + self->storageOffset, src, len, cudaMemcpyHostToDevice));
+  THCudaCheck(hipMemcpy(self->storage->data + self->storageOffset, src, len, hipMemcpyHostToDevice));
 }
 
 static void THCudaTensor_copyTensor2d(THCState *state, float *dst, THCudaTensor *self)
@@ -63,7 +64,7 @@ static void THCudaTensor_copyTensor2d(THCState *state, float *dst, THCudaTensor 
   size_t len = THCudaTensor_nElement(state, self)*sizeof(float);
   THCudaTensor *temp = THCudaTensor_newTranspose(state, self, 0, 1);
   THCudaTensor *selfc = THCudaTensor_newContiguous(state, temp);
-  THCudaCheck(cudaMemcpy(dst, selfc->storage->data + selfc->storageOffset, len, cudaMemcpyDeviceToHost));
+  THCudaCheck(hipMemcpy(dst, selfc->storage->data + selfc->storageOffset, len, hipMemcpyDeviceToHost));
   THCudaTensor_free(state, temp);
   THCudaTensor_free(state, selfc);
 }
@@ -252,8 +253,8 @@ void THCudaTensor_geev(THCState *state, THCudaTensor *re_, THCudaTensor *rv_, TH
   {
     THCudaTensor_resize2d(state, re_, 2, n);
     THCudaTensor *re = THCudaTensor_newContiguous(state, re_);
-    THCudaCheck(cudaMemcpy(re->storage->data + re->storageOffset, wr, n*sizeof(float), cudaMemcpyHostToDevice));
-    THCudaCheck(cudaMemcpy(re->storage->data + re->storageOffset + n, wi, n*sizeof(float), cudaMemcpyHostToDevice));
+    THCudaCheck(hipMemcpy(re->storage->data + re->storageOffset, wr, n*sizeof(float), hipMemcpyHostToDevice));
+    THCudaCheck(hipMemcpy(re->storage->data + re->storageOffset + n, wi, n*sizeof(float), hipMemcpyHostToDevice));
     THCudaTensor_freeCopyTo(state, re, re_);
     THCudaTensor_transpose(state, re_, NULL, 0, 1);
   }
@@ -395,12 +396,12 @@ void THCudaTensor_getri(THCState *state, THCudaTensor *ra_, THCudaTensor *a)
   THCudaCheck(THCudaMalloc(state, (void**)&d_matrices1_const, matrices_size));
   THCudaCheck(THCudaMalloc(state, (void**)&d_matrices2, matrices_size));
 
-  THCudaCheck(cudaMemcpyAsync(d_matrices1, matrices1, matrices_size,
-                              cudaMemcpyHostToDevice, THCState_getCurrentStream(state)));
-  THCudaCheck(cudaMemcpyAsync(d_matrices1_const, matrices1_const, matrices_size,
-                              cudaMemcpyHostToDevice, THCState_getCurrentStream(state)));
-  THCudaCheck(cudaMemcpyAsync(d_matrices2, matrices2, matrices_size,
-                              cudaMemcpyHostToDevice, THCState_getCurrentStream(state)));
+  THCudaCheck(hipMemcpyAsync(d_matrices1, matrices1, matrices_size,
+                              hipMemcpyHostToDevice, THCState_getCurrentStream(state)));
+  THCudaCheck(hipMemcpyAsync(d_matrices1_const, matrices1_const, matrices_size,
+                              hipMemcpyHostToDevice, THCState_getCurrentStream(state)));
+  THCudaCheck(hipMemcpyAsync(d_matrices2, matrices2, matrices_size,
+                              hipMemcpyHostToDevice, THCState_getCurrentStream(state)));
   int info;
   int *info_gpu;
   THCudaCheck(THCudaMalloc(state, (void**)&info_gpu, sizeof(int)));
@@ -411,7 +412,7 @@ void THCudaTensor_getri(THCState *state, THCudaTensor *ra_, THCudaTensor *a)
   // Run LU
   THCudaBlas_Sgetrf(state, n, d_matrices1, n, ipiv_gpu, info_gpu, 1);
 
-  THCudaCheck(cudaMemcpy(&info, info_gpu, sizeof(int), cudaMemcpyDeviceToHost));
+  THCudaCheck(hipMemcpy(&info, info_gpu, sizeof(int), hipMemcpyDeviceToHost));
 
   if (info > 0)
     THError("CUBLAS getrf : U(%d,%d) is 0, U is singular", info, info);
@@ -435,7 +436,7 @@ void THCudaTensor_getri(THCState *state, THCudaTensor *ra_, THCudaTensor *a)
 
 __global__ void THCudaTensor_copyUpperSymmetric(float *input, int n, int len)
 {
-  for (int idx = threadIdx.x + blockIdx.x * blockDim.x; idx < len; idx += 65535) {
+  for (int idx = hipThreadIdx_x + hipBlockIdx_x * hipBlockDim_x; idx < len; idx += 65535) {
     const int r = idx % n;
     const int c = idx / n;
     if (r > c) {
@@ -468,11 +469,11 @@ void THCudaTensor_potri(THCState *state, THCudaTensor *ra_, THCudaTensor *a)
   else if (info < 0)
     THError("MAGMA potri : Argument %d : illegal value", -info);
 
-  cudaStream_t stream = THCState_getCurrentStream(state);
+  hipStream_t stream = THCState_getCurrentStream(state);
   const int len = n*n;
   dim3 blocks(std::min(DIVUP(len, 128), 65535));
   dim3 threads(128);
-  THCudaTensor_copyUpperSymmetric<<<blocks, threads, 0, stream>>>(input_data, n, len);
+  hipLaunchKernel(HIP_KERNEL_NAME(THCudaTensor_copyUpperSymmetric), dim3(blocks), dim3(threads), 0, stream, input_data, n, len);
 
   THCudaTensor_freeCopyTo(state, input, ra_);
 #else

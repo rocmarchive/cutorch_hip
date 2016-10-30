@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #ifndef THC_GENERIC_FILE
 #define THC_GENERIC_FILE "generic/THCTensorMathReduce.cu"
 #else
@@ -13,7 +14,7 @@ THCTensor_(sum)(THCState* state, THCTensor *self, THCTensor *src, long dimension
     THArgCheck(false, 2, CUTORCH_DIM_WARNING);
   }
 
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 }
 
 THC_API void
@@ -27,7 +28,7 @@ THCTensor_(prod)(THCState* state, THCTensor *self, THCTensor *src, long dimensio
     THArgCheck(false, 2, CUTORCH_DIM_WARNING);
   }
 
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 }
 
 THC_API void
@@ -56,11 +57,11 @@ THCTensor_(renorm)(THCState *state, THCTensor* self, THCTensor* src, real value,
   dim3 grid(data->size[0]);
   dim3 threads(32);
 
-  THCTensor_kernel_renorm<real><<<grid, threads, 0, THCState_getCurrentStream(state)>>>(THCTensor_(data)(state, data), value, size, maxnorm);
+  hipLaunchKernel(HIP_KERNEL_NAME(THCTensor_kernel_renorm<real>), dim3(grid), dim3(threads), 0, THCState_getCurrentStream(state), THCTensor_(data)(state, data), value, size, maxnorm);
 
-  cudaError errcode = cudaGetLastError();
-  if(errcode != cudaSuccess)
-    THError(cudaGetErrorString(errcode));
+  hipError_t errcode = hipGetLastError();
+  if(errcode != hipSuccess)
+    THError(hipGetErrorString(errcode));
 
   THCTensor_(free)(state, src_);
   self_ = THCTensor_(newTranspose)(state, data, dimension, 0);
@@ -141,7 +142,7 @@ THCTensor_(varall)(THCState *state, THCTensor *self)
     ScalarConvert<ptrdiff_t, accreal>::to(THCTensor_(nElement)(state, self) - 1)
   );
 
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
   return val;
 }
 
@@ -171,7 +172,7 @@ THCTensor_(norm)(THCState *state, THCTensor* self, THCTensor* src, real value, l
     THCTensor_(pow)(state, self, self, THCNumerics<real>::cinv(value));
   }
 
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 }
 
 THC_API accreal
@@ -215,7 +216,7 @@ THCTensor_(normall)(THCState *state, THCTensor *self, real value)
     );
   }
 
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
   return result;
 }
 
@@ -234,7 +235,7 @@ THCTensor_(sumall)(THCState *state, THCTensor *self) {
     THArgCheck(false, 1, CUTORCH_DIM_WARNING);
   }
 
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
   return val;
 }
 
@@ -256,7 +257,7 @@ THCTensor_(prodall)(THCState *state, THCTensor *self) {
     ScalarConvert<long, accreal>::to(THCTensor_(nElement)(state, self)) - 1
   );
 
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
   return val;
 }
 
@@ -280,7 +281,7 @@ THCTensor_(minall)(THCState *state, THCTensor *self) {
     THArgCheck(false, 1, CUTORCH_DIM_WARNING);
   }
 
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
   return val;
 }
 
@@ -296,7 +297,7 @@ THCTensor_(maxall)(THCState *state, THCTensor *self) {
     THArgCheck(false, 1, CUTORCH_DIM_WARNING);
   }
 
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
   return val;
 }
 

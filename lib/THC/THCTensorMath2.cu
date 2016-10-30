@@ -45,7 +45,7 @@ void THCudaTensor_tpow(THCState *state, THCudaTensor *self_, float value, THCuda
     }
   }
 
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 }
 
 struct TensorATan2Op {
@@ -65,7 +65,7 @@ void THCudaTensor_atan2(THCState *state, THCudaTensor *self_, THCudaTensor *tx, 
     THArgCheck(false, 2, CUTORCH_DIM_WARNING);
   }
 
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 }
 
 float THCudaTensor_dist(THCState *state, THCudaTensor *self, THCudaTensor *src, float value)

@@ -121,7 +121,7 @@ half THC_float2half(float a)
 }
 
 THC_EXTERNC int THC_nativeHalfInstructions(THCState *state) {
-  cudaDeviceProp* prop =
+  hipDeviceProp_t* prop =
     THCState_getCurrentDeviceProperties(state);
 
   // CC 5.3+
@@ -130,7 +130,7 @@ THC_EXTERNC int THC_nativeHalfInstructions(THCState *state) {
 }
 
 THC_EXTERNC int THC_fastHalfInstructions(THCState *state) {
-  cudaDeviceProp* prop =
+  hipDeviceProp_t* prop =
     THCState_getCurrentDeviceProperties(state);
 
   // Check for CC 6.0 only (corresponds to P100)

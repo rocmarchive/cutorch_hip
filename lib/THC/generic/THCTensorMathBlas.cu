@@ -504,12 +504,12 @@ THCTensor_(baddbmm)(THCState *state, THCTensor *result, real beta, THCTensor *t,
   THCudaCheck(THCudaMalloc(state, (void**)&d_matrices2, matrices_size));
   THCudaCheck(THCudaMalloc(state, (void**)&d_result_matrices, matrices_size));
 
-  THCudaCheck(cudaMemcpyAsync(d_matrices1, matrices1, matrices_size,
-                              cudaMemcpyHostToDevice, THCState_getCurrentStream(state)));
-  THCudaCheck(cudaMemcpyAsync(d_matrices2, matrices2, matrices_size,
-                              cudaMemcpyHostToDevice, THCState_getCurrentStream(state)));
-  THCudaCheck(cudaMemcpyAsync(d_result_matrices, result_matrices, matrices_size,
-                              cudaMemcpyHostToDevice, THCState_getCurrentStream(state)));
+  THCudaCheck(hipMemcpyAsync(d_matrices1, matrices1, matrices_size,
+                              hipMemcpyHostToDevice, THCState_getCurrentStream(state)));
+  THCudaCheck(hipMemcpyAsync(d_matrices2, matrices2, matrices_size,
+                              hipMemcpyHostToDevice, THCState_getCurrentStream(state)));
+  THCudaCheck(hipMemcpyAsync(d_result_matrices, result_matrices, matrices_size,
+                              hipMemcpyHostToDevice, THCState_getCurrentStream(state)));
 
 #ifdef THC_REAL_IS_FLOAT
   THCudaBlas_SgemmBatched(

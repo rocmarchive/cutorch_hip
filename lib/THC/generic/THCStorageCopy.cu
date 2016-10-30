@@ -4,19 +4,19 @@
 
 void THCStorage_(rawCopy)(THCState *state, THCStorage *self, real *src)
 {
-  THCudaCheck(cudaMemcpyAsync(self->data, src, self->size * sizeof(real), cudaMemcpyDeviceToDevice, THCState_getCurrentStream(state)));
+  THCudaCheck(hipMemcpyAsync(self->data, src, self->size * sizeof(real), hipMemcpyDeviceToDevice, THCState_getCurrentStream(state)));
 }
 
 void THCStorage_(copy)(THCState *state, THCStorage *self, THCStorage *src)
 {
   THArgCheck(self->size == src->size, 2, "size does not match");
-  THCudaCheck(cudaMemcpyAsync(self->data, src->data, self->size * sizeof(real), cudaMemcpyDeviceToDevice, THCState_getCurrentStream(state)));
+  THCudaCheck(hipMemcpyAsync(self->data, src->data, self->size * sizeof(real), hipMemcpyDeviceToDevice, THCState_getCurrentStream(state)));
 }
 
 void THCStorage_(copyCuda)(THCState *state, THCStorage *self, THCStorage *src)
 {
   THArgCheck(self->size == src->size, 2, "size does not match");
-  THCudaCheck(cudaMemcpyAsync(self->data, src->data, self->size * sizeof(real), cudaMemcpyDeviceToDevice, THCState_getCurrentStream(state)));
+  THCudaCheck(hipMemcpyAsync(self->data, src->data, self->size * sizeof(real), hipMemcpyDeviceToDevice, THCState_getCurrentStream(state)));
 }
 
 // conversions are mediated by the CPU
