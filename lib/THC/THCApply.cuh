@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #ifndef THC_APPLY_INC
 #define THC_APPLY_INC
 
@@ -27,9 +28,9 @@ __global__ void
 kernelPointwiseApply1(TensorInfo<Ta, IndexType> a,
                       IndexType totalElements,
                       Op op) {
-  for (IndexType linearIndex = blockIdx.x * blockDim.x + threadIdx.x;
+  for (IndexType linearIndex = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;
        linearIndex < totalElements;
-       linearIndex += gridDim.x * blockDim.x) {
+       linearIndex += hipGridDim_x * hipBlockDim_x) {
     // Convert `linearIndex` into an offset of `a`
     const IndexType aOffset =
       IndexToOffset<Ta, IndexType, ADims>::get(linearIndex, a);
@@ -50,9 +51,9 @@ kernelPointwiseApply2(TensorInfo<Ta, IndexType> a,
                       TensorInfo<Tb, IndexType> b,
                       IndexType totalElements,
                       Op op) {
-  for (IndexType linearIndex = blockIdx.x * blockDim.x + threadIdx.x;
+  for (IndexType linearIndex = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;
        linearIndex < totalElements;
-       linearIndex += gridDim.x * blockDim.x) {
+       linearIndex += hipGridDim_x * hipBlockDim_x) {
     // Convert `linearIndex` into an offset of `a`
     const IndexType aOffset =
       IndexToOffset<Ta, IndexType, ADims>::get(linearIndex, a);
@@ -78,9 +79,9 @@ kernelPointwiseApply3(TensorInfo<Ta, IndexType> a,
                       TensorInfo<Tc, IndexType> c,
                       IndexType totalElements,
                       Op op) {
-  for (IndexType linearIndex = blockIdx.x * blockDim.x + threadIdx.x;
+  for (IndexType linearIndex = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;
        linearIndex < totalElements;
-       linearIndex += gridDim.x * blockDim.x) {
+       linearIndex += hipGridDim_x * hipBlockDim_x) {
     // Convert `linearIndex` into an offset of `a`
     const IndexType aOffset =
       IndexToOffset<Ta, IndexType, ADims>::get(linearIndex, a);
@@ -103,7 +104,7 @@ inline dim3 getApplyBlock() {
 
 inline bool getApplyGrid(THCState* state, ptrdiff_t totalElements, dim3& grid) {
   int curDevice = -1;
-  cudaGetDevice(&curDevice);
+  hipGetDevice(&curDevice);
 
   if (curDevice == -1) {
     return false;

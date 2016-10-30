@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #ifndef THC_REDUCE_INC
 #define THC_REDUCE_INC
 
@@ -17,7 +18,7 @@
 template <typename IndexType>
 __device__ __forceinline__ IndexType getReduceNoncontigDimSliceIndex() {
   // Each thread handles one slice
-  return getLinearBlockId<IndexType>() * THC_NONCONTIG_REDUCE_BLOCK_SIZE + threadIdx.x;
+  return getLinearBlockId<IndexType>() * THC_NONCONTIG_REDUCE_BLOCK_SIZE + hipThreadIdx_x;
 }
 
 // Kernel that handles an entire reduction of a slice of a tensor per each thread
@@ -103,17 +104,17 @@ kernelReduceContigDim(TensorInfo<T, IndexType> out,
   // the slice. The elements are guaranteed contiguous starting at
   // `inBaseOffset`.
   T r = init;
-  for (IndexType i = threadIdx.x; i < reductionSize; i += blockDim.x) {
+  for (IndexType i = hipThreadIdx_x; i < reductionSize; i += hipBlockDim_x) {
     r = reduceOp(r, modifyOp(in.data[inBaseOffset + i]));
   }
 
   // Reduce within the block
   // FIXME: extern name
-  extern __shared__ char smemChar[];
+  HIP_DYNAMIC_SHARED( char, smemChar)
   T* smem = (T*) smemChar;
-  r = reduceBlock<T, ReduceOp>(smem, blockDim.x, r, reduceOp, init);
+  r = reduceBlock<T, ReduceOp>(smem, hipBlockDim_x, r, reduceOp, init);
 
-  if (threadIdx.x == 0) {
+  if (hipThreadIdx_x == 0) {
     // Write out reduced value
     out.data[outOffset] = r;
   }
