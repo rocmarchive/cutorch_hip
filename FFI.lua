@@ -26,7 +26,7 @@ typedef struct _THCCudaResourcesPerDevice {
 typedef struct THCState
 {
   struct THCRNGState* rngState;
-  struct cudaDeviceProp* deviceProperties;
+  struct hipDeviceProp_t* deviceProperties;
   THCCudaResourcesPerDevice* resourcesPerDevice;
   int numDevices;
   int numUserStreams;

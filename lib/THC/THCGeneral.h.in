@@ -65,7 +65,7 @@ typedef struct _THCCudaResourcesPerDevice {
 /* Global state to be held in the cutorch table. */
 struct THCState {
   struct THCRNGState* rngState;
-  struct cudaDeviceProp* deviceProperties;
+  struct hipDeviceProp_t* deviceProperties;
   /* Set of all allocated resources. resourcePerDevice[dev]->streams[0] is NULL,
      which specifies the per-device default stream. blasHandles do not have a
      default and must be explicitly initialized. We always initialize 1

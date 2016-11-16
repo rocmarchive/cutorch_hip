@@ -207,7 +207,7 @@ void THCudaEnablePeerToPeerAccess(THCState* state)
 
         if (access) {
           hipError_t err = hipDeviceEnablePeerAccess(j, 0);
-          if (err == cudaErrorPeerAccessAlreadyEnabled) {
+          if (err == hipErrorPeerAccessAlreadyEnabled) {
             /* It is possible that another thread has already enabled access. */
             /* Any future call to hipGetLastError will now return an error, */
             /* even though we've already dealt with this specific error here. */
@@ -334,16 +334,17 @@ void THCState_reserveStreams(THCState* state, int numStreams, int nonBlocking)
     THCCudaResourcesPerDevice* res = THCState_getDeviceResourcePtr(state, dev);
 
     /* +1 for the default stream as well */
-    THCStream** newStreams = realloc(res->streams, (numStreams + 1) * sizeof(THCStream*));
+    THCStream** newStreams = (THCStream**)realloc(res->streams, (numStreams + 1) * sizeof(THCStream*));
     THAssert(newStreams);
 
-    void** newScratchSpace = realloc(res->devScratchSpacePerStream, (numStreams + 1) * sizeof(void*));
+    void** newScratchSpace = (void**) realloc(res->devScratchSpacePerStream, (numStreams + 1) * sizeof(void*));
     THAssert(newScratchSpace);
 
     /* Allocate new stream resources */
     size_t scratchSpaceSize = THCState_getDeviceScratchSpaceSize(state, dev);
+    // TODO: HIP Equivalent for below line of code hipStreamNonBlocking and hipStreamDefault
     unsigned int flags =
-      nonBlocking ? hipStreamNonBlocking : hipStreamDefault;
+      nonBlocking ? cudaStreamNonBlocking : cudaStreamDefault;
 
     for (int stream = state->numUserStreams + 1; stream <= numStreams; ++stream) {
       newStreams[stream] = THCStream_new(flags);

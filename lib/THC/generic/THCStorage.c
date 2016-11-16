@@ -144,7 +144,7 @@ THCStorage* THCStorage_(newWithDataAndAllocator)(
   int device;
   if (data) {
     struct hipPointerAttribute_t attr;
-    THCudaCheck(cudaPointerGetAttributes(&attr, data));
+    THCudaCheck(hipPointerGetAttributes(&attr, data));
     device = attr.device;
   } else {
     THCudaCheck(hipGetDevice(&device));
