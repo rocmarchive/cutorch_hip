@@ -1,12 +1,14 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8 FATAL_ERROR)
 CMAKE_POLICY(VERSION 2.8)
 
-SET(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/lib/THC/cmake ${CMAKE_MODULE_PATH} "/opt/rocm/hip/cmake")
+SET(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_CURRENT_SOURCE_DIR}/lib/THC/cmake ${CMAKE_MODULE_PATH} "$ENV{HIP_PATH}/cmake")
 
 FIND_PACKAGE(Torch REQUIRED)
 FIND_PACKAGE(CUDA 6.5 REQUIRED)
 FIND_PACKAGE(HIP 1.0 REQUIRED)
 FIND_PACKAGE(MAGMA)
+
+INCLUDE(HipTorchWrap)
 
 EXECUTE_PROCESS(COMMAND $ENV{HIP_PATH}/bin/hipconfig --cpp_config OUTPUT_VARIABLE HIP_CXX_FLAGS)
 IF (NOT WIN32)
@@ -27,10 +29,10 @@ INCLUDE_DIRECTORIES(BEFORE "${CMAKE_CURRENT_BINARY_DIR}/lib/THC")
 INCLUDE_DIRECTORIES("${CMAKE_CURRENT_SOURCE_DIR}/lib/THC")
 INCLUDE_DIRECTORIES("${CMAKE_CURRENT_SOURCE_DIR}/torch")
 
-SET(src Storage.cc init.cc Tensor.cc TensorMath.c TensorOperator.cc torch/utils.cc)
+SET(src Storage.cc init.cc Tensor.cc TensorMath.cpp TensorOperator.cc torch/utils.cc)
 SET(luasrc init.lua Tensor.lua FFI.lua test/test.lua)
 
-ADD_TORCH_WRAP(cudatensormathwrap TensorMath.lua)
+ADD_HIPTORCH_WRAP(cudatensormathwrap TensorMath.lua)
 
 ADD_TORCH_PACKAGE(cutorch "${src}" "${luasrc}")
 TARGET_LINK_LIBRARIES(cutorch luaT THC)
