@@ -740,25 +740,25 @@ static int cutorch_getDeviceProperties(lua_State *L)
   SET_DEVN_PROP(canMapHostMemory);
   SET_DEVN_PROP(clockRate);
   SET_DEVN_PROP(computeMode);
-  SET_DEVN_PROP(deviceOverlap);
-  SET_DEVN_PROP(integrated);
-  SET_DEVN_PROP(kernelExecTimeoutEnabled);
+  //SET_DEVN_PROP(deviceOverlap);  // TODO: HIP Equivalent
+  //SET_DEVN_PROP(integrated);     // TODO: HIP Equivalent
+  //SET_DEVN_PROP(kernelExecTimeoutEnabled); // TODO: HIP Equivalent
   SET_DEVN_PROP(major);
   SET_DEVN_PROP(maxThreadsPerBlock);
-  SET_DEVN_PROP(memPitch);
+  //SET_DEVN_PROP(memPitch); //TODO: HIP Equivalent
   SET_DEVN_PROP(minor);
   SET_DEVN_PROP(multiProcessorCount);
   SET_DEVN_PROP(regsPerBlock);
   SET_DEVN_PROP(sharedMemPerBlock);
-  SET_DEVN_PROP(textureAlignment);
+  //SET_DEVN_PROP(textureAlignment); // TODO: HIP Equivalent
   SET_DEVN_PROP(totalConstMem);
   SET_DEVN_PROP(totalGlobalMem);
-  SET_DEVN_PROP(hipWarpSize);
+  // SET_DEVN_PROP(hipWarpSize); //TODO: HIP Equivalent
   SET_DEVN_PROP(pciBusID);
   SET_DEVN_PROP(pciDeviceID);
-  SET_DEVN_PROP(pciDomainID);
-  SET_DEVN_PROP(maxTexture1D);
-  SET_DEVN_PROP(maxTexture1DLinear);
+  // SET_DEVN_PROP(pciDomainID); //TODO: HIP Equivalent
+  // SET_DEVN_PROP(maxTexture1D); //TODO: HIP Equivalent
+  // SET_DEVN_PROP(maxTexture1DLinear); // TODO: HIP Equivalent
 
   size_t freeMem;
   THCudaCheck(hipMemGetInfo (&freeMem, NULL));
@@ -819,7 +819,7 @@ static int cutorch_getRNGState(lua_State *L)
 
 static int cutorch_setRNGState(lua_State *L)
 {
-  THByteTensor* t = luaT_checkudata(L, 1, "torch.ByteTensor");
+  THByteTensor* t = (THByteTensor*)luaT_checkudata(L, 1, "torch.ByteTensor");
   THCRandom_setRNGState(cutorch_getstate(L), t);
   return 0;
 }
@@ -834,7 +834,7 @@ static int cutorch_getState(lua_State *L)
 
 static int cutorch_Event_new(lua_State *L)
 {
-  hipEvent_t *event = luaT_alloc(L, sizeof(hipEvent_t));
+  hipEvent_t *event = (hipEvent_t*)luaT_alloc(L, sizeof(hipEvent_t));
   THCudaCheck(hipEventCreate(event));
 
   THCState *state = cutorch_getstate(L);
@@ -846,7 +846,7 @@ static int cutorch_Event_new(lua_State *L)
 
 static int cutorch_Event_free(lua_State *L)
 {
-  hipEvent_t *event = luaT_checkudata(L, 1, "cutorch.Event");
+  hipEvent_t *event = (hipEvent_t*)luaT_checkudata(L, 1, "cutorch.Event");
   THCudaCheck(hipEventDestroy(*event));
   luaT_free(L, event);
 
@@ -855,7 +855,7 @@ static int cutorch_Event_free(lua_State *L)
 
 static int cutorch_Event_waitOn(lua_State *L)
 {
-  hipEvent_t *event = luaT_checkudata(L, 1, "cutorch.Event");
+  hipEvent_t *event = (hipEvent_t*)luaT_checkudata(L, 1, "cutorch.Event");
   THCState *state = cutorch_getstate(L);
   THCudaCheck(hipStreamWaitEvent(THCState_getCurrentStream(state), *event, 0));
 
@@ -876,7 +876,7 @@ static void cutorch_Event_init(lua_State *L)
 
 static void luaCutorchGCFunction(void *data)
 {
-  lua_State *L = data;
+  lua_State *L = (lua_State*)data;
   lua_gc(L, LUA_GCCOLLECT, 0);
 }
 
