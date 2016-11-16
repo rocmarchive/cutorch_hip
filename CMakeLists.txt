@@ -29,7 +29,7 @@ INCLUDE_DIRECTORIES(BEFORE "${CMAKE_CURRENT_BINARY_DIR}/lib/THC")
 INCLUDE_DIRECTORIES("${CMAKE_CURRENT_SOURCE_DIR}/lib/THC")
 INCLUDE_DIRECTORIES("${CMAKE_CURRENT_SOURCE_DIR}/torch")
 
-SET(src Storage.cc init.cc Tensor.cc TensorMath.cpp TensorOperator.cc torch/utils.cc)
+SET(src Storage.cc init.cc Tensor.cc TensorMath.cc TensorOperator.cc torch/utils.cc)
 SET(luasrc init.lua Tensor.lua FFI.lua test/test.lua)
 
 ADD_HIPTORCH_WRAP(cudatensormathwrap TensorMath.lua)
