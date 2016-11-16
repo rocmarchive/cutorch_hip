@@ -1,6 +1,6 @@
 #include "THCStream.h"
 
-#include <cuda_runtime_api.h>
+#include <hip/hip_runtime_api.h>
 #include "THAtomic.h"
 
 
@@ -8,8 +8,8 @@ THCStream* THCStream_new(int flags)
 {
   THCStream* self = (THCStream*) malloc(sizeof(THCStream));
   self->refcount = 1;
-  THCudaCheck(cudaGetDevice(&self->device));
-  THCudaCheck(cudaStreamCreateWithFlags(&self->stream, flags));
+  THCudaCheck(hipGetDevice(&self->device));
+  THCudaCheck(hipStreamCreateWithFlags(&self->stream, flags));
   return self;
 }
 
@@ -19,7 +19,7 @@ void THCStream_free(THCStream* self)
     return;
   }
   if (THAtomicDecrementRef(&self->refcount)) {
-    THCudaCheck(cudaStreamDestroy(self->stream));
+    THCudaCheck(hipStreamDestroy(self->stream));
     free(self);
   }
 }

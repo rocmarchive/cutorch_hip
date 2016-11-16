@@ -7,7 +7,7 @@ static void *THCudaHostAllocator_malloc(void* ctx, ptrdiff_t size) {
 
   if (size == 0) return NULL;
 
-  THCudaCheck(cudaMallocHost(&ptr, size));
+  THCudaCheck(hipHostMalloc(&ptr, size));
 
   return ptr;
 }
@@ -15,7 +15,7 @@ static void *THCudaHostAllocator_malloc(void* ctx, ptrdiff_t size) {
 static void THCudaHostAllocator_free(void* ctx, void* ptr) {
   if (!ptr) return;
 
-  THCudaCheck(cudaFreeHost(ptr));
+  THCudaCheck(hipHostFree(ptr));
 }
 
 void THCAllocator_init(THCState *state) {

@@ -1,7 +1,5 @@
 #ifndef THC_STREAM_INC
 #define THC_STREAM_INC
-
-#include <hip/hip_runtime_api.h>
 #include "THCGeneral.h"
 
 struct THCStream

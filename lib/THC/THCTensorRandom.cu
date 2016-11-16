@@ -166,7 +166,7 @@ __host__ void THCRandom_getRNGState(THCState* state, THByteTensor *rng_state)
   memcpy(THByteTensor_data(rng_state) + states_size, &gen->initial_seed, seed_size);
 }
 
-__global__ void set_rngstate_kernel(curandStateMtgp32 *state, mtgp32_kernel_params *kernel)
+__global__ void set_rngstate_kernel(hipLaunchParm lp, curandStateMtgp32 *state, mtgp32_kernel_params *kernel)
 {
   state[hipThreadIdx_x].k = kernel;
 }
@@ -189,7 +189,7 @@ __host__ void THCRandom_setRNGState(THCState* state, THByteTensor *rng_state)
 }
 
 #define GENERATE_KERNEL1(NAME, ARG1, CURAND_FUNC, TRANSFORM)                   \
-__global__ void NAME(curandStateMtgp32 *state, int size, float *result, ARG1)  \
+__global__ void NAME(hipLaunchParm  lp, curandStateMtgp32 *state, int size, float *result, ARG1)  \
 {                                                                              \
   int idx = hipBlockIdx_x * BLOCK_SIZE + hipThreadIdx_x;                             \
   int rounded_size = THCCeilDiv(size, BLOCK_SIZE) * BLOCK_SIZE;                     \
@@ -203,7 +203,7 @@ __global__ void NAME(curandStateMtgp32 *state, int size, float *result, ARG1)  \
 }
 
 #define GENERATE_KERNEL2(NAME, ARG1, ARG2, CURAND_FUNC, TRANSFORM)                   \
-__global__ void NAME(curandStateMtgp32 *state, int size, float *result, ARG1, ARG2)  \
+__global__ void NAME(hipLaunchParm lp, curandStateMtgp32 *state, int size, float *result, ARG1, ARG2)  \
 {                                                                                    \
   int idx = hipBlockIdx_x * BLOCK_SIZE + hipThreadIdx_x;                                   \
   int rounded_size = THCCeilDiv(size, BLOCK_SIZE) * BLOCK_SIZE;                           \
@@ -227,7 +227,7 @@ GENERATE_KERNEL2(generate_cauchy, double median, double sigma, curand_uniform, (
 #undef GENERATE_KERNEL2
 
 /* Separate kernel because curand_log_normal gets extra parameters. */
-__global__ void generate_log_normal(curandStateMtgp32 *state, int size, float *result, float mean, float stddev)
+__global__ void generate_log_normal(hipLaunchParm lp, curandStateMtgp32 *state, int size, float *result, float mean, float stddev)
 {
   int idx = hipBlockIdx_x * BLOCK_SIZE + hipThreadIdx_x;
   int rounded_size = THCCeilDiv(size, BLOCK_SIZE) * BLOCK_SIZE;
@@ -369,7 +369,7 @@ __device__ int binarySearchForMultinomial(float* dist,
 }
 
 // Normalizes the L1 norm of every row to 1; used by multinomial
-__global__ void renormRowsL1(float* dist, long rows, long cols) {
+__global__ void renormRowsL1(hipLaunchParm lp, float* dist, long rows, long cols) {
   HIP_DYNAMIC_SHARED( float, smem)
 
   for (long row = hipBlockIdx_x; row < rows; row += hipGridDim_x) {
@@ -413,7 +413,7 @@ void THCudaTensor_renormRows(struct THCState* state,
 }
 
 __global__ void
-sampleMultinomialOnce(float* dest,
+sampleMultinomialOnce(hipLaunchParm lp, float* dest,
                       long distributions,
                       int categories,
                       float* dist) {
@@ -503,7 +503,7 @@ sampleMultinomialOnce(float* dest,
 }
 
 __global__ void
-sampleMultinomialWithReplacement(curandStateMtgp32* state,
+sampleMultinomialWithReplacement(hipLaunchParm lp, curandStateMtgp32* state,
                                  int totalSamples,
                                  float* dest,
                                  long distributions,
@@ -542,7 +542,7 @@ sampleMultinomialWithReplacement(curandStateMtgp32* state,
 }
 
 __global__ void
-sampleMultinomialWithoutReplacement(curandStateMtgp32* state,
+sampleMultinomialWithoutReplacement(hipLaunchParm lp, curandStateMtgp32* state,
                                     int totalSamples,
                                     int sample,
                                     float* dest,

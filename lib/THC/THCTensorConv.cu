@@ -29,7 +29,7 @@
  *     but can be set to 0 to allow arbitrary kernel sizes
  */
 template <bool swapkernel, int T_kernel_h, int T_kernel_w>
-  __global__ void conv2generic(float *input, float *kernel, float *output,
+  __global__ void conv2generic(hipLaunchParm lp, float *input, float *kernel, float *output,
                                int input_n, int input_h, int input_w,
                                int kernel_n, int kernel_h, int kernel_w,
                                int stride_h, int stride_w)
@@ -195,7 +195,7 @@ template <bool swapkernel, int T_kernel_h, int T_kernel_w>
  *   - all chunks of data should be contiguous
  *   - the swapkernel flag can be used to generate a conv2 instead of xcorr2
  */
-__global__ void conv2genericrev(float *input, float *kernel, float *output,
+__global__ void conv2genericrev(hipLaunchParm lp, float *input, float *kernel, float *output,
                                 int input_n, int input_h, int input_w,
                                 int kernel_n, int kernel_h, int kernel_w,
                                 float alpha, int stride_h, int stride_w)
@@ -710,7 +710,7 @@ THC_API void THCudaTensor_conv2DRevgerm(THCState *state, THCudaTensor *output, f
  *   ---- should have a fanin set of inputs contiguously
  */
 template <bool swapkernel, int T_kernel_h, int T_kernel_w>
-  __global__ void conv2mapgeneric(float *input, float *kernel, float *output,
+  __global__ void conv2mapgeneric(hipLaunchParm lp, float *input, float *kernel, float *output,
                                   int input_n, int input_h, int input_w,
                                   int kernel_n, int kernel_h, int kernel_w,
                                   int stride_w, int stride_h,

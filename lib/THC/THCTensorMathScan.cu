@@ -20,7 +20,7 @@
  * Each thread processes a single inner row at a time.
  */
 template<class BinaryOp>
-__global__ void THCudaTensor_kernel_scanOuterDim(float *tgt_, float *src_,
+__global__ void THCudaTensor_kernel_scanOuterDim(hipLaunchParm lp, float *tgt_, float *src_,
                                                  unsigned num_orows, unsigned num_irows, unsigned row_size,
                                                  float init, BinaryOp binary_op)
 {
@@ -82,7 +82,7 @@ __host__ void THCudaTensor_scanOuterDim(THCState *state, THCudaTensor *tgt, THCu
  * per thread block is quicker than processing a single row, especially for short rows).
  */
 template<int num_threads_x, int num_threads_y, class BinaryFunction>
-__global__ void THCudaTensor_kernel_scanInnermostDim(float *tgt_, float *src_,
+__global__ void THCudaTensor_kernel_scanInnermostDim(hipLaunchParm lp, float *tgt_, float *src_,
                                                      unsigned num_rows, unsigned row_size,
                                                      float init, BinaryFunction binary_op)
 {

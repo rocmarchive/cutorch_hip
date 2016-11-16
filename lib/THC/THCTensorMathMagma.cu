@@ -434,7 +434,7 @@ void THCudaTensor_getri(THCState *state, THCudaTensor *ra_, THCudaTensor *a)
 }
 
 
-__global__ void THCudaTensor_copyUpperSymmetric(float *input, int n, int len)
+__global__ void THCudaTensor_copyUpperSymmetric(hipLaunchParm lp, float *input, int n, int len)
 {
   for (int idx = hipThreadIdx_x + hipBlockIdx_x * hipBlockDim_x; idx < len; idx += 65535) {
     const int r = idx % n;
@@ -548,7 +548,7 @@ void THCudaTensor_qr(THCState *state, THCudaTensor *rq_, THCudaTensor *rr_, THCu
 #ifdef MAGMA_V2
   int nb = magma_get_sgeqrf_nb(m, n);
 #else
-  int nb = magma_get_sgeqrf_nb(m);
+  int nb = magma_get_sgeqrf_nb(m, 0);
 #endif
 
   float *a_data = THCudaTensor_data(state, a);

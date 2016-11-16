@@ -124,7 +124,7 @@ struct LogicalAny {
 };
 
 template<typename Real>
-__global__ void THCTensor_kernel_renorm(Real *data, const Real value, const ptrdiff_t size, const Real maxnorm)
+__global__ void THCTensor_kernel_renorm(hipLaunchParm lp, Real *data, const Real value, const ptrdiff_t size, const Real maxnorm)
 {
   __shared__ Real buffer[32];
   long tx = hipThreadIdx_x;
@@ -298,7 +298,7 @@ __forceinline__ __device__ Real THCTensor_computeVar(Real sum, Real sum2, unsign
  * Each thread processes a single inner row at a time.
  */
 template<typename Real, bool flag, bool apply_sqrt>
-__global__ void THCTensor_kernel_varOuterDim(Real *tgt, Real *src_, unsigned num_orows, unsigned num_irows, unsigned row_size)
+__global__ void THCTensor_kernel_varOuterDim(hipLaunchParm lp, Real *tgt, Real *src_, unsigned num_orows, unsigned num_irows, unsigned row_size)
 {
   for (unsigned orow = hipBlockIdx_x; orow < num_orows; orow += hipGridDim_x) {
     for (unsigned irow = hipBlockIdx_y * hipBlockDim_x + hipThreadIdx_x; irow < num_irows; irow += hipGridDim_y * hipBlockDim_x) {
@@ -367,7 +367,7 @@ __host__ void THCTensor_varOuterDim(THCState *state, TensorTypeK *tgt, TensorTyp
  * per thread block is quicker than processing a single row, especially for short rows).
  */
 template<typename Real, bool flag, bool apply_sqrt>
-__global__ void THCTensor_kernel_varInnermostDim(Real *tgt, Real *src_, unsigned num_rows, unsigned row_size)
+__global__ void THCTensor_kernel_varInnermostDim(hipLaunchParm lp, Real *tgt, Real *src_, unsigned num_rows, unsigned row_size)
 {
   __shared__ Real ssum[32][16];
   __shared__ Real ssum2[32][16];
@@ -444,7 +444,7 @@ __host__ void THCTensor_varInnermostDim(THCState *state, TensorTypeK *tgt, Tenso
 */
 template <typename K, typename Index, class BinaryFunction>
 __global__ void
-kernelTransformReduceOuterDimIndex(K *tgt1,
+kernelTransformReduceOuterDimIndex(hipLaunchParm lp, K *tgt1,
                                    Index *tgt2,
                                    K *src_,
                                    unsigned num_orows,
@@ -522,7 +522,7 @@ THC_transformReduceOuterDimIndex(THCState *state,
  */
 template <typename K, typename Index, class BinaryFunction>
 __global__ void
-kernelTransformReduceInnermostDimIndex(K *tgt1,
+kernelTransformReduceInnermostDimIndex(hipLaunchParm lp, K *tgt1,
                                        Index* tgt2,
                                        K *src_,
                                        unsigned num_rows,

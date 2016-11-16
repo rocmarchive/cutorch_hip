@@ -3,6 +3,7 @@
 #define THC_REDUCE_APPLY_UTILS_INC
 
 #include <cuda.h>
+#include "hip/hip_runtime.h"
 #include <assert.h>
 #include "THCGeneral.h"
 #include "THCTensor.h"
@@ -38,10 +39,10 @@ __device__ T reduceBlock(T* smem,
 
   // First warp will perform reductions across warps
   __syncthreads();
-  if ((hipThreadIdx_x / hipWarpSize) == 0) {
+  if ((hipThreadIdx_x / warpSize) == 0) {
     T r = hipThreadIdx_x < numVals ? smem[hipThreadIdx_x] : init;
 
-    for (int i = hipWarpSize + hipThreadIdx_x; i < numVals; i += hipWarpSize) {
+    for (int i = warpSize + hipThreadIdx_x; i < numVals; i += warpSize) {
       r = reduceOp(r, smem[i]);
     }
 
@@ -55,10 +56,10 @@ __device__ T reduceBlock(T* smem,
   if (hipThreadIdx_x == 0) {
     r = smem[0];
 
-    int numLanesParticipating = min(numVals, hipWarpSize);
+    int numLanesParticipating = min(numVals, warpSize);
 
     if (numLanesParticipating == 32) {
-      // Unroll for hipWarpSize == 32 and numVals >= 32
+      // Unroll for warpSize == 32 and numVals >= 32
 #pragma unroll
       for (int i = 1; i < 32; ++i) {
         r = reduceOp(r, smem[i]);

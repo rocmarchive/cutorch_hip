@@ -1,5 +1,6 @@
 #ifndef THC_GENERIC_FILE
 #define THC_GENERIC_FILE "generic/THCTensor.cu"
+#include "hip/hip_runtime.h"
 #else
 
 cudaTextureObject_t THCTensor_(getTextureObject)(THCState *state, THCTensor *self)
@@ -11,7 +12,7 @@ cudaTextureObject_t THCTensor_(getTextureObject)(THCState *state, THCTensor *sel
   resDesc.resType = cudaResourceTypeLinear;
   resDesc.res.linear.devPtr = THCTensor_(data)(state, self);
   resDesc.res.linear.sizeInBytes = THCTensor_(nElement)(state, self) * 4;
-  resDesc.res.linear.desc = hipCreateChannelDesc(32, 0, 0, 0,
+  resDesc.res.linear.desc = cudaCreateChannelDesc(32, 0, 0, 0,
                                                   cudaChannelFormatKindFloat);
   struct cudaTextureDesc texDesc;
   memset(&texDesc, 0, sizeof(texDesc));

@@ -5,7 +5,7 @@
 #include "THAllocator.h"
 #include "THCThreadLocal.h"
 #undef log1p
-
+#include "hip/hip_runtime.h"
 #include "cuda.h"
 #include "cuda_runtime.h"
 #include "cublas_v2.h"
@@ -45,10 +45,11 @@ typedef struct THCStream THCStream;
 typedef struct THCState THCState;
 
 typedef struct _THCDeviceAllocator {
-   cudaError_t (*malloc)( void*, void**, size_t,         cudaStream_t);
-   cudaError_t (*realloc)(void*, void**, size_t, size_t, cudaStream_t);
-   cudaError_t (*free)(void*, void*);
-   cudaError_t (*emptyCache)(void*);
+// TODO: NEEL: HIPEQUIVALENT
+   hipError_t (*malloc)( void*, void**, size_t,         hipStream_t);
+   hipError_t (*realloc)(void*, void**, size_t, size_t, hipStream_t);
+   hipError_t (*free)(void*, void*);
+   hipError_t (*emptyCache)(void*);
    void* state;
 } THCDeviceAllocator;
 
@@ -130,7 +131,7 @@ THC_API void THCState_setPeerToPeerAccess(THCState* state, int dev, int devToAcc
 THC_API int THCState_getKernelPeerToPeerAccessEnabled(THCState* state);
 THC_API void THCState_setKernelPeerToPeerAccessEnabled(THCState* state, int val);
 
-THC_API struct cudaDeviceProp* THCState_getCurrentDeviceProperties(THCState* state);
+THC_API struct hipDeviceProp_t* THCState_getCurrentDeviceProperties(THCState* state);
 
 THC_API struct THCRNGState* THCState_getRngState(THCState* state);
 THC_API THAllocator* THCState_getCudaHostAllocator(THCState* state);
@@ -144,12 +145,12 @@ THC_API void THCState_reserveStreams(THCState* state, int numStreams, int nonBlo
 THC_API int THCState_getNumStreams(THCState* state);
 
 /* Stream API */
-THC_API cudaStream_t THCState_getCurrentStreamOnDevice(THCState *state, int device);
-THC_API cudaStream_t THCState_getCurrentStream(THCState *state);
+THC_API hipStream_t THCState_getCurrentStreamOnDevice(THCState *state, int device);
+THC_API hipStream_t THCState_getCurrentStream(THCState *state);
 THC_API struct THCStream* THCState_getStream(THCState *state);
 THC_API void THCState_setStream(THCState *state, struct THCStream* stream);
 /* deprecated stream API */
-THC_API cudaStream_t THCState_getDeviceStream(THCState *state, int device, int stream);
+THC_API hipStream_t THCState_getDeviceStream(THCState *state, int device, int stream);
 THC_API int THCState_getCurrentStreamIndex(THCState *state);
 THC_API void THCState_setCurrentStreamIndex(THCState *state, int stream);
 
@@ -170,11 +171,11 @@ THC_API size_t THCState_getDeviceScratchSpaceSize(THCState* state, int device);
 #define THCudaCheck(err)  __THCudaCheck(err, __FILE__, __LINE__)
 #define THCublasCheck(err)  __THCublasCheck(err,  __FILE__, __LINE__)
 
-THC_API void __THCudaCheck(cudaError_t err, const char *file, const int line);
+THC_API void __THCudaCheck(hipError_t err, const char *file, const int line);
 THC_API void __THCublasCheck(cublasStatus_t status, const char *file, const int line);
 
-THC_API cudaError_t THCudaMalloc(THCState *state, void **ptr, size_t size);
-THC_API cudaError_t THCudaFree(THCState *state, void *ptr);
+THC_API hipError_t THCudaMalloc(THCState *state, void **ptr, size_t size);
+THC_API hipError_t THCudaFree(THCState *state, void *ptr);
 THC_API void THCSetGCHandler(THCState *state,
                              void (*torchGCHandlerFunction)(void *data),
                              void *data );

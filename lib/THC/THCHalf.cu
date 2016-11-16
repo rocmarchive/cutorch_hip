@@ -1,3 +1,4 @@
+#include "hip/hip_runtime_api.h"
 #include "THCHalf.h"
 #include <thrust/transform.h>
 #include <thrust/execution_policy.h>

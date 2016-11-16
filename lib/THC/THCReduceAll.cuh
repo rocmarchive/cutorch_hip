@@ -27,7 +27,7 @@ template <typename ModifyOp,
           typename IndexType,
           int ADims>
 __global__ void
-kernelReduceAll(TensorInfo<InT, IndexType> in,
+kernelReduceAll(hipLaunchParm lp, TensorInfo<InT, IndexType> in,
                 IndexType totalElements,
                 AccT init,
                 ModifyOp modifyOp,
@@ -73,7 +73,7 @@ template <typename ModifyOp,
           typename IndexType,
           int ADims>
 __global__ void
-kernelReduceAllPass1(TensorInfo<InT, IndexType> in,
+kernelReduceAllPass1(hipLaunchParm lp, TensorInfo<InT, IndexType> in,
                      IndexType totalElements,
                      AccT init,
                      ModifyOp modifyOp,
@@ -103,7 +103,7 @@ kernelReduceAllPass1(TensorInfo<InT, IndexType> in,
 
 template <typename ReduceOp, typename T, typename IndexType>
 __global__ void
-kernelReduceAllPass2(int numPass1Blocks,
+kernelReduceAllPass2(hipLaunchParm lp, int numPass1Blocks,
                      T init,
                      ReduceOp reduceOp,
                      T* scratchSpace,

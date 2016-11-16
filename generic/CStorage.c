@@ -11,14 +11,14 @@
   {                                                                     \
     real *fdata = (real*)THAlloc(sizeof(real)*size);                    \
     TH_CONCAT_3(THFile_read,Real,Raw)(file, fdata, size);               \
-    THCudaCheck(cudaMemcpy(data, fdata, size * sizeof(real), cudaMemcpyHostToDevice)); \
+    THCudaCheck(hipMemcpy(data, fdata, size * sizeof(real), hipMemcpyHostToDevice)); \
     THFree(fdata);                                                      \
   }
 
 #define THFile_writeRealRaw(file, data, size)                           \
   {                                                                     \
     real *fdata = (real*)THAlloc(sizeof(real)*size);                    \
-    THCudaCheck(cudaMemcpy(fdata, data, size * sizeof(real), cudaMemcpyDeviceToHost)); \
+    THCudaCheck(hipMemcpy(fdata, data, size * sizeof(real), hipMemcpyDeviceToHost)); \
     TH_CONCAT_3(THFile_write,Real,Raw)(file, fdata, size);              \
     THFree(fdata);                                                      \
   }
@@ -27,14 +27,14 @@
   {                                                                     \
     real *fdata = (real*)THAlloc(sizeof(real)*size);                    \
     THFile_readCharRaw(file, (char *)fdata, sizeof(real) * size);       \
-    THCudaCheck(cudaMemcpy(data, fdata, size * sizeof(real), cudaMemcpyHostToDevice)); \
+    THCudaCheck(hipMemcpy(data, fdata, size * sizeof(real), hipMemcpyHostToDevice)); \
     THFree(fdata);                                                      \
   }
 
 #define THFile_writeRealRaw(file, data, size)                           \
   {                                                                     \
     real *fdata = (real*)THAlloc(sizeof(real)*size);                    \
-    THCudaCheck(cudaMemcpy(fdata, data, size * sizeof(real), cudaMemcpyDeviceToHost)); \
+    THCudaCheck(hipMemcpy(fdata, data, size * sizeof(real), hipMemcpyDeviceToHost)); \
     THFile_writeCharRaw(file, (char *)fdata, size * sizeof(real));      \
     THFree(fdata);                                                      \
   }

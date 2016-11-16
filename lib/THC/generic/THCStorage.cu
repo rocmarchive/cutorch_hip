@@ -1,4 +1,5 @@
 #ifndef THC_GENERIC_FILE
+#include "hip/hip_runtime.h"
 #define THC_GENERIC_FILE "generic/THCStorage.cu"
 #else
 
