@@ -6,8 +6,6 @@
 #include "THCThreadLocal.h"
 #undef log1p
 #include "hip/hip_runtime.h"
-#include "cuda.h"
-#include "cuda_runtime.h"
 #include "cublas_v2.h"
 
 #cmakedefine USE_MAGMA

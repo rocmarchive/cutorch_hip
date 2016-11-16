@@ -14,6 +14,7 @@ IF(NOT MAGMA_FOUND)
 ENDIF()
 
 FIND_PACKAGE(HIP 1.0 REQUIRED)
+EXECUTE_PROCESS(COMMAND $ENV{HIP_PATH}/bin/hipconfig --cpp_config OUTPUT_VARIABLE HIP_C_FLAGS)
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "4.9.3")
@@ -27,10 +28,12 @@ endif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "4.7" OR CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL "4.7" )
     # add c++11 flag
-    set_property(SOURCE THCCachingAllocator.cpp APPEND PROPERTY COMPILE_FLAGS -std=c++11 -I"/opt/rocm/hip/include") 
+    set_property(SOURCE THCCachingAllocator.cpp APPEND PROPERTY COMPILE_FLAGS ${HIP_C_FLAGS}) 
+    set_property(SOURCE THCCachingAllocator.cpp APPEND PROPERTY COMPILE_FLAGS "-std=c++11") 
   else()
     # add c++0x flag
-    set_property(SOURCE THCCachingAllocator.cpp APPEND PROPERTY COMPILE_FLAGS -std=c++0x -I"/opt/rocm/hip/include")
+    set_property(SOURCE THCCachingAllocator.cpp APPEND PROPERTY COMPILE_FLAGS ${HIP_C_FLAGS})
+    set_property(SOURCE THCCachingAllocator.cpp APPEND PROPERTY COMPILE_FLAGS "-std=c++0x")
   endif()
 else()
   SET(CMAKE_CXX_STANDARD 11)
@@ -122,7 +125,7 @@ CONFIGURE_FILE(THCGeneral.h.in "${CMAKE_CURRENT_BINARY_DIR}/THCGeneral.h")
 IF(MSVC)
   LIST(APPEND CUDA_NVCC_FLAGS "-Xcompiler /wd4819")
 ELSE()
-  SET(CMAKE_C_FLAGS "-std=c99 -D__HIP_PLATFORM_NVCC__=1 ${CMAKE_C_FLAGS}")
+  SET(CMAKE_C_FLAGS "-std=c99 ${CMAKE_C_FLAGS} ${HIP_C_FLAGS}")
 ENDIF()
 
 SET(src
