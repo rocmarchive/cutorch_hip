@@ -5,7 +5,7 @@
 #include "THAllocator.h"
 #include "THCThreadLocal.h"
 #undef log1p
-#include "hip/hip_runtime.h"
+#include "hip/hip_runtime_api.h"
 #include "cublas_v2.h"
 
 #cmakedefine USE_MAGMA

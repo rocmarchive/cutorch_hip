@@ -29,11 +29,9 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "4.7" OR CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL "4.7" )
     # add c++11 flag
     set_property(SOURCE THCCachingAllocator.cpp APPEND PROPERTY COMPILE_FLAGS "-std=c++11") 
-    #set_property(SOURCE THCCachingAllocator.cpp APPEND PROPERTY COMPILE_FLAGS "${HIP_CXX_FLAGS}") 
   else()
     # add c++0x flag
     set_property(SOURCE THCCachingAllocator.cpp APPEND PROPERTY COMPILE_FLAGS "-std=c++0x")
-    #set_property(SOURCE THCCachingAllocator.cpp APPEND PROPERTY COMPILE_FLAGS "${HIP_CXX_FLAGS}")
   endif()
 else()
   SET(CMAKE_CXX_STANDARD 11)
@@ -130,12 +128,12 @@ ENDIF()
 
 SET(src
     THCCachingAllocator.cpp
-    THCGeneral.cc
-    THCStorageCopy.cc
-    THCStream.cc
-    THCTensor.cc
-    THCTensorCopy.cc
-    THCThreadLocal.cc
+    THCGeneral.c
+    THCStorageCopy.c
+    THCStream.c
+    THCTensor.c
+    THCTensorCopy.c
+    THCThreadLocal.c
     )
 
 SET(src-cuda

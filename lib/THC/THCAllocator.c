@@ -7,7 +7,7 @@ static void *THCudaHostAllocator_malloc(void* ctx, ptrdiff_t size) {
 
   if (size == 0) return NULL;
 
-  THCudaCheck(hipHostMalloc(&ptr, size));
+  THCudaCheck(hipMallocHost(&ptr, size));
 
   return ptr;
 }

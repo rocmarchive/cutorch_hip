@@ -1,4 +1,4 @@
-#include "hip/hip_runtime.h"
+#include "hip/hip_runtime_api.h"
 #include "utils.h"
 #include "luaT.h"
 #include "THCGeneral.h"
