@@ -145,8 +145,10 @@ void THCudaShutdown(THCState* state)
     }
     /* Free Torch-defined handles (0 is NULL for consistency with streams API) */
     for (int handle = 1; handle <= state->numUserBlasHandles; ++handle) {
+#ifdef CUBLAS_PATH
       THCublasCheck(cublasDestroy(
                       THCState_getDeviceBlasHandle(state, dev, handle)));
+#endif
     }
     /* Free per-stream scratch space; starts at 0 because there is space for
        the default stream as well*/
@@ -155,7 +157,9 @@ void THCudaShutdown(THCState* state)
     }
 
     free(res->streams);
+#ifdef CUBLAS_PATH
     free(res->blasHandles);
+#endif
     free(res->devScratchSpacePerStream);
     THCStream_free((THCStream*)THCThreadLocal_get(state->currentStreams[dev]));
     THCThreadLocal_free(state->currentStreams[dev]);
@@ -344,7 +348,7 @@ void THCState_reserveStreams(THCState* state, int numStreams, int nonBlocking)
     size_t scratchSpaceSize = THCState_getDeviceScratchSpaceSize(state, dev);
     // TODO: HIP Equivalent for below line of code hipStreamNonBlocking and hipStreamDefault
     unsigned int flags =
-      nonBlocking ? cudaStreamNonBlocking : cudaStreamDefault;
+      nonBlocking ? hipStreamNonBlocking : hipStreamDefault;
 
     for (int stream = state->numUserStreams + 1; stream <= numStreams; ++stream) {
       newStreams[stream] = THCStream_new(flags);
@@ -371,6 +375,7 @@ void THCState_reserveBlasHandles(THCState* state, int numBlasHandles)
   int prevDev = -1;
   THCudaCheck(hipGetDevice(&prevDev));
 
+#ifdef CUBLAS_PATH
   /* Otherwise, we have to allocate a new set of blasHandles */
   for (int dev = 0; dev < state->numDevices; ++dev) {
     THCudaCheck(hipSetDevice(dev));
@@ -399,6 +404,7 @@ void THCState_reserveBlasHandles(THCState* state, int numBlasHandles)
 
   state->numUserBlasHandles = numBlasHandles;
 
+#endif
   THCudaCheck(hipSetDevice(prevDev));
 }
 
@@ -435,6 +441,7 @@ hipStream_t THCState_getDeviceStream(THCState *state, int device, int streamInde
   return stream ? stream->stream : NULL;
 }
 
+#ifdef CUBLAS_PATH
 cublasHandle_t THCState_getDeviceBlasHandle(THCState *state, int device, int handle)
 {
   if (handle <= 0 || handle > state->numUserBlasHandles)
@@ -444,6 +451,7 @@ cublasHandle_t THCState_getDeviceBlasHandle(THCState *state, int device, int han
   }
   return THCState_getDeviceResourcePtr(state, device)->blasHandles[handle];
 }
+#endif
 
 static THCStream* THCState_getStreamOnDevice(THCState* state, int device)
 {
@@ -485,6 +493,7 @@ hipStream_t THCState_getCurrentStream(THCState *state)
   }
 }
 
+#ifdef CUBLAS_PATH
 cublasHandle_t THCState_getCurrentBlasHandle(THCState *state)
 {
   /* This is called at the point of kernel execution.
@@ -500,6 +509,7 @@ cublasHandle_t THCState_getCurrentBlasHandle(THCState *state)
   THError("THCState and blasHandles must be set as there is no default blasHandle");
   return NULL;
 }
+#endif
 
 int THCState_getCurrentStreamIndex(THCState *state)
 {
@@ -626,6 +636,7 @@ void __THCudaCheck(hipError_t err, const char *file, const int line)
   }
 }
 
+#ifdef CUBLAS_PATH
 void __THCublasCheck(cublasStatus_t status, const char *file, const int line)
 {
   if(status != CUBLAS_STATUS_SUCCESS)
@@ -670,6 +681,7 @@ void __THCublasCheck(cublasStatus_t status, const char *file, const int line)
     _THError(file, line, "cublas runtime error : %s", errmsg);
   }
 }
+#endif
 
 static ptrdiff_t heapSize = 0; // not thread-local
 static const ptrdiff_t heapMaxDelta = (ptrdiff_t)1e6;

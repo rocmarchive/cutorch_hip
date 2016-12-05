@@ -6,10 +6,12 @@
 #include "THCApply.cuh"
 #include "THCReduce.cuh"
 
+#ifdef THRUST_PATH
 #include <thrust/device_ptr.h>
 #include <thrust/scan.h>
 #if CUDA_VERSION >= 7000
 #include <thrust/system/cuda/execution_policy.h>
+#endif
 #endif
 
 template <typename T, typename MaskT>

@@ -2,6 +2,8 @@
 #include "THCGeneral.h"
 #include "THCHalf.h"
 
+
+#ifdef CUBLAS_PATH
 float THCudaBlas_Sdot(THCState *state, long n, float *x, long incx, float *y, long incy)
 {
   if (n == 1) {
@@ -412,3 +414,4 @@ void THCudaBlas_Dgetri(THCState *state, int n, const double **a, int lda, int *p
   cublasSetStream(handle, THCState_getCurrentStream(state));
   THCublasCheck(cublasDgetriBatched(handle, n, a, lda, pivot, c, ldc, info, batchSize));
 }
+#endif

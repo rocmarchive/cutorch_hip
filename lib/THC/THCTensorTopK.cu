@@ -7,7 +7,7 @@
 #include "THCScanUtils.cuh"
 #include "THCTensorTypeUtils.cuh"
 #include <algorithm> // for std::min
-
+#ifdef CUDA_PATH
 #if CUDA_VERSION >= 7000
 #include <thrust/system/cuda/execution_policy.h>
 #endif
@@ -251,7 +251,7 @@ __device__ void radixSelect(const RadixConverter& conv,
 }
 
 template <typename IndexType, int Dim, bool Order>
-__global__ void gatherTopK(TensorInfo<float, IndexType> input,
+__global__ void gatherTopK(hipLaunchParm lp, TensorInfo<float, IndexType> input,
                            IndexType inputSliceSize,
                            IndexType outputSliceSize, // aka `k`
 
@@ -408,8 +408,8 @@ THC_API void THCudaTensor_topk(THCState* state,
   THLongStorage_free(topKSize);
 
 #define RUN_K(INDEX_T, DIM, DIR)                                        \
-  gatherTopK<INDEX_T, DIM, DIR>                                         \
-    <<<grid, block, 0, THCState_getCurrentStream(state)>>>(             \
+  hipLaunchKernel(HIP_KERNEL_NAME(gatherTopK<INDEX_T, DIM, DIR>),                                         \
+      grid, block, 0, THCState_getCurrentStream(state),             \
       inputInfo,                                                        \
       sliceSize,                                                        \
       k,                                                                \
@@ -534,3 +534,4 @@ THC_API void THCudaTensor_topk(THCState* state,
 
   THCudaCheck(hipGetLastError());
 }
+#endif

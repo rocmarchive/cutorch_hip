@@ -8,12 +8,14 @@
 #include "THCTensorMathReduce.cuh"
 #include "THCTensorMathPointwise.cuh"
 
+#ifdef THRUST_PATH
 #include <thrust/device_ptr.h>
 #include <thrust/transform_reduce.h>
 #include <thrust/functional.h>
 #include <thrust/inner_product.h>
 #if CUDA_VERSION >= 7000
 #include <thrust/system/cuda/execution_policy.h>
+#endif
 #endif
 
 struct TensorTPowOp {
@@ -34,15 +36,18 @@ void THCudaTensor_tpow(THCState *state, THCudaTensor *self_, float value, THCuda
 {
   THAssert(THCudaTensor_checkGPU(state, 2, self_, src));
   if (self_ == src) {
+#ifdef CUDA_PATH
     if (!THC_pointwiseApply1(state, self_, TensorTPowOp(value))) {
       THArgCheck(false, 2, CUTORCH_DIM_WARNING);
     }
+#endif
   } else {
     THCudaTensor_resizeAs(state, self_, src);
-
+#ifdef CUDA_PATH
     if (!THC_pointwiseApply2(state, self_, src, TensorTPowOp(value))) {
       THArgCheck(false, 2, CUTORCH_DIM_WARNING);
     }
+#endif
   }
 
   THCudaCheck(hipGetLastError());
@@ -60,10 +65,11 @@ void THCudaTensor_atan2(THCState *state, THCudaTensor *self_, THCudaTensor *tx, 
   THArgCheck(THCudaTensor_nElement(state, tx) ==
              THCudaTensor_nElement(state, ty), 3, "sizes do not match");
   THCudaTensor_resizeAs(state, self_, tx);
-
+#ifdef CUDA_PATH
   if (!THC_pointwiseApply3(state, self_, tx, ty, TensorATan2Op())) {
     THArgCheck(false, 2, CUTORCH_DIM_WARNING);
   }
+#endif
 
   THCudaCheck(hipGetLastError());
 }
@@ -74,19 +80,22 @@ float THCudaTensor_dist(THCState *state, THCudaTensor *self, THCudaTensor *src, 
   self = THCudaTensor_newContiguous(state, self);
   ptrdiff_t size = THCudaTensor_nElement(state, self);
   src = THCudaTensor_newContiguous(state, src);
+  float result = 0;
+#ifdef THRUST_PATH
   thrust::device_ptr<float> self_data(THCudaTensor_data(state, self));
   thrust::device_ptr<float> src_data(THCudaTensor_data(state, src));
 
-  float result = thrust::inner_product(
+  result = thrust::inner_product(
 #if CUDA_VERSION >= 7000
     thrust::cuda::par.on(THCState_getCurrentStream(state)),
 #endif
     self_data, self_data+size, src_data, (float) 0,
     thrust::plus<float>(), TensorDistOp<float>(value));
+#endif
 
   THCudaTensor_free(state, src);
   THCudaTensor_free(state, self);
-
+  
   return pow(result, (float)1.0/value);
 }
 

@@ -7,10 +7,12 @@ THCTensor_(fill)(THCState* state, THCTensor *self_, real value)
 {
   THAssert(THCTensor_(checkGPU)(state, 1, self_));
 
+  #ifdef CUDA_PATH
   if (!THC_pointwiseApply1(
         state, self_, TensorFillOp<real>(value))) {
     THArgCheck(false, 1, CUTORCH_DIM_WARNING);
   }
+  #endif
 
   THCudaCheck(hipGetLastError());
 }
@@ -25,11 +27,13 @@ THCTensor_(zero)(THCState *state, THCTensor *self_)
                                 sizeof(real) * THCTensor_(nElement)(state, self_),
                                 THCState_getCurrentStream(state)));
   } else {
+    #ifdef CUDA_PATH
     if (!THC_pointwiseApply1(
           state, self_,
           TensorFillOp<real>(ScalarConvert<int, real>::to(0)))) {
       THArgCheck(false, 1, CUTORCH_DIM_WARNING);
     }
+    #endif
   }
 
   THCudaCheck(hipGetLastError());

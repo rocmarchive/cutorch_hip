@@ -289,7 +289,7 @@ void THCudaTensor_tril(THCState *state, THCudaTensor *self_, THCudaTensor *src_,
   float *start = THCudaTensor_data(state, src) + src->storageOffset;
 
   TensorTriOp<0> op(start, stride0, stride1, k);
-
+#ifdef CUDA_PATH
   if (self_ == src_) {
     if (!THC_pointwiseApply1(state, src, op)) {
       THArgCheck(false, 2, CUTORCH_DIM_WARNING);
@@ -301,6 +301,7 @@ void THCudaTensor_tril(THCState *state, THCudaTensor *self_, THCudaTensor *src_,
       THArgCheck(false, 2, CUTORCH_DIM_WARNING);
     }
   }
+#endif
 
   if (self_ == src_)
     THCudaTensor_freeCopyTo(state, src, src_);
@@ -323,6 +324,7 @@ void THCudaTensor_triu(THCState *state, THCudaTensor *self_, THCudaTensor *src_,
 
   TensorTriOp<1> op(start, stride0, stride1, k);
 
+#ifdef CUDA_PATH
   if (self_ == src_) {
     if (!THC_pointwiseApply1(state, src, op)) {
       THArgCheck(false, 2, CUTORCH_DIM_WARNING);
@@ -334,6 +336,7 @@ void THCudaTensor_triu(THCState *state, THCudaTensor *self_, THCudaTensor *src_,
       THArgCheck(false, 2, CUTORCH_DIM_WARNING);
     }
   }
+#endif
 
   if (self_ == src_)
     THCudaTensor_freeCopyTo(state, src, src_);

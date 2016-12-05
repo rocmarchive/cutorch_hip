@@ -3,8 +3,8 @@
 #else
 
 #define RUN(TYPE, DIMS, REAL)                                           \
-  THCudaTensor_gatherKernel<TYPE, REAL, DIMS>                                \
-  <<<grid, block, 0, THCState_getCurrentStream(state)>>>(               \
+  hipLaunchKernel(HIP_KERNEL_NAME(THCudaTensor_gatherKernel<TYPE, REAL, DIMS>),                                \
+    grid, block, 0, THCState_getCurrentStream(state),               \
     tensorInfo, srcInfo, indexInfo, dim, (TYPE)totalElements);
 
 void THCTensor_(gather)(THCState* state, THCTensor *tensor,
@@ -56,6 +56,7 @@ void THCTensor_(gather)(THCState* state, THCTensor *tensor,
       getTensorInfo<THCudaLongTensor, unsigned int>(state, index);
 
     // Specialize for a small number of dimensions.
+#ifdef CUDA_PATH
     switch (indexInfo.dims) {
       case 1:
         RUN(unsigned int, 1, real);
@@ -74,6 +75,7 @@ void THCTensor_(gather)(THCState* state, THCTensor *tensor,
         THCudaCheck(hipGetLastError());
         break;
     }
+#endif
   } else {
     TensorInfo<real, unsigned long> tensorInfo =
       getTensorInfo<THCTensor, unsigned long>(state, tensor);
@@ -81,7 +83,9 @@ void THCTensor_(gather)(THCState* state, THCTensor *tensor,
       getTensorInfo<THCTensor, unsigned long>(state, src);
     TensorInfo<long, unsigned long> indexInfo =
       getTensorInfo<THCudaLongTensor, unsigned long>(state, index);
+#ifdef CUDA_PATH
     RUN(unsigned long, -1, real);
+#endif
     THCudaCheck(hipGetLastError());
   }
 
@@ -97,8 +101,8 @@ void THCTensor_(gather)(THCState* state, THCTensor *tensor,
 
 
 #define RUN(TYPE, DIMS, REAL)                                           \
-  THCudaTensor_scatterKernel<TYPE, REAL, DIMS>                               \
-  <<<grid, block, 0, THCState_getCurrentStream(state)>>>(               \
+  hipLaunchKernel(HIP_KERNEL_NAME(THCudaTensor_scatterKernel<TYPE, REAL, DIMS>),                               \
+  grid, block, 0, THCState_getCurrentStream(state),              \
     tensorInfo, srcInfo, indexInfo, dim, (TYPE)totalElements);
 
 void THCTensor_(scatter)(THCState* state, THCTensor *tensor, int dim, THCudaLongTensor *index, THCTensor *src) {
@@ -148,6 +152,7 @@ void THCTensor_(scatter)(THCState* state, THCTensor *tensor, int dim, THCudaLong
       getTensorInfo<THCudaLongTensor, unsigned int>(state, index);
 
     // Specialize for a small number of dimensions.
+#ifdef CUDA_PATH
     switch (indexInfo.dims) {
       case 1:
         RUN(unsigned int, 1, real);
@@ -162,6 +167,7 @@ void THCTensor_(scatter)(THCState* state, THCTensor *tensor, int dim, THCudaLong
         RUN(unsigned int, -1, real);
         break;
     }
+#endif
   } else {
     TensorInfo<real, unsigned long> tensorInfo =
       getTensorInfo<THCTensor, unsigned long>(state, tensor);
@@ -169,8 +175,9 @@ void THCTensor_(scatter)(THCState* state, THCTensor *tensor, int dim, THCudaLong
       getTensorInfo<THCTensor, unsigned long>(state, src);
     TensorInfo<long, unsigned long> indexInfo =
       getTensorInfo<THCudaLongTensor, unsigned long>(state, index);
-
+#ifdef CUDA_PATH
     RUN(unsigned long, -1, real)
+#endif
   }
 
   if (oldTensor) {
@@ -184,8 +191,8 @@ void THCTensor_(scatter)(THCState* state, THCTensor *tensor, int dim, THCudaLong
 #undef RUN
 
 #define RUN(TYPE, DIMS, REAL)                                           \
-  THCudaTensor_scatterFillKernel<TYPE, REAL, DIMS>                           \
-      <<<grid, block, 0, THCState_getCurrentStream(state)>>>(      \
+  hipLaunchKernel(HIP_KERNEL_NAME(THCudaTensor_scatterFillKernel<TYPE, REAL, DIMS>),                           \
+          grid, block, 0, THCState_getCurrentStream(state),      \
           tensorInfo, indexInfo, value, dim, (TYPE)totalElements);
 
 void
@@ -230,6 +237,7 @@ THCTensor_(scatterFill)(THCState* state, THCTensor *tensor,
       getTensorInfo<THCudaLongTensor, unsigned int>(state, index);
 
     // Specialize for a small number of dimensions.
+#ifdef CUDA_PATH
     switch (indexInfo.dims) {
       case 1:
         RUN(unsigned int, 1, real);
@@ -244,13 +252,15 @@ THCTensor_(scatterFill)(THCState* state, THCTensor *tensor,
         RUN(unsigned int, -1, real);
         break;
     }
+#endif
   } else {
     TensorInfo<real, unsigned long> tensorInfo =
       getTensorInfo<THCTensor, unsigned long>(state, tensor);
     TensorInfo<long, unsigned long> indexInfo =
       getTensorInfo<THCudaLongTensor, unsigned long>(state, index);
-
+#ifdef CUDA_PATH
     RUN(unsigned long, -1, real);
+#endif
   }
 
   if (oldTensor) {

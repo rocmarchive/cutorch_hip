@@ -76,7 +76,7 @@ THC_copyTensor(THCState* state, TensorTypeDst* dst, TensorTypeSrc* src) {
     // src waits on dst barrier (src already waits on src)
     hipEvent_t dstReady;
     THCudaCheck(hipSetDevice(dstDev));
-    THCudaCheck(hipEventCreateWithFlags(&dstReady, cudaEventDisableTiming));
+    THCudaCheck(hipEventCreateWithFlags(&dstReady, hipEventDisableTiming));
     THCudaCheck(hipEventRecord(dstReady, NULL));
 
     THCudaCheck(hipSetDevice(srcDev));
@@ -113,11 +113,13 @@ THC_copyTensor(THCState* state, TensorTypeDst* dst, TensorTypeSrc* src) {
     // A device always has access to itself, so this also handles the
     // case srcDev == dstDev
     if (THCState_getPeerToPeerAccess(state, srcDev, dstDev)) {
-      bool succ =
-        THC_pointwiseApply2(
+      bool succ = false;
+      #ifdef CUDA_PATH
+      succ = THC_pointwiseApply2(
           state, dst, src,
           CopyOp<typename TensorUtils<TensorTypeDst>::DataType,
                  typename TensorUtils<TensorTypeSrc>::DataType>());
+      #endif 
 
       THArgCheck(succ, 2, CUTORCH_DIM_WARNING);
     } else {
@@ -139,11 +141,13 @@ THC_copyTensor(THCState* state, TensorTypeDst* dst, TensorTypeSrc* src) {
         srcContig = TensorUtils<TensorTypeDst>::newTensor(state);
         TensorUtils<TensorTypeDst>::resizeAs(state, srcContig, dst);
 
-        bool succ =
-          THC_pointwiseApply2(
+        bool succ = false;
+      #ifdef CUDA_PATH
+          succ = THC_pointwiseApply2(
             state, srcContig, src,
             CopyOp<typename TensorUtils<TensorTypeDst>::DataType,
                    typename TensorUtils<TensorTypeSrc>::DataType>());
+      #endif
 
         THArgCheck(succ, 2, CUTORCH_DIM_WARNING);
       }
@@ -184,7 +188,7 @@ THC_copyTensor(THCState* state, TensorTypeDst* dst, TensorTypeSrc* src) {
 
     // Still on srcDev, record default stream event
     hipEvent_t srcReady;
-    THCudaCheck(hipEventCreateWithFlags(&srcReady, cudaEventDisableTiming));
+    THCudaCheck(hipEventCreateWithFlags(&srcReady, hipEventDisableTiming));
     THCudaCheck(hipEventRecord(srcReady, NULL));
 
     THCudaCheck(hipSetDevice(dstDev));

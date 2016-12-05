@@ -7,7 +7,9 @@
 #include "THCNumerics.cuh"
 #include "THCReduce.cuh"
 #include "THCReduceAll.cuh"
+#ifdef THRUST_PATH
 #include <thrust/functional.h>
+#endif
 
 // Reduction operators that support `half`, unlike Thrust
 template <typename InT, typename AccT>
@@ -135,6 +137,7 @@ __global__ void THCTensor_kernel_renorm(hipLaunchParm lp, Real *data, const Real
   buffer[tx] = ScalarConvert<int, Real>::to(0);
 
   // get norm of axis
+#ifdef CUDA_PATH
   for (ptrdiff_t i=tx; i<size; i+=step)
   {
     buffer[tx] = THCNumerics<Real>::add(
@@ -144,6 +147,7 @@ __global__ void THCTensor_kernel_renorm(hipLaunchParm lp, Real *data, const Real
         value)
     );
   }
+#endif
   // add (reduce)
   for (unsigned int stride = hipBlockDim_x >> 1; stride > 0; stride >>= 1)
   {
@@ -255,7 +259,9 @@ struct TensorDistOp
   const T exponent;
 };
 
+#ifdef THRUST_PATH
 #include <thrust/functional.h>
+#endif
 
 // Given the sum of values and the sum of squares, compute the variance or standard deviation.
 template<typename Real, bool flag, bool apply_sqrt>
@@ -442,6 +448,7 @@ __host__ void THCTensor_varInnermostDim(THCState *state, TensorTypeK *tgt, Tenso
    to preserve the location of contention (for example min/max operations).
    The structure of the kernels follows the structure of the reduction kernels.
 */
+#ifdef THRUST_PATH
 template <typename K, typename Index, class BinaryFunction>
 __global__ void
 kernelTransformReduceOuterDimIndex(hipLaunchParm lp, K *tgt1,
@@ -509,7 +516,6 @@ THC_transformReduceOuterDimIndex(THCState *state,
 
   THCudaCheck(hipGetLastError());
 }
-
 /* Reduce the innermost dimension of a tensor (on thrust::pair functors which are (value, index))
  *
  * For an n-d tensor (n <= 4) where the reduction is along the innermost dimension:
@@ -663,4 +669,5 @@ struct MinValuePair {
   }
 };
 
+#endif
 #endif // THC_TENSORMATH_REDUCE_CUH

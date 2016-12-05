@@ -2,6 +2,7 @@
 #define THC_ASM_UTILS_INC
 
 // Collection of direct PTX functions
+#ifdef CUDA_PATH
 
 __device__ __forceinline__
 unsigned int getBitfield(unsigned int val, int pos, int len) {
@@ -47,6 +48,6 @@ __device__ __forceinline__ unsigned getLaneMaskGe() {
   asm("mov.u32 %0, %%lanemask_ge;" : "=r"(mask));
   return mask;
 }
-
+#endif
 
 #endif // THC_ASM_UTILS_INC

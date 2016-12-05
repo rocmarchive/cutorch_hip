@@ -1,8 +1,11 @@
 #ifndef THC_NUMERICS_INC
 #define THC_NUMERICS_INC
 
+#ifdef CUDA_PATH
 #include <cuda.h>
 #include <limits.h>
+#endif
+#include "hip/hip_runtime.h"
 #include "THCHalf.h"
 
 /// Class for numeric limits of the particular data type, which
@@ -86,7 +89,9 @@ struct THCNumerics<int> {
   static inline __host__ __device__  int mul(int a, int b) { return a * b; }
   static inline __host__ __device__  int sub(int a, int b) { return a - b; }
   static inline __host__ __device__  int div(int a, int b) { return a / b; }
+#ifdef CUDA_PATH
   static inline __host__ __device__  int abs(int a) { return ::abs(a); }
+#endif
 };
 
 template <>
@@ -105,7 +110,9 @@ struct THCNumerics<long> {
   static inline __host__ __device__  long mul(long a, long b) { return a * b; }
   static inline __host__ __device__  long sub(long a, long b) { return a - b; }
   static inline __host__ __device__  long div(long a, long b) { return a / b; };
+#ifdef CUDA_PATH
   static inline __host__ __device__  long abs(long a) { return labs(a); }
+#endif
 };
 
 #ifdef CUDA_HALF_TENSOR
@@ -577,7 +584,9 @@ struct THCNumerics<double> {
   static inline __host__ __device__  double tan  (double a) { return   ::tan(a); }
   static inline __host__ __device__  double atan (double a) { return  ::atan(a); }
   static inline __host__ __device__  double tanh (double a) { return  ::tanh(a); }
+#ifdef CUDA_PATH
   static inline __host__ __device__  double abs  (double a) { return   ::abs(a); }
+#endif
   static inline __host__ __device__  double round(double a) { return ::round(a); }
   static inline __host__ __device__  double frac (double a) { return a - ::trunc(a); }
   static inline __host__ __device__  double cinv (double a) { return 1.0 / a; }

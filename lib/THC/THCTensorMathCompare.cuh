@@ -77,9 +77,11 @@ void THC_logicalValue(THCState *state,
   TensorUtils<TensorTypeOut>::resize(state, self_, st, NULL);
   THLongStorage_free(st);
 
+#ifdef CUDA_PATH
   if (!THC_pointwiseApply2(state, self_, src, op)) {
     THArgCheck(false, 2, CUTORCH_DIM_WARNING);
   }
+#endif
 
   THCudaCheck(hipGetLastError());
 }

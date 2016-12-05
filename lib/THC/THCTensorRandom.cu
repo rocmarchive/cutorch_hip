@@ -5,12 +5,15 @@
 #include "THCTensorCopy.h"
 #include "THCTensorMath.h"
 #include "THCReduceApplyUtils.cuh"
-
+#ifdef THRUST_PATH
 #include <thrust/functional.h>
+#endif
+#ifdef CURAND_PATH
 #include <curand.h>
 #include <curand_kernel.h>
 #include <curand_mtgp32_host.h>
 #include <curand_mtgp32dc_p_11213.h>
+#endif
 
 #define MAX_NUM_BLOCKS 64
 #define BLOCK_SIZE 256
@@ -18,8 +21,10 @@
 /* Sets up generator. Allocates but does not create the generator states. */
 __host__ void initializeGenerator(THCState *state, Generator* gen)
 {
+#ifdef CURAND_PATH
   THCudaCheck(THCudaMalloc(state, (void**)&gen->gen_states, MAX_NUM_BLOCKS * sizeof(curandStateMtgp32)));
   THCudaCheck(THCudaMalloc(state, (void**)&gen->kernel_params, sizeof(mtgp32_kernel_params)));
+#endif 
 }
 
 /* Frees memory allocated during setup. */
@@ -40,6 +45,7 @@ __host__ void destroyGenerator(THCState *state, Generator* gen)
 /* Creates a new generator state given the seed. */
 __host__ void createGeneratorState(Generator* gen, unsigned long seed)
 {
+#ifdef CURAND_PATH
   if (curandMakeMTGP32Constants(mtgp32dc_params_fast_11213, gen->kernel_params) != CURAND_STATUS_SUCCESS)
   {
     THError("Creating MTGP constants failed.");
@@ -49,6 +55,7 @@ __host__ void createGeneratorState(Generator* gen, unsigned long seed)
   {
     THError("Creating MTGP kernel state failed.");
   }
+#endif
 }
 
 /* Initialize generator array (must be called before any other function) */
@@ -105,11 +112,12 @@ __host__ Generator* THCRandom_getGenerator(THCState* state)
   return gen;
 }
 
+#ifdef CURAND_PATH
 __host__ struct curandStateMtgp32* THCRandom_generatorStates(struct THCState* state)
 {
   return THCRandom_getGenerator(state)->gen_states;
 }
-
+#endif
 /* Random seed */
 __host__ unsigned long THCRandom_seed(THCState* state)
 {
@@ -139,7 +147,9 @@ __host__ void THCRandom_manualSeedAll(THCState* state, unsigned long seed)
   THCudaCheck(hipGetDevice(&currentDevice));
   for (int i = 0; i < rng_state->num_devices; ++i) {
     THCudaCheck(hipSetDevice(i));
+#ifdef CUDA_PATH
     THCRandom_manualSeed(state, seed);
+#endif
   }
   THCudaCheck(hipSetDevice(currentDevice));
 }
@@ -155,7 +165,10 @@ __host__ void THCRandom_getRNGState(THCState* state, THByteTensor *rng_state)
   Generator* gen = THCRandom_getGenerator(state);
 
   // The RNG state comprises the MTPG32 states and the seed.
-  static const size_t states_size = MAX_NUM_BLOCKS * sizeof(curandStateMtgp32);
+  static const size_t states_size = 0;
+#ifdef CURAND_PATH
+  states_size = MAX_NUM_BLOCKS * sizeof(curandStateMtgp32);
+#endif
   static const size_t seed_size = sizeof(unsigned long);
   static const size_t total_size = states_size + seed_size;
   THByteTensor_resize1d(rng_state, total_size);
@@ -166,16 +179,21 @@ __host__ void THCRandom_getRNGState(THCState* state, THByteTensor *rng_state)
   memcpy(THByteTensor_data(rng_state) + states_size, &gen->initial_seed, seed_size);
 }
 
+#ifdef CURAND_PATH
 __global__ void set_rngstate_kernel(hipLaunchParm lp, curandStateMtgp32 *state, mtgp32_kernel_params *kernel)
 {
   state[hipThreadIdx_x].k = kernel;
 }
+#endif
 
 __host__ void THCRandom_setRNGState(THCState* state, THByteTensor *rng_state)
 {
   Generator* gen = THCRandom_getGenerator(state);
 
-  static const size_t states_size = MAX_NUM_BLOCKS * sizeof(curandStateMtgp32);
+  static const size_t states_size = 0; 
+#ifdef CURAND_PATH
+  states_size = MAX_NUM_BLOCKS * sizeof(curandStateMtgp32);
+#endif
   static const size_t seed_size = sizeof(unsigned long);
   static const size_t total_size = states_size + seed_size;
   THArgCheck(THByteTensor_nElement(rng_state) == total_size, 1, "RNG state is wrong size");
@@ -183,8 +201,10 @@ __host__ void THCRandom_setRNGState(THCState* state, THByteTensor *rng_state)
 
   THCudaCheck(hipMemcpy(gen->gen_states, THByteTensor_data(rng_state),
                          states_size, hipMemcpyHostToDevice));
+#ifdef CURAND_PATH
   hipLaunchKernel(HIP_KERNEL_NAME(set_rngstate_kernel), dim3(1), dim3(MAX_NUM_BLOCKS), 0, THCState_getCurrentStream(state), 
       gen->gen_states, gen->kernel_params);
+#endif
   memcpy(&gen->initial_seed, THByteTensor_data(rng_state) + states_size, seed_size);
 }
 
@@ -215,13 +235,14 @@ __global__ void NAME(hipLaunchParm lp, curandStateMtgp32 *state, int size, float
     }                                                                                \
   }                                                                                  \
 }
-
+#ifdef CURAND_PATH
 GENERATE_KERNEL2(generate_uniform, double a, double b, curand_uniform, x * (b-a) + a)
 GENERATE_KERNEL1(generate_bernoulli, double p, curand_uniform, (float)x <= p)
 GENERATE_KERNEL2(generate_normal, double mean, double stdv, curand_normal, (x * stdv) + mean)
 GENERATE_KERNEL1(generate_geometric, double p, curand_uniform, (log(1-x) / log(p)) + 1)
 GENERATE_KERNEL1(generate_exponential, double lambda, curand_uniform, (float)(-1. / lambda * log(1-x)))
 GENERATE_KERNEL2(generate_cauchy, double median, double sigma, curand_uniform, (float)(median + sigma * tan(M_PI*(x-0.5))))
+#endif
 
 #undef GENERATE_KERNEL1
 #undef GENERATE_KERNEL2
@@ -232,10 +253,12 @@ __global__ void generate_log_normal(hipLaunchParm lp, curandStateMtgp32 *state, 
   int idx = hipBlockIdx_x * BLOCK_SIZE + hipThreadIdx_x;
   int rounded_size = THCCeilDiv(size, BLOCK_SIZE) * BLOCK_SIZE;
   for (int i = idx; i < rounded_size; i += BLOCK_SIZE * MAX_NUM_BLOCKS) {
+    #ifdef CURAND_PATH
     float x = curand_log_normal(&state[hipBlockIdx_x], mean, stddev);
     if (i < size) {
       result[i] = x;
     }
+    #endif
   }
 }
 
@@ -247,9 +270,10 @@ THC_API void THCudaTensor_uniform(THCState* state, THCudaTensor *self_, double a
   THCudaTensor *self = THCudaTensor_newContiguous(state, self_);
   ptrdiff_t size = THCudaTensor_nElement(state, self);
   float *data = THCudaTensor_data(state, self);
-
+  #ifdef CURAND_PATH
   hipLaunchKernel(HIP_KERNEL_NAME(generate_uniform), dim3(NUM_BLOCKS), dim3(BLOCK_SIZE), 0, THCState_getCurrentStream(state), 
       gen->gen_states, size, data, a, b);
+  #endif
 
   THCudaTensor_freeCopyTo(state, self, self_);
 };
@@ -261,10 +285,10 @@ THC_API void THCudaTensor_bernoulli(THCState* state, THCudaTensor *self_, double
   THCudaTensor *self = THCudaTensor_newContiguous(state, self_);
   ptrdiff_t size = THCudaTensor_nElement(state, self);
   float *data = THCudaTensor_data(state, self);
-
+  #ifdef CURAND_PATH
   hipLaunchKernel(HIP_KERNEL_NAME(generate_bernoulli), dim3(NUM_BLOCKS), dim3(BLOCK_SIZE), 0, THCState_getCurrentStream(state), 
       gen->gen_states, size, data, p);
-
+  #endif
   THCudaTensor_freeCopyTo(state, self, self_);
 };
 
@@ -275,9 +299,10 @@ THC_API void THCudaTensor_normal(THCState* state, THCudaTensor *self_, double me
   THCudaTensor *self = THCudaTensor_newContiguous(state, self_);
   ptrdiff_t size = THCudaTensor_nElement(state, self);
   float *data = THCudaTensor_data(state, self);
-
+  #ifdef CURAND_PATH
   hipLaunchKernel(HIP_KERNEL_NAME(generate_normal), dim3(NUM_BLOCKS), dim3(BLOCK_SIZE), 0, THCState_getCurrentStream(state), 
       gen->gen_states, size, data, mean, stdv);
+  #endif
 
   THCudaTensor_freeCopyTo(state, self, self_);
 };
@@ -290,10 +315,10 @@ THC_API void THCudaTensor_logNormal(THCState* state, THCudaTensor *self_, double
   THCudaTensor *self = THCudaTensor_newContiguous(state, self_);
   ptrdiff_t size = THCudaTensor_nElement(state, self);
   float *data = THCudaTensor_data(state, self);
-
+  #ifdef CURAND_PATH
   hipLaunchKernel(HIP_KERNEL_NAME(generate_log_normal), dim3(NUM_BLOCKS), dim3(BLOCK_SIZE), 0, THCState_getCurrentStream(state), 
       gen->gen_states, size, data, mean, stdv);
-
+  #endif
   THCudaTensor_freeCopyTo(state, self, self_);
 };
 
@@ -305,9 +330,10 @@ THC_API void THCudaTensor_geometric(THCState* state, THCudaTensor *self_, double
   THCudaTensor *self = THCudaTensor_newContiguous(state, self_);
   ptrdiff_t size = THCudaTensor_nElement(state, self);
   float *data = THCudaTensor_data(state, self);
-
+  #ifdef CURAND_PATH
   hipLaunchKernel(HIP_KERNEL_NAME(generate_geometric), dim3(NUM_BLOCKS), dim3(BLOCK_SIZE), 0, THCState_getCurrentStream(state), 
       gen->gen_states, size, data, p);
+  #endif
 
   THCudaTensor_freeCopyTo(state, self, self_);
 };
@@ -320,9 +346,10 @@ THC_API void THCudaTensor_exponential(THCState* state, THCudaTensor *self_, doub
   THCudaTensor *self = THCudaTensor_newContiguous(state, self_);
   ptrdiff_t size = THCudaTensor_nElement(state, self);
   float *data = THCudaTensor_data(state, self);
-
+  #ifdef CURAND_PATH
   hipLaunchKernel(HIP_KERNEL_NAME(generate_exponential), dim3(NUM_BLOCKS), dim3(BLOCK_SIZE), 0, THCState_getCurrentStream(state), 
       gen->gen_states, size, data, lambda);
+  #endif
 
   THCudaTensor_freeCopyTo(state, self, self_);
 };
@@ -335,9 +362,10 @@ THC_API void THCudaTensor_cauchy(THCState* state, THCudaTensor *self_, double me
   THCudaTensor *self = THCudaTensor_newContiguous(state, self_);
   ptrdiff_t size = THCudaTensor_nElement(state, self);
   float *data = THCudaTensor_data(state, self);
-
+  #ifdef CURAND_PATH
   hipLaunchKernel(HIP_KERNEL_NAME(generate_cauchy), dim3(NUM_BLOCKS), dim3(BLOCK_SIZE), 0, THCState_getCurrentStream(state), 
       gen->gen_states, size, data, median, sigma);
+  #endif
 
   THCudaTensor_freeCopyTo(state, self, self_);
 };
@@ -377,8 +405,9 @@ __global__ void renormRowsL1(hipLaunchParm lp, float* dist, long rows, long cols
     for (long col = hipThreadIdx_x; col < cols; col += hipBlockDim_x) {
       sum += dist[row * cols + col];
     }
-
+    #ifdef THRUST_PATH
     sum = reduceBlock(smem, hipBlockDim_x, sum, thrust::plus<float>(), 0.0f);
+    #endif
     if (hipThreadIdx_x == 0) {
       smem[0] = sum;
     }
@@ -429,7 +458,9 @@ sampleMultinomialOnce(hipLaunchParm lp, float* dest,
     }
 
     // hipThreadIdx_x == 0 has the sum value from this
+    #ifdef THRUST_PATH
     sum = reduceBlock(smem, hipBlockDim_x, sum, thrust::plus<float>(), 0.0f);
+    #endif
 
     // Broadcast sum and sample value
     if (hipThreadIdx_x == 0) {
@@ -525,7 +556,10 @@ sampleMultinomialWithReplacement(hipLaunchParm lp, curandStateMtgp32* state,
       int sample = sampleBase + hipThreadIdx_y;
 
       // All threads participate in this
-      float r = curand_uniform(&state[hipBlockIdx_x]);
+      float r = 0.0f;
+      #ifdef CURAND_PATH
+      r = curand_uniform(&state[hipBlockIdx_x]);
+      #endif 
 
       if (hipThreadIdx_x == 0 && sample < totalSamples) {
         // Find the bucket that a uniform sample lies in
@@ -565,7 +599,10 @@ sampleMultinomialWithoutReplacement(hipLaunchParm lp, curandStateMtgp32* state,
     long curDist = curDistBase + hipThreadIdx_y;
 
     // All threads must participate in this
-    float r = curand_uniform(&state[hipBlockIdx_x]);
+    float r = 0.0f;
+    #ifdef CURAND_PATH
+    r = curand_uniform(&state[hipBlockIdx_x]);
+    #endif
 
     if (hipThreadIdx_x == 0 && curDist < distributions) {
       // Find the bucket that a uniform sample lies in

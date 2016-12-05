@@ -94,13 +94,13 @@ template <typename K, typename V,
           int KeyDims, int ValueDims,
           typename Comparator, typename IndexType, int Power2SortSize>
 __global__ void
-bitonicSortKVInPlace(TensorInfo<K, IndexType> keys,
+bitonicSortKVInPlace(hipLaunchParm lp, TensorInfo<K, IndexType> keys,
                      IndexType keySlices,
                      IndexType keySliceSize,
                      IndexType keySliceStride,
                      TensorInfo<V, IndexType> values,
                      IndexType valueSliceStride,
-                     const Comparator& comp) {
+                     const Comparator comp) {
   // Find the slice of the tensor that we are sorting
   const IndexType linearIndex = getLinearBlockId<IndexType>();
   // Tiling the slices could have us be out of bounds, if there are a

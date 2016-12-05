@@ -121,15 +121,19 @@ THC_API void THCTensor_(sortKeyValueInplace)(THCState* state,
     int collapseValueDim = valueInfo.collapseDims(dim);
 
     if (keyInfo.isContiguous()) {
+#ifdef CUDA_PATH
       HANDLE_SORT_CASE(unsigned int, -2);
+#endif 
     } else {
       switch (keyInfo.dims) {
+#ifdef CUDA_PATH
         case 2:
           HANDLE_SORT_CASE(unsigned int, 2);
           break;
         default:
           HANDLE_SORT_CASE(unsigned int, -1);
           break;
+#endif
       }
     }
   } else {
@@ -144,7 +148,9 @@ THC_API void THCTensor_(sortKeyValueInplace)(THCState* state,
     int collapseValueDim = valueInfo.collapseDims(dim);
 
     // long case is rare, just instantiate the generic version
+#ifdef CUDA_PATH
     HANDLE_SORT_CASE(unsigned long, -1);
+#endif
   }
 #undef HANDLE_CASE
 #undef HANDLE_SORT_CASE
@@ -209,6 +215,7 @@ void sortViaThrust(THCState* state,
   THCTensor_(free)(state, trKeys);
   THCudaLongTensor_free(state, trIndices);
 
+#ifdef THRUST_PATH
   thrust::device_ptr<real> keyIter(THCTensor_(data)(state, trContigKey));
 
   // Since we are composing a global index across all segments rather
@@ -262,6 +269,7 @@ void sortViaThrust(THCState* state,
 #endif
     indexIter, indexIter + totalElements,
     GlobalIndexToPerSliceIndex(sliceSize));
+#endif
 
   // Reverse the transposition as needed
   if (dim != nDims - 1) {

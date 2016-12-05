@@ -141,7 +141,7 @@ int createSingleDeviceEvents(lua_State *L, THCState *state, int arg,
     int streamId = (int) lua_tonumber(L, -1);
     hipStream_t streamWaitingOn =
       THCState_getDeviceStream(state, device, streamId);
-    THCudaCheck(hipEventCreateWithFlags(&event[i], cudaEventDisableTiming));
+    THCudaCheck(hipEventCreateWithFlags(&event[i], hipEventDisableTiming));
     THCudaCheck(hipEventRecord(event[i], streamWaitingOn));
     lua_pop(L, 1);
     i++;

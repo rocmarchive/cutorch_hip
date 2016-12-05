@@ -5,12 +5,14 @@
 
 void THCStorage_(fill)(THCState *state, THCStorage *self, real value)
 {
+#ifdef THRUST_PATH
   thrust::device_ptr<real> self_data(self->data);
   thrust::fill(
 #if CUDA_VERSION >= 7000
     thrust::cuda::par.on(THCState_getCurrentStream(state)),
 #endif
     self_data, self_data+self->size, value);
+#endif
 }
 
 void THCStorage_(resize)(THCState *state, THCStorage *self, ptrdiff_t size)

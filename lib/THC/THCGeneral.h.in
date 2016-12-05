@@ -6,7 +6,9 @@
 #include "THCThreadLocal.h"
 #undef log1p
 #include "hip/hip_runtime_api.h"
-#include "cublas_v2.h"
+#ifdef CUBLAS_PATH
+  #include "cublas_v2.h"
+#endif
 
 #cmakedefine USE_MAGMA
 
@@ -53,7 +55,9 @@ typedef struct _THCDeviceAllocator {
 
 typedef struct _THCCudaResourcesPerDevice {
   THCStream** streams;
+#ifdef CUBLAS_PATH
   cublasHandle_t* blasHandles;
+#endif 
   /* Size of scratch space per each stream on this device available */
   size_t scratchSpacePerStream;
   /* Device-resident scratch space per stream, used for global memory
@@ -155,8 +159,10 @@ THC_API void THCState_setCurrentStreamIndex(THCState *state, int stream);
 THC_API void THCState_reserveBlasHandles(THCState* state, int numHandles);
 THC_API int THCState_getNumBlasHandles(THCState* state);
 
+#ifdef CUBLAS_PATH
 THC_API cublasHandle_t THCState_getDeviceBlasHandle(THCState *state, int device, int handle);
 THC_API cublasHandle_t THCState_getCurrentBlasHandle(THCState *state);
+#endif
 THC_API int THCState_getCurrentBlasHandleIndex(THCState *state);
 THC_API void THCState_setCurrentBlasHandleIndex(THCState *state, int handle);
 
@@ -170,7 +176,9 @@ THC_API size_t THCState_getDeviceScratchSpaceSize(THCState* state, int device);
 #define THCublasCheck(err)  __THCublasCheck(err,  __FILE__, __LINE__)
 
 THC_API void __THCudaCheck(hipError_t err, const char *file, const int line);
+#ifdef CUBLAS_PATH
 THC_API void __THCublasCheck(cublasStatus_t status, const char *file, const int line);
+#endif
 
 THC_API hipError_t THCudaMalloc(THCState *state, void **ptr, size_t size);
 THC_API hipError_t THCudaFree(THCState *state, void *ptr);

@@ -2,7 +2,7 @@
 #define THC_GENERIC_FILE "generic/THCTensor.cu"
 #include "hip/hip_runtime.h"
 #else
-
+#ifdef CUDA_TEXTURE
 cudaTextureObject_t THCTensor_(getTextureObject)(THCState *state, THCTensor *self)
 {
   THAssert(THCTensor_(checkGPU)(state, 1, self));
@@ -28,6 +28,7 @@ cudaTextureObject_t THCTensor_(getTextureObject)(THCState *state, THCTensor *sel
   }
   return texObj;
 }
+#endif
 
 THC_API int THCTensor_(getDevice)(THCState* state, const THCTensor* tensor) {
   if (!tensor->storage) return -1;

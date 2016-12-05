@@ -6,6 +6,7 @@ THC_API void
 THCTensor_(add)(THCState *state, THCTensor *self_, THCTensor *src_, real value)
 {
   THAssert(THCTensor_(checkGPU)(state, 2, self_, src_));
+#ifdef CUDA_PATH
   if (self_ == src_) {
     if (!THC_pointwiseApply1(state, self_, TensorAddConstantOp<real>(value))) {
       THArgCheck(false, 2, CUTORCH_DIM_WARNING);
@@ -17,6 +18,7 @@ THCTensor_(add)(THCState *state, THCTensor *self_, THCTensor *src_, real value)
       THArgCheck(false, 2, CUTORCH_DIM_WARNING);
     }
   }
+#endif
 
   THCudaCheck(hipGetLastError());
 }
@@ -26,17 +28,19 @@ THCTensor_(sub)(THCState *state, THCTensor *self_, THCTensor *src_, real value)
 {
   THAssert(THCTensor_(checkGPU)(state, 2, self_, src_));
   if (self_ == src_) {
+#ifdef CUDA_PATH
     if (!THC_pointwiseApply1(state, self_, TensorSubConstantOp<real>(value))) {
       THArgCheck(false, 2, CUTORCH_DIM_WARNING);
     }
+#endif
   } else {
     THCTensor_(resizeAs)(state, self_, src_);
-
+#ifdef CUDA_PATH
     if (!THC_pointwiseApply2(state, self_, src_, TensorSubConstantOp<real>(value))) {
       THArgCheck(false, 2, CUTORCH_DIM_WARNING);
     }
+#endif
   }
-
   THCudaCheck(hipGetLastError());
 }
 
@@ -44,6 +48,7 @@ THC_API void
 THCTensor_(mul)(THCState *state, THCTensor *self_, THCTensor *src_, real value)
 {
   THAssert(THCTensor_(checkGPU)(state, 2, self_, src_));
+#ifdef CUDA_PATH
   if (self_ == src_) {
     if (!THC_pointwiseApply1(state, self_, TensorMulConstantOp<real>(value))) {
       THArgCheck(false, 2, CUTORCH_DIM_WARNING);
@@ -55,7 +60,7 @@ THCTensor_(mul)(THCState *state, THCTensor *self_, THCTensor *src_, real value)
       THArgCheck(false, 2, CUTORCH_DIM_WARNING);
     }
   }
-
+#endif
   THCudaCheck(hipGetLastError());
 }
 
@@ -64,7 +69,7 @@ THCTensor_(div)(THCState* state, THCTensor *self_, THCTensor *src_, real value)
 {
   THAssert(THCTensor_(checkGPU)(state, 2, self_, src_));
   THArgCheck(value != ScalarConvert<int, real>::to(0), 3, "divide by zero");
-
+#ifdef CUDA_PATH
   if (self_ == src_) {
     if (!THC_pointwiseApply1(state, self_, TensorDivConstantOp<real>(value))) {
       THArgCheck(false, 2, CUTORCH_DIM_WARNING);
@@ -76,6 +81,7 @@ THCTensor_(div)(THCState* state, THCTensor *self_, THCTensor *src_, real value)
       THArgCheck(false, 2, CUTORCH_DIM_WARNING);
     }
   }
+#endif
 
   THCudaCheck(hipGetLastError());
 }

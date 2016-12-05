@@ -31,7 +31,7 @@ template <typename ModifyOp,
 __launch_bounds__(32 * 16, 4)
 #endif
 __global__ void
-kernelReduceNoncontigDim(TensorInfo<T, IndexType> out,
+kernelReduceNoncontigDim(hipLaunchParm lp, TensorInfo<T, IndexType> out,
                          TensorInfo<T, IndexType> in,
                          IndexType reductionStride,
                          IndexType reductionSize,
@@ -79,7 +79,7 @@ template <typename ModifyOp,
           typename IndexType,
           int ADims, int BDims>
 __global__ void
-kernelReduceContigDim(TensorInfo<T, IndexType> out,
+kernelReduceContigDim(hipLaunchParm lp, TensorInfo<T, IndexType> out,
                       TensorInfo<T, IndexType> in,
                       IndexType reductionSize,
                       IndexType totalSlices,
@@ -208,6 +208,7 @@ bool THC_reduceDim(THCState* state,
     block = getNoncontigReduceBlock();
   }
 
+#ifdef CUDA_PATH
   // Resize out to correspond to the reduced size
   THLongStorage* sizes = TensorUtils<TensorType>::newSizeOf(state, in);
   THLongStorage_set(sizes, dim, 1);
@@ -224,17 +225,17 @@ bool THC_reduceDim(THCState* state,
   // index can be similarly collapsed. That is what this unrolling is for.
 #define HANDLE_CASE(TYPE, OUT, IN)                                      \
   if (contigReduction) {                                                \
-    kernelReduceContigDim<ModifyOp, ReduceOp,                           \
+    hipLaunchKernel(HIP_KERNEL_NAME(kernelReduceContigDim<ModifyOp, ReduceOp,                           \
                           typename TensorUtils<TensorType>::DataType,   \
-                          TYPE, OUT, IN>                                \
-      <<<grid, block, smemSize, THCState_getCurrentStream(state)>>>(    \
+                          TYPE, OUT, IN>),                                \
+        grid, block, smemSize, THCState_getCurrentStream(state),    \
         outInfo, inInfo, reductionSize,                                 \
         (TYPE) outElements, init, modifyOp, reduceOp);                  \
   } else {                                                              \
-    kernelReduceNoncontigDim<ModifyOp, ReduceOp,                        \
+    hipLaunchKernel(HIP_KERNEL_NAME(kernelReduceNoncontigDim<ModifyOp, ReduceOp,                        \
                              typename TensorUtils<TensorType>::DataType, \
-                             TYPE, OUT, IN>                             \
-      <<<grid, block, 0, THCState_getCurrentStream(state)>>>(           \
+                             TYPE, OUT, IN>),                             \
+        grid, block, 0, THCState_getCurrentStream(state),          \
         outInfo, inInfo, reductionStride, reductionSize,                \
         (TYPE) outElements, init, modifyOp, reduceOp);                  \
   }                                                                     \
@@ -276,6 +277,12 @@ bool THC_reduceDim(THCState* state,
       }                                                \
     }                                                  \
   }
+
+#else
+    #define HANDLE_CASE(TYPE, OUT, IN)
+    #define HANDLE_IN_CASE(TYPE, OUT, IN)
+    #define HANDLE_OUT_CASE(TYPE, OUT, IN)
+#endif 
 
   if (TensorUtils<TensorType>::canUse32BitIndexMath(state, out) &&
       TensorUtils<TensorType>::canUse32BitIndexMath(state, in)) {
@@ -320,5 +327,4 @@ bool THC_reduceDim(THCState* state,
 }
 
 #undef THC_NONCONTIG_REDUCE_BLOCK_SIZE
-
 #endif // THC_REDUCE_INC

@@ -7,10 +7,12 @@
 #include "THCTensorCopy.h"
 #include "THCTensorTypeUtils.cuh"
 
+#ifdef THRUST_PATH
 #include <thrust/device_ptr.h>
 #include <thrust/sort.h>
 #if CUDA_VERSION >= 7000
 #include <thrust/system/cuda/execution_policy.h>
+#endif
 #endif
 
 template <typename T>
@@ -33,7 +35,7 @@ struct ThrustLTOp {
 // `sliceSize - 1`.
 template <typename IndexType, int Dim>
 __global__ void
-fillSliceWithIndex(TensorInfo<long, IndexType> out,
+fillSliceWithIndex(hipLaunchParm lp, TensorInfo<long, IndexType> out,
                    IndexType totalSlices,
                    IndexType sliceSize,
                    IndexType sliceStride) {
