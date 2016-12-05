@@ -36,7 +36,12 @@ SET(luasrc init.lua Tensor.lua FFI.lua test/test.lua)
 
 ADD_TORCH_WRAP(cudatensormathwrap TensorMath.lua)
 ADD_TORCH_PACKAGE(cutorch "${src}" "${luasrc}")
+
+IF(${PLATFORM} MATCHES "hcc")
 TARGET_LINK_LIBRARIES(cutorch luaT THC hip_hcc)
+ELSEIF(${PLATFORM} MATCHES "nvcc")
+TARGET_LINK_LIBRARIES(cutorch luaT THC)
+ENDIF() 
 
 IF(LUALIB)
   TARGET_LINK_LIBRARIES(cutorch ${LUALIB})
