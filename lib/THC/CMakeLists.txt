@@ -16,7 +16,6 @@ IF (${PLATFORM} MATCHES "nvcc")
   ENDIF()
 ENDIF() # PLATFORM MATCHES
 
-FIND_PACKAGE(HIP 1.0 REQUIRED)
 EXECUTE_PROCESS(COMMAND $ENV{HIP_PATH}/bin/hipconfig --cpp_config OUTPUT_VARIABLE HIP_CXX_FLAGS)
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
@@ -42,6 +41,7 @@ endif()
 
 
 INCLUDE_DIRECTORIES(${CUDA_INCLUDE_DIRS})
+INCLUDE_DIRECTORIES($ENV{HIP_THRUST_PATH})
 INCLUDE_DIRECTORIES("${CUDA_SDK_ROOT_DIR}/common/inc")
 
 IF(MAGMA_FOUND)
@@ -70,27 +70,6 @@ IF ($ENV{TH_BINARY_BUILD})
   MESSAGE(STATUS "TH_BINARY_BUILD detected. Statically linking libstdc++")
   SET(CMAKE_CXX_FLAGS "-static-libstdc++ ${CMAKE_CXX_FLAGS}")
 ENDIF()
-
-IF(APPLE)
-  IF(${CUDA_VERSION} LESS 6.0)
-    # work around for mac os x bug:
-    # http://stackoverflow.com/questions/16286588/cuda-5-0-cmake-and-make-failing-on-osx-10-8-3
-    if (NOT DEFINED CUDA_HOST_COMPILER AND CMAKE_C_COMPILER_ID STREQUAL "Clang" AND EXISTS /usr/bin/gcc)
-      set(CUDA_HOST_COMPILER /usr/bin/gcc CACHE FILEPATH "Host side compiler used by NVCC")
-      message(STATUS "Setting CMAKE_HOST_COMPILER to /usr/bin/gcc instead of ${CMAKE_C_COMPILER}.")
-    endif()
-
-    # bug on Apple
-    LINK_DIRECTORIES("/usr/local/cuda/lib/")
-  ELSEIF(${CUDA_VERSION} LESS 7.0)
-    SET(CUDA_HOST_COMPILER clang)
-    LIST(APPEND CUDA_NVCC_FLAGS "-Xcompiler -stdlib=libstdc++ -Xlinker -stdlib=libstdc++")
-    IF("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libstdc++")
-    ENDIF()
-  ENDIF()
-  # CUDA 7 supports clang and libc++ so no need to change anything
-ENDIF(APPLE)
 
 # Detect CUDA architecture and get best NVCC flags
 IF(NOT COMMAND CUDA_SELECT_NVCC_ARCH_FLAGS)
