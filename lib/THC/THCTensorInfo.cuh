@@ -1,7 +1,7 @@
 #ifndef THC_TENSOR_INFO_INC
 #define THC_TENSOR_INFO_INC
 
-#include <cuda.h>
+#include <hip/hip_runtime.h>
 #include <assert.h>
 #include "THCGeneral.h"
 #include "THCTensor.h"
@@ -18,10 +18,22 @@
 // CUDA kernel argument that defines tensor layout
 template <typename T, typename IndexType>
 struct TensorInfo {
+  __host__ __device__
+  TensorInfo() : data{nullptr}, dims{0} {}
+  __host__ __device__
+  TensorInfo(const TensorInfo& x)
+    : data{x.data}, dims{x.dims}
+  {
+    for (auto i = 0; i != MAX_CUTORCH_DIMS; ++i) sizes[i] = x.sizes[i];
+    for (auto i = 0; i != MAX_CUTORCH_DIMS; ++i) strides[i] = x.strides[i];
+  }
+  __host__ __device__
+  TensorInfo(TensorInfo&&) = default;
+
   TensorInfo(T* p,
              int dim,
-             IndexType sz[MAX_CUTORCH_DIMS],
-             IndexType st[MAX_CUTORCH_DIMS]);
+             const IndexType (&sz)[MAX_CUTORCH_DIMS],
+             const IndexType (&st)[MAX_CUTORCH_DIMS]);
 
   // Set the size of the given dimension to 1, as if it were a
   // reduction dim (allows you to calculate offsets of the reduction
@@ -50,10 +62,11 @@ struct TensorInfo {
 };
 
 template <typename T, typename IndexType>
+inline
 TensorInfo<T, IndexType>::TensorInfo(T* p,
                                      int dim,
-                                     IndexType sz[MAX_CUTORCH_DIMS],
-                                     IndexType st[MAX_CUTORCH_DIMS]) {
+                                     const IndexType (&sz)[MAX_CUTORCH_DIMS],
+                                     const IndexType (&st)[MAX_CUTORCH_DIMS]) {
   data = p;
   dims = dim;
   assert(dims > 0 && dims < MAX_CUTORCH_DIMS);
@@ -65,6 +78,7 @@ TensorInfo<T, IndexType>::TensorInfo(T* p,
 }
 
 template <typename T, typename IndexType>
+inline
 void
 TensorInfo<T, IndexType>::reduceDim(int dim) {
   assert(dim < dims && dim >= 0);

@@ -110,7 +110,7 @@ static inline  __device__ void atomicAdd(half *address, half val) {
 }
 #endif
 
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ < 600
+//#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ < 600
 // from CUDA C Programmic Guide
 static inline  __device__  void atomicAdd(double *address, double val) {
   unsigned long long int* address_as_ull = (unsigned long long int*)address;
@@ -119,13 +119,16 @@ static inline  __device__  void atomicAdd(double *address, double val) {
 
   do {
     assumed = old;
-    old = atomicCAS(address_as_ull, assumed,
-                    __double_as_longlong(val +
-                    __longlong_as_double(assumed)));
+//    old = atomicCAS(address_as_ull, assumed,
+//                    __double_as_longlong(val +
+//                    __longlong_as_double(assumed)));
+      old = atomicCAS(address_as_ull,
+                      assumed,
+                      (unsigned long long)(val + (double)(assumed)));
 
     // Note: uses integer comparison to avoid hang in case of NaN (since NaN != NaN)
   } while (assumed != old);
 }
-#endif
+//#endif
 
 #endif // THC_ATOMICS_INC

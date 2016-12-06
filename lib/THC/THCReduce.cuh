@@ -1,7 +1,5 @@
-#include "hip/hip_runtime.h"
 #ifndef THC_REDUCE_INC
 #define THC_REDUCE_INC
-
 //
 // This file contains dimension reduction operation functions and
 // kernels that work on both contiguous and non-contiguous tensor
@@ -11,6 +9,8 @@
 
 #include "THCTensorTypeUtils.cuh"
 #include "THCReduceApplyUtils.cuh"
+
+#include <hip/hip_runtime.h>
 
 // Threads per thread block
 #define THC_NONCONTIG_REDUCE_BLOCK_SIZE 32 * 16
@@ -30,15 +30,19 @@ template <typename ModifyOp,
 #if __CUDA_ARCH__ >= 350
 __launch_bounds__(32 * 16, 4)
 #endif
-__global__ void
-kernelReduceNoncontigDim(TensorInfo<T, IndexType> out,
+__global__
+inline
+void
+kernelReduceNoncontigDim(hipLaunchParm lp,
+                         TensorInfo<T, IndexType> out,
                          TensorInfo<T, IndexType> in,
                          IndexType reductionStride,
                          IndexType reductionSize,
                          IndexType totalSlices,
                          T init,
                          ModifyOp modifyOp,
-                         ReduceOp reduceOp) {
+                         ReduceOp reduceOp)
+{
   const IndexType sliceIndex = getReduceNoncontigDimSliceIndex<IndexType>();
 
   if (sliceIndex >= totalSlices) {
@@ -78,14 +82,18 @@ template <typename ModifyOp,
           typename T,
           typename IndexType,
           int ADims, int BDims>
-__global__ void
-kernelReduceContigDim(TensorInfo<T, IndexType> out,
+__global__
+inline
+void
+kernelReduceContigDim(hipLaunchParm lp,
+                      TensorInfo<T, IndexType> out,
                       TensorInfo<T, IndexType> in,
                       IndexType reductionSize,
                       IndexType totalSlices,
                       T init,
                       ModifyOp modifyOp,
-                      ReduceOp reduceOp) {
+                      ReduceOp reduceOp)
+{
   const IndexType sliceIndex = getReduceContigDimSliceIndex<IndexType>();
 
   if (sliceIndex >= totalSlices) {
@@ -110,9 +118,9 @@ kernelReduceContigDim(TensorInfo<T, IndexType> out,
 
   // Reduce within the block
   // FIXME: extern name
-  HIP_DYNAMIC_SHARED( char, smemChar)
+  HIP_DYNAMIC_SHARED(char, smemChar)
   T* smem = (T*) smemChar;
-  r = reduceBlock<T, ReduceOp>(smem, hipBlockDim_x, r, reduceOp, init);
+  r = reduceBlock(smem, hipBlockDim_x, r, reduceOp, init);
 
   if (hipThreadIdx_x == 0) {
     // Write out reduced value
@@ -124,7 +132,8 @@ inline dim3 getNoncontigReduceBlock() {
   return dim3(THC_NONCONTIG_REDUCE_BLOCK_SIZE);
 }
 
-inline dim3 getContigReduceBlock(ptrdiff_t numSlices, long reductionSize) {
+inline dim3 getContigReduceBlock(ptrdiff_t numSlices, long reductionSize)
+{
   // If the number of slices is low but the reduction dimension size
   // is high, then we should increase block size for greater parallelism.
   // Aim for at least 32 warps per SM (assume 15 SMs; don't bother
@@ -222,22 +231,42 @@ bool THC_reduceDim(THCState* state,
   // (or vice versa), the contiguous tensor can be collapsed to one
   // dimension, and the loop to translate the linear index to the array
   // index can be similarly collapsed. That is what this unrolling is for.
-#define HANDLE_CASE(TYPE, OUT, IN)                                      \
-  if (contigReduction) {                                                \
-    kernelReduceContigDim<ModifyOp, ReduceOp,                           \
-                          typename TensorUtils<TensorType>::DataType,   \
-                          TYPE, OUT, IN>                                \
-      <<<grid, block, smemSize, THCState_getCurrentStream(state)>>>(    \
-        outInfo, inInfo, reductionSize,                                 \
-        (TYPE) outElements, init, modifyOp, reduceOp);                  \
-  } else {                                                              \
-    kernelReduceNoncontigDim<ModifyOp, ReduceOp,                        \
-                             typename TensorUtils<TensorType>::DataType, \
-                             TYPE, OUT, IN>                             \
-      <<<grid, block, 0, THCState_getCurrentStream(state)>>>(           \
-        outInfo, inInfo, reductionStride, reductionSize,                \
-        (TYPE) outElements, init, modifyOp, reduceOp);                  \
-  }                                                                     \
+#define HANDLE_CASE(TYPE, OUT, IN)                                                                       \
+  if (contigReduction) {                                                                                 \
+    hipLaunchKernel(HIP_KERNEL_NAME(kernelReduceContigDim<ModifyOp, ReduceOp,                            \
+                                                          typename TensorUtils<TensorType>::DataType,    \
+                                                          TYPE, OUT, IN>),                               \
+                    dim3{grid},                                                                          \
+                    dim3{block},                                                                         \
+                    smemSize,                                                                            \
+                    THCState_getCurrentStream(state),                                                    \
+                    outInfo,                                                                             \
+                    inInfo,                                                                              \
+                    reductionSize,                                                                       \
+                    (TYPE) outElements,                                                                  \
+                    init,                                                                                \
+                    modifyOp,                                                                            \
+                    reduceOp);                                                                           \
+  } else {                                                                                               \
+    hipLaunchKernel(HIP_KERNEL_NAME(kernelReduceNoncontigDim<ModifyOp,                                   \
+                                                             ReduceOp,                                   \
+                                                             typename TensorUtils<TensorType>::DataType, \
+                                                             TYPE,                                       \
+                                                             OUT,                                        \
+                                                             IN>),                                       \
+                    dim3{grid},                                                                          \
+                    dim3{block},                                                                         \
+                    0,                                                                                   \
+                    THCState_getCurrentStream(state),                                                    \
+                    outInfo,                                                                             \
+                    inInfo,                                                                              \
+                    reductionStride,                                                                     \
+                    reductionSize,                                                                       \
+                    (TYPE) outElements,                                                                  \
+                    init,                                                                                \
+                    modifyOp,                                                                            \
+                    reduceOp);                                                                           \
+  }
 
 #define HANDLE_IN_CASE(TYPE, OUT, IN)                     \
   {                                                       \

@@ -3,6 +3,9 @@
 
 #include "THCGeneral.h"
 
+#include <hip/hip_runtime_api.h>
+#include <hip/hip_fp16.h>
+
 /* We compile with CudaHalfTensor support if we have this: */
 #if CUDA_VERSION >= 7050 || CUDA_HAS_FP16
 #define CUDA_HALF_TENSOR 1
@@ -10,7 +13,6 @@
 
 #ifdef CUDA_HALF_TENSOR
 
-#include <cuda_fp16.h>
 #include <stdint.h>
 
 THC_EXTERNC void THCFloat2Half(THCState *state, half *out, float *in, ptrdiff_t len);

@@ -114,9 +114,9 @@ wrap.types[typename] = {
 
    check = function(arg, idx)
       if arg.dim then
-         return string.format('(arg%d = luaT_toudata(L, %d, "torch.%s")) && (arg%d->nDimension == %d)', arg.i, idx, typename, arg.i, arg.dim)
+         return string.format('(arg%d = (decltype(arg%d))luaT_toudata(L, %d, "torch.%s")) && (arg%d->nDimension == %d)', arg.i, arg.i, idx, typename, arg.i, arg.dim)
       else
-         return string.format('(arg%d = luaT_toudata(L, %d, "torch.%s"))', arg.i, idx, typename)
+         return string.format('(arg%d = (decltype(arg%d))luaT_toudata(L, %d, "torch.%s"))', arg.i, arg.i, idx, typename)
       end
    end,
 
@@ -217,7 +217,7 @@ wrap.types[typename .. 'Array'] = {
              table.insert(txt, string.format('arg%d_data = (TH%s**)THAlloc(arg%d_size * sizeof(TH%s*));', arg.i, typename, arg.i, typename))
              table.insert(txt, string.format('for (arg%d_i = arg%d_size - 1; arg%d_i >= 0; arg%d_i--)', arg.i, arg.i, arg.i, arg.i))
              table.insert(txt, string.format('{'))
-             table.insert(txt, string.format('  if (!(arg%d_data[arg%d_i] = luaT_toudata(L, -1, "torch.%s")))', arg.i, arg.i, typename))
+             table.insert(txt, string.format('  if (!(arg%d_data[arg%d_i] = (TH%s*)luaT_toudata(L, -1, "torch.%s")))', arg.i, arg.i, typename, typename))
              table.insert(txt, string.format('    luaL_error(L, "expected %s in tensor array");', typename))
              table.insert(txt, string.format('  lua_pop(L, 1);'))
              table.insert(txt, string.format('}'))
@@ -430,7 +430,7 @@ cutorch_state_code = function(varname)
   local txt = {}
   table.insert(txt, 'lua_getglobal(L, "cutorch");')
   table.insert(txt, 'lua_getfield(L, -1, "_state");')
-  table.insert(txt, string.format('THCState *%s = lua_touserdata(L, -1);', varname))
+  table.insert(txt, string.format('THCState *%s = (THCState*)lua_touserdata(L, -1);', varname))
   table.insert(txt, 'lua_pop(L, 2);')
   return table.concat(txt, '\n');
 end
@@ -478,7 +478,7 @@ local function TensorToCudaLong_declare(dummy)
       end
 end
 local function TensorToCudaLong_check(arg, idx)
-   return string.format('(dummyIndexTensor = luaT_toudata(L, %d, "torch.%s"))', idx, Tensor)
+   return string.format('(dummyIndexTensor = (decltype(dummyIndexTensor))luaT_toudata(L, %d, "torch.%s"))', idx, Tensor)
 end
 local function TensorToCudaLong_read(arg, idx)
    local copyname = Tensor:match("(%a+)Tensor")
@@ -1846,4 +1846,5 @@ void cutorch_%sMath_init(lua_State *L)
 }
 ]], Tensor, Tensor, Tensor, Tensor))
 
-interface:tofile(arg[1])
+--[[This is a temporary workaround intended to get HCC compilation working]]
+interface:tofile(string.gsub(arg[1], "TensorMath.c", "TensorMath.cpp"))

@@ -1,4 +1,4 @@
-#include "hip/hip_runtime.h"
+#pragma once
 #ifndef THC_TENSORSORT_CUH
 #define THC_TENSORSORT_CUH
 
@@ -7,11 +7,8 @@
 #include "THCTensorCopy.h"
 #include "THCTensorTypeUtils.cuh"
 
-#include <thrust/device_ptr.h>
-#include <thrust/sort.h>
-#if CUDA_VERSION >= 7000
-#include <thrust/system/cuda/execution_policy.h>
-#endif
+#include <hip/hip_runtime.h>
+#include <bolt/amp/sort.h>
 
 template <typename T>
 struct ThrustGTOp {
@@ -32,8 +29,11 @@ struct ThrustLTOp {
 // (sliceSize - 1) * sliceStride, we fill that slice from `0` to
 // `sliceSize - 1`.
 template <typename IndexType, int Dim>
-__global__ void
-fillSliceWithIndex(TensorInfo<long, IndexType> out,
+__global__
+inline
+void
+fillSliceWithIndex(hipLaunchParm lp,
+                   TensorInfo<long, IndexType> out,
                    IndexType totalSlices,
                    IndexType sliceSize,
                    IndexType sliceStride) {
@@ -56,7 +56,9 @@ fillSliceWithIndex(TensorInfo<long, IndexType> out,
 // For slice sorting in Thrust; extracts a slice index from a linear
 // index and uses that for comparison
 struct SliceComp {
-  SliceComp(long size) : sliceSize(size) {}
+  explicit
+  __host__ __device__
+  SliceComp(long size) : sliceSize{size} {}
 
   __device__ bool operator()(const long& a, const long& b) const {
     // Since the slices are guaranteed to be innermost, the segment is
@@ -71,13 +73,15 @@ struct SliceComp {
 
 // For sorting in Thurst; extracts a within-slice index from a linear index
 struct GlobalIndexToPerSliceIndex {
-  GlobalIndexToPerSliceIndex(long size) : sliceSize(size) {}
+  __host__ __device__
+  explicit
+  GlobalIndexToPerSliceIndex(long size) : sliceSize{size} {}
 
   __device__ inline void operator()(long& v) const {
     v = v % sliceSize + TH_INDEX_BASE;
   }
 
-  const long sliceSize;
+  long sliceSize;
 };
 
 unsigned long nextHighestPowerOf2(unsigned long n);

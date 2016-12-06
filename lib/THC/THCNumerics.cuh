@@ -1,9 +1,10 @@
 #ifndef THC_NUMERICS_INC
 #define THC_NUMERICS_INC
 
-#include <cuda.h>
-#include <limits.h>
 #include "THCHalf.h"
+
+#include <hip/hip_runtime.h>
+#include <limits.h>
 
 /// Class for numeric limits of the particular data type, which
 /// includes support for `half`.
@@ -86,7 +87,7 @@ struct THCNumerics<int> {
   static inline __host__ __device__  int mul(int a, int b) { return a * b; }
   static inline __host__ __device__  int sub(int a, int b) { return a - b; }
   static inline __host__ __device__  int div(int a, int b) { return a / b; }
-  static inline __host__ __device__  int abs(int a) { return ::abs(a); }
+  static inline __host__ __device__  int abs(int a) { return fabs(a); }
 };
 
 template <>
@@ -105,7 +106,7 @@ struct THCNumerics<long> {
   static inline __host__ __device__  long mul(long a, long b) { return a * b; }
   static inline __host__ __device__  long sub(long a, long b) { return a - b; }
   static inline __host__ __device__  long div(long a, long b) { return a / b; };
-  static inline __host__ __device__  long abs(long a) { return labs(a); }
+  static inline __host__ __device__  long abs(long a) { return fabs(a); }
 };
 
 #ifdef CUDA_HALF_TENSOR
@@ -567,7 +568,7 @@ struct THCNumerics<double> {
   static inline __host__ __device__  double ceil (double a) { return  ::ceil(a); }
   static inline __host__ __device__  double floor(double a) { return ::floor(a); }
   static inline __host__ __device__  double trunc(double a) { return ::trunc(a); }
-  static inline __host__ __device__  double neg  (double a) { return       -a; }
+  static inline __host__ __device__  double neg  (double a) { return         -a; }
   static inline __host__ __device__  double acos (double a) { return  ::acos(a); }
   static inline __host__ __device__  double cosh (double a) { return  ::cosh(a); }
   static inline __host__ __device__  double acosh(double a) { return ::acosh(a); }
@@ -577,7 +578,7 @@ struct THCNumerics<double> {
   static inline __host__ __device__  double tan  (double a) { return   ::tan(a); }
   static inline __host__ __device__  double atan (double a) { return  ::atan(a); }
   static inline __host__ __device__  double tanh (double a) { return  ::tanh(a); }
-  static inline __host__ __device__  double abs  (double a) { return   ::abs(a); }
+  static inline __host__ __device__  double abs  (double a) { return  ::fabs(a); }
   static inline __host__ __device__  double round(double a) { return ::round(a); }
   static inline __host__ __device__  double frac (double a) { return a - ::trunc(a); }
   static inline __host__ __device__  double cinv (double a) { return 1.0 / a; }

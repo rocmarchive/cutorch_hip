@@ -29,10 +29,12 @@
  *     but can be set to 0 to allow arbitrary kernel sizes
  */
 template <bool swapkernel, int T_kernel_h, int T_kernel_w>
-  __global__ void conv2generic(hipLaunchParm lp, float *input, float *kernel, float *output,
-                               int input_n, int input_h, int input_w,
-                               int kernel_n, int kernel_h, int kernel_w,
-                               int stride_h, int stride_w)
+  __global__
+  inline
+  void conv2generic(hipLaunchParm lp, float *input, float *kernel, float *output,
+                    int input_n, int input_h, int input_w,
+                    int kernel_n, int kernel_h, int kernel_w,
+                    int stride_h, int stride_w)
 {
   // output dimensions
   int output_h = (input_h - kernel_h) / stride_h + 1;
@@ -195,10 +197,12 @@ template <bool swapkernel, int T_kernel_h, int T_kernel_w>
  *   - all chunks of data should be contiguous
  *   - the swapkernel flag can be used to generate a conv2 instead of xcorr2
  */
-__global__ void conv2genericrev(hipLaunchParm lp, float *input, float *kernel, float *output,
-                                int input_n, int input_h, int input_w,
-                                int kernel_n, int kernel_h, int kernel_w,
-                                float alpha, int stride_h, int stride_w)
+__global__
+inline
+void conv2genericrev(hipLaunchParm lp, float *input, float *kernel, float *output,
+                     int input_n, int input_h, int input_w,
+                     int kernel_n, int kernel_h, int kernel_w,
+                     float alpha, int stride_h, int stride_w)
 {
   // output dimensions
   int output_h = input_h - (kernel_h - 1) * stride_h;
@@ -595,7 +599,7 @@ THC_API void THCudaTensor_conv2DRevger(THCState *state, THCudaTensor *output, fl
   dim3 threads(128/nOutputRows, nOutputRows);
 
   // compute rev conv
-  hipLaunchKernel(HIP_KERNEL_NAME(conv2genericrev), dim3(blocks), dim3(threads), 0, THCState_getCurrentStream(state), 
+  hipLaunchKernel(HIP_KERNEL_NAME(conv2genericrev), dim3(blocks), dim3(threads), 0, THCState_getCurrentStream(state),
     input_data, kernel_data, output_data,
     nInputPlane, nInputRows, nInputCols,
     nKernelPlane, nKernelRows, nKernelCols,
@@ -674,7 +678,7 @@ THC_API void THCudaTensor_conv2DRevgerm(THCState *state, THCudaTensor *output, f
     dim3 threads(cst, nOutputRows, subbatch);
 
     // compute rev conv
-    hipLaunchKernel(HIP_KERNEL_NAME(conv2genericrev), dim3(blocks), dim3(threads), 0, THCState_getCurrentStream(state), 
+    hipLaunchKernel(HIP_KERNEL_NAME(conv2genericrev), dim3(blocks), dim3(threads), 0, THCState_getCurrentStream(state),
       input_data + input->stride[0]*sl,
       kernel_data + kernel->stride[0]*sl,
       output_data,
@@ -710,11 +714,13 @@ THC_API void THCudaTensor_conv2DRevgerm(THCState *state, THCudaTensor *output, f
  *   ---- should have a fanin set of inputs contiguously
  */
 template <bool swapkernel, int T_kernel_h, int T_kernel_w>
-  __global__ void conv2mapgeneric(hipLaunchParm lp, float *input, float *kernel, float *output,
-                                  int input_n, int input_h, int input_w,
-                                  int kernel_n, int kernel_h, int kernel_w,
-                                  int stride_w, int stride_h,
-                                  float *table, int fanin)
+  __global__
+  inline
+  void conv2mapgeneric(hipLaunchParm lp, float *input, float *kernel, float *output,
+                       int input_n, int input_h, int input_w,
+                       int kernel_n, int kernel_h, int kernel_w,
+                       int stride_w, int stride_h,
+                       float *table, int fanin)
 {
   // output dimensions
   int output_h = (input_h - kernel_h) / stride_h + 1;

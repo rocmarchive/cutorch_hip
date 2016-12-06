@@ -40,10 +40,16 @@ void THCudaLongTensor_fillSliceWithIndex(THCState* state,
 
   dim3 block(numThreads);
 
-#define FILL_INDEX(T, DIM)                                       \
-  fillSliceWithIndex<T, DIM>                                     \
-    <<<grid, block, 0, THCState_getCurrentStream(state)>>>(      \
-      info, numSlices, sliceSize, info.strides[collapseDim])
+#define FILL_INDEX(T, DIM)                                                      \
+  hipLaunchKernel(HIP_KERNEL_NAME(fillSliceWithIndex<T, DIM>),                  \
+                  dim3{grid},                                                   \
+                  dim3{block},                                                  \
+                  0,                                                            \
+                  THCState_getCurrentStream(state),                             \
+                  info,                                                         \
+                  numSlices,                                                    \
+                  sliceSize,                                                    \
+                  info.strides[collapseDim])
 
   if (TensorUtils<THCudaLongTensor>::canUse32BitIndexMath(state, t)) {
     TensorInfo<long, unsigned int> info =

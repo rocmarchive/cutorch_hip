@@ -434,7 +434,9 @@ void THCudaTensor_getri(THCState *state, THCudaTensor *ra_, THCudaTensor *a)
 }
 
 
-__global__ void THCudaTensor_copyUpperSymmetric(hipLaunchParm lp, float *input, int n, int len)
+__global__
+inline
+void THCudaTensor_copyUpperSymmetric(hipLaunchParm lp, float *input, int n, int len)
 {
   for (int idx = hipThreadIdx_x + hipBlockIdx_x * hipBlockDim_x; idx < len; idx += 65535) {
     const int r = idx % n;

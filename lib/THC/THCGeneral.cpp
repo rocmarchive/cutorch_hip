@@ -5,6 +5,7 @@
 #include "THCAllocator.h"
 #include "THCThreadLocal.h"
 #include "THCStream.h"
+
 #include <stdlib.h>
 #include <stdint.h>
 
@@ -27,12 +28,12 @@ void THCState_free(THCState* state)
   free(state);
 }
 
-static hipError_t cudaMallocWrapper(void* ctx, void** devPtr, size_t size, hipStream_t stream)
+static hipError_t cudaMallocWrapper(void* /*ctx*/, void** devPtr, size_t size, hipStream_t /*stream*/)
 {
   return hipMalloc(devPtr, size);
 }
 
-static hipError_t cudaFreeWrapper(void* ctx, void* devPtr)
+static hipError_t cudaFreeWrapper(void* /*ctx*/, void* devPtr)
 {
   return hipFree(devPtr);
 }
@@ -145,7 +146,7 @@ void THCudaShutdown(THCState* state)
     }
     /* Free Torch-defined handles (0 is NULL for consistency with streams API) */
     for (int handle = 1; handle <= state->numUserBlasHandles; ++handle) {
-      THCublasCheck(cublasDestroy(
+      THCublasCheck(hipblasDestroy(
                       THCState_getDeviceBlasHandle(state, dev, handle)));
     }
     /* Free per-stream scratch space; starts at 0 because there is space for
@@ -344,7 +345,7 @@ void THCState_reserveStreams(THCState* state, int numStreams, int nonBlocking)
     size_t scratchSpaceSize = THCState_getDeviceScratchSpaceSize(state, dev);
     // TODO: HIP Equivalent for below line of code hipStreamNonBlocking and hipStreamDefault
     unsigned int flags =
-      nonBlocking ? cudaStreamNonBlocking : cudaStreamDefault;
+      nonBlocking ? hipStreamNonBlocking : hipStreamDefault;
 
     for (int stream = state->numUserStreams + 1; stream <= numStreams; ++stream) {
       newStreams[stream] = THCStream_new(flags);
@@ -376,8 +377,8 @@ void THCState_reserveBlasHandles(THCState* state, int numBlasHandles)
     THCudaCheck(hipSetDevice(dev));
 
     /* +1 to be consistent with stream API, blas handle 0 is NULL and unused */
-    cublasHandle_t* newBlasHandles =
-      (cublasHandle_t*) malloc((numBlasHandles + 1) * sizeof(cublasHandle_t));
+    hipblasHandle_t* newBlasHandles =
+      (hipblasHandle_t*) malloc((numBlasHandles + 1) * sizeof(hipblasHandle_t));
 
     /* Copy over old blasHandles
        (0 is NULL, 1 ... numUserBlasHandles are rest) */
@@ -389,7 +390,7 @@ void THCState_reserveBlasHandles(THCState* state, int numBlasHandles)
     /* Allocate new handles */
     for (int hndl = state->numUserBlasHandles + 1; hndl <= numBlasHandles; ++hndl) {
       newBlasHandles[hndl] = NULL;
-      THCublasCheck(cublasCreate(newBlasHandles + hndl));
+      THCublasCheck(hipblasCreate(newBlasHandles + hndl));
     }
 
     THCCudaResourcesPerDevice* res = THCState_getDeviceResourcePtr(state, dev);
@@ -435,7 +436,7 @@ hipStream_t THCState_getDeviceStream(THCState *state, int device, int streamInde
   return stream ? stream->stream : NULL;
 }
 
-cublasHandle_t THCState_getDeviceBlasHandle(THCState *state, int device, int handle)
+hipblasHandle_t THCState_getDeviceBlasHandle(THCState *state, int device, int handle)
 {
   if (handle <= 0 || handle > state->numUserBlasHandles)
   {
@@ -485,7 +486,7 @@ hipStream_t THCState_getCurrentStream(THCState *state)
   }
 }
 
-cublasHandle_t THCState_getCurrentBlasHandle(THCState *state)
+hipblasHandle_t THCState_getCurrentBlasHandle(THCState *state)
 {
   /* This is called at the point of kernel execution.
      For some debugging code or improperly instrumented kernels,
@@ -626,39 +627,39 @@ void __THCudaCheck(hipError_t err, const char *file, const int line)
   }
 }
 
-void __THCublasCheck(cublasStatus_t status, const char *file, const int line)
+void __THCublasCheck(hipblasStatus_t status, const char *file, const int line)
 {
-  if(status != CUBLAS_STATUS_SUCCESS)
+  if(status != HIPBLAS_STATUS_SUCCESS)
   {
     const char* errmsg = NULL;
 
     switch(status)
     {
-      case CUBLAS_STATUS_NOT_INITIALIZED:
+      case HIPBLAS_STATUS_NOT_INITIALIZED:
         errmsg = "library not initialized";
         break;
 
-      case CUBLAS_STATUS_ALLOC_FAILED:
+      case HIPBLAS_STATUS_ALLOC_FAILED:
         errmsg = "resource allocation failed";
         break;
 
-      case CUBLAS_STATUS_INVALID_VALUE:
+      case HIPBLAS_STATUS_INVALID_VALUE:
         errmsg = "an invalid numeric value was used as an argument";
         break;
+  // TODO: hipBlas does not support this.
+  //    case CUBLAS_STATUS_ARCH_MISMATCH:
+  //      errmsg = "an absent device architectural feature is required";
+  //      break;
 
-      case CUBLAS_STATUS_ARCH_MISMATCH:
-        errmsg = "an absent device architectural feature is required";
-        break;
-
-      case CUBLAS_STATUS_MAPPING_ERROR:
+      case HIPBLAS_STATUS_MAPPING_ERROR:
         errmsg = "an access to GPU memory space failed";
         break;
 
-      case CUBLAS_STATUS_EXECUTION_FAILED:
+      case HIPBLAS_STATUS_EXECUTION_FAILED:
         errmsg = "the GPU program failed to execute";
         break;
 
-      case CUBLAS_STATUS_INTERNAL_ERROR:
+      case HIPBLAS_STATUS_INTERNAL_ERROR:
         errmsg = "an internal operation failed";
         break;
 
@@ -677,7 +678,7 @@ static const ptrdiff_t heapMinDelta = (ptrdiff_t)-1e6;
 static const double heapSoftmaxGrowthThresh = 0.8; // grow softmax if >80% max after GC
 static const double heapSoftmaxGrowthFactor = 1.4; // grow softmax by 40%
 
-void THCSetGCHandler(THCState *state, void (*cutorchGCFunction_)(void *data), void *data )
+void THCSetGCHandler(THCState *state, void (*cutorchGCFunction_)(void */*data*/), void *data )
 {
   state->cutorchGCFunction = cutorchGCFunction_;
   state->cutorchGCData = data;
@@ -741,5 +742,5 @@ void THCHeapUpdate(THCState *state, ptrdiff_t size) {
 
 #undef GLOBAL_SCRATCH_SPACE_PER_SM_STREAM
 
-#include "THCStorage.c"
-#include "THCAllocator.c"
+//#include "THCStorage.c"
+//#include "THCAllocator.c"

@@ -1,13 +1,21 @@
-#include "hip/hip_runtime.h"
 #ifndef THC_GENERIC_FILE
 #define THC_GENERIC_FILE "generic/THCTensorMathReduce.cu"
 #else
+
+#include <hip/hip_runtime.h>
+
+struct Identity_fn { // TODO: this is temporary and should be removed.
+    template<typename T>
+    __host__ __device__
+    constexpr
+    T operator()(const T& x) const { return x; }
+};
 
 THC_API void
 THCTensor_(sum)(THCState* state, THCTensor *self, THCTensor *src, long dimension) {
   THAssert(THCTensor_(checkGPU)(state, 2, self, src));
   if (!THC_reduceDim(state, self, src,
-                     thrust::identity<real>(),
+                     Identity_fn{},
                      ReduceAdd<real, real>(),
                      ScalarConvert<int, real>::to(0),
                      dimension)) {
@@ -21,7 +29,7 @@ THC_API void
 THCTensor_(prod)(THCState* state, THCTensor *self, THCTensor *src, long dimension) {
   THAssert(THCTensor_(checkGPU)(state, 2, self, src));
   if (!THC_reduceDim(state, self, src,
-                     thrust::identity<real>(),
+                     Identity_fn{},
                      ReduceMultiply<real, real>(),
                      ScalarConvert<int, real>::to(1),
                      dimension)) {
@@ -227,7 +235,7 @@ THCTensor_(sumall)(THCState *state, THCTensor *self) {
   THAssert(THCTensor_(checkGPU)(state, 1, self));
   accreal val;
   if (!THC_reduceAll(state, self,
-                     thrust::identity<real>(),
+                     Identity_fn{},
                      ReduceAdd<real, accreal>(),
                      ReduceAdd<accreal, accreal>(),
                      ScalarConvert<int, accreal>::to(0),
@@ -244,7 +252,7 @@ THCTensor_(prodall)(THCState *state, THCTensor *self) {
   THAssert(THCTensor_(checkGPU)(state, 1, self));
   accreal val;
   if (!THC_reduceAll(state, self,
-                     thrust::identity<real>(),
+                     Identity_fn{},
                      ReduceMultiply<real, accreal>(),
                      ReduceMultiply<accreal, accreal>(),
                      ScalarConvert<int, accreal>::to(1),
@@ -274,7 +282,7 @@ THCTensor_(minall)(THCState *state, THCTensor *self) {
   THAssert(THCTensor_(checkGPU)(state, 1, self));
   real val;
   if (!THC_reduceAll(state, self,
-                     thrust::identity<real>(),
+                     Identity_fn{},
                      ReduceMin<real>(),
                      ReduceMin<real>(),
                      THCNumerics<real>::max(), &val, 0)) {
@@ -290,7 +298,7 @@ THCTensor_(maxall)(THCState *state, THCTensor *self) {
   THAssert(THCTensor_(checkGPU)(state, 1, self));
   real val;
   if (!THC_reduceAll(state, self,
-                     thrust::identity<real>(),
+                     Identity_fn{},
                      ReduceMax<real>(),
                      ReduceMax<real>(),
                      THCNumerics<real>::min(), &val, 0)) {
@@ -309,10 +317,8 @@ THCTensor_(max)(THCState *state,
                 long dimension) {
   THAssert(THCTensor_(checkGPU)(state, 3, values, indices, src));
 
-  thrust::pair<typename TensorUtils<THCTensor>::DataType, long>
-    init =
-    thrust::make_pair<typename TensorUtils<THCTensor>::DataType, long>(
-      THCNumerics<typename TensorUtils<THCTensor>::DataType>::min(), 1);
+  bolt::amp::pair<typename TensorUtils<THCTensor>::DataType, long>
+    init{THCNumerics<typename TensorUtils<THCTensor>::DataType>::min(), 1};
 
   return THC_reduceDimIndex(
     state, values, indices, src, dimension, init,
@@ -327,10 +333,8 @@ THCTensor_(min)(THCState *state,
                 long dimension) {
   THAssert(THCTensor_(checkGPU)(state, 3, values, indices, src));
 
-  thrust::pair<typename TensorUtils<THCTensor>::DataType, long>
-    init =
-    thrust::make_pair<typename TensorUtils<THCTensor>::DataType, long>(
-      THCNumerics<typename TensorUtils<THCTensor>::DataType>::max(), 1);
+  bolt::amp::pair<typename TensorUtils<THCTensor>::DataType, long>
+    init{THCNumerics<typename TensorUtils<THCTensor>::DataType>::max(), 1};
 
   return THC_reduceDimIndex(
     state, values, indices, src, dimension, init,

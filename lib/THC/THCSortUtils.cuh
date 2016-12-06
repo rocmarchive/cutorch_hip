@@ -1,10 +1,11 @@
-#include "hip/hip_runtime.h"
 #ifndef THC_SORT_UTILS_INC
 #define THC_SORT_UTILS_INC
 
 #include "THCReduceApplyUtils.cuh"
 #include "THCTensorTypeUtils.cuh"
 #include "THCNumerics.cuh"
+
+#include <hip/hip_runtime.h>
 
 // Collection of kernel sort routines
 template <typename T>
@@ -93,14 +94,17 @@ __device__ inline void bitonicSort(K keys[Power2SortSize],
 template <typename K, typename V,
           int KeyDims, int ValueDims,
           typename Comparator, typename IndexType, int Power2SortSize>
-__global__ void
-bitonicSortKVInPlace(TensorInfo<K, IndexType> keys,
+__global__
+inline
+void
+bitonicSortKVInPlace(hipLaunchParm lp,
+                     TensorInfo<K, IndexType> keys,
                      IndexType keySlices,
                      IndexType keySliceSize,
                      IndexType keySliceStride,
                      TensorInfo<V, IndexType> values,
                      IndexType valueSliceStride,
-                     const Comparator& comp) {
+                     Comparator comp) {
   // Find the slice of the tensor that we are sorting
   const IndexType linearIndex = getLinearBlockId<IndexType>();
   // Tiling the slices could have us be out of bounds, if there are a

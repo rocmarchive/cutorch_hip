@@ -1,16 +1,17 @@
 #ifndef THC_GENERIC_FILE
-#include "hip/hip_runtime.h"
+#include <hip/hip_runtime.h>
+#include <bolt/amp/fill.h>
+#include <bolt/amp/device_vector.h>
 #define THC_GENERIC_FILE "generic/THCStorage.cu"
 #else
 
 void THCStorage_(fill)(THCState *state, THCStorage *self, real value)
 {
-  thrust::device_ptr<real> self_data(self->data);
-  thrust::fill(
+    bolt::amp::fill( // TODO: add localised version.
 #if CUDA_VERSION >= 7000
-    thrust::cuda::par.on(THCState_getCurrentStream(state)),
+//    thrust::cuda::par.on(THCState_getCurrentStream(state)),
 #endif
-    self_data, self_data+self->size, value);
+    self->data, self->data + self->size, value);
 }
 
 void THCStorage_(resize)(THCState *state, THCStorage *self, ptrdiff_t size)

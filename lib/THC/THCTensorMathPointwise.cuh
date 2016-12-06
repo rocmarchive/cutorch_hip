@@ -399,26 +399,34 @@ struct TensorDivOp<half> {
 
 template <typename T>
 struct TensorClampOp {
+  __host__ __device__
+  TensorClampOp() : minValue{FLT_MIN}, maxValue{FLT_MAX} {}
+  __host__ __device__
+  TensorClampOp(const TensorClampOp& x)
+    : minValue{x.minValue}, maxValue{x.maxValue} {}
+  TensorClampOp(TensorClampOp&&) = default;
+
+  __host__ __device__
   TensorClampOp(T min, T max) : minValue(min), maxValue(max) {}
-  __device__ __forceinline__ void operator()(T* out, T* in) {
+  __device__ __forceinline__ void operator()(T* out, T* in) const {
     T val = THCNumerics<T>::lt(*in, maxValue) ? *in : maxValue;
     *out = THCNumerics<T>::gt(minValue, val) ? minValue : val;
   }
 
-  __device__ __forceinline__ void operator()(T* v) {
+  __device__ __forceinline__ void operator()(T* v) const {
     T val = THCNumerics<T>::lt(*v, maxValue) ? *v : maxValue;
     *v = THCNumerics<T>::gt(minValue, val) ? minValue : val;
   }
 
-  const T minValue;
-  const T maxValue;
+  T minValue;
+  T maxValue;
 };
 
 template <typename T>
 struct TensorLerpOp {
   TensorLerpOp(T w) : w(w) {}
 
-  __device__ __forceinline__ void operator()(T *out, T *a, T *b) {
+  __device__ __forceinline__ void operator()(T *out, T *a, T *b) const {
     *out = THCNumerics<T>::add(
       *a,
       THCNumerics<T>::mul(
@@ -428,14 +436,15 @@ struct TensorLerpOp {
     );
   }
 
-  const T w;
+  T w;
 };
 
 template <typename T>
 struct TensorCrossOp {
+  __host__ __device__
   TensorCrossOp(long sx, long sy, long so) : sx(sx), sy(sy), so(so) {}
 
-  __device__ __forceinline__ void operator()(T* out, T* x, T*y) {
+  __device__ __forceinline__ void operator()(T* out, T* x, T*y) const {
     out[0 * so] = THCNumerics<T>::sub(
         THCNumerics<T>::mul(x[1 * sx], y[2 * sy]),
         THCNumerics<T>::mul(x[2 * sx], y[1 * sy])
@@ -452,40 +461,41 @@ struct TensorCrossOp {
     );
   }
 
-  const long sx, sy, so;
+  long sx, sy, so;
 };
 
 template <typename T>
 struct TensorMaxOp {
-  __device__ __forceinline__ void operator()(T* out, T* in) {
+  __device__ __forceinline__ void operator()(T* out, T* in) const {
     *out = THCNumerics<T>::gt(*out, *in) ? *out : *in;
   }
 
-  __device__ __forceinline__ void operator()(T* out, T* in1, T* in2) {
+  __device__ __forceinline__ void operator()(T* out, T* in1, T* in2) const {
     *out = THCNumerics<T>::gt(*in1, *in2) ? *in1 : *in2;
   }
 };
 
 template <typename T>
 struct TensorMinOp {
-  __device__ __forceinline__ void operator()(T* out, T* in) {
+  __device__ __forceinline__ void operator()(T* out, T* in) const {
     *out = THCNumerics<T>::lt(*out, *in) ? *out : *in;
   }
 
-  __device__ __forceinline__ void operator()(T* out, T* in1, T* in2) {
+  __device__ __forceinline__ void operator()(T* out, T* in1, T* in2) const {
     *out = THCNumerics<T>::lt(*in1, *in2) ? *in1 : *in2;
   }
 };
 
 template <typename T>
 struct TensorMaxValueOp {
+  explicit
   TensorMaxValueOp(T v) : val(v) {}
 
-  __device__ __forceinline__ void operator()(T* out) {
+  __device__ __forceinline__ void operator()(T* out) const {
     *out = THCNumerics<T>::gt(*out, val) ? *out : val;
   }
 
-  __device__ __forceinline__ void operator()(T* out, T* in) {
+  __device__ __forceinline__ void operator()(T* out, T* in) const {
     *out = THCNumerics<T>::gt(*in, val) ? *in : val;
   }
 
@@ -494,13 +504,14 @@ struct TensorMaxValueOp {
 
 template <typename T>
 struct TensorMinValueOp {
+  explicit
   TensorMinValueOp(T v) : val(v) {}
 
-  __device__ __forceinline__ void operator()(T* out) {
+  __device__ __forceinline__ void operator()(T* out) const {
     *out = THCNumerics<T>::lt(*out, val) ? *out : val;
   }
 
-  __device__ __forceinline__ void operator()(T* out, T* in) {
+  __device__ __forceinline__ void operator()(T* out, T* in) const {
     *out = THCNumerics<T>::lt(*in, val) ? *in : val;
   }
 
@@ -509,9 +520,10 @@ struct TensorMinValueOp {
 
 template <typename T>
 struct TensorAddCMulOp {
+  explicit
   TensorAddCMulOp(T v) : val(v) {}
 
-  __device__ __forceinline__ void operator()(T* out, T* in1, T* in2) {
+  __device__ __forceinline__ void operator()(T* out, T* in1, T* in2) const {
     *out = THCNumerics<T>::add(
       *out,
       THCNumerics<T>::mul(
@@ -526,9 +538,10 @@ struct TensorAddCMulOp {
 
 template <typename T>
 struct TensorAddCDivOp {
+  explicit
   TensorAddCDivOp(T v) : val(v) {}
 
-  __device__ __forceinline__ void operator()(T* out, T* in1, T* in2) {
+  __device__ __forceinline__ void operator()(T* out, T* in1, T* in2) const {
     *out = THCNumerics<T>::add(
       *out,
       THCNumerics<T>::mul(

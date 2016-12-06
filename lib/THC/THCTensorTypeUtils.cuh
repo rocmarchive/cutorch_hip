@@ -1,12 +1,12 @@
 #ifndef THC_TENSOR_TYPE_UTILS_INC
 #define THC_TENSOR_TYPE_UTILS_INC
 
-#include <cuda.h>
-#include <assert.h>
 #include "THCGeneral.h"
 #include "THCHalf.h"
 #include "THCTensor.h"
 #include "THCTensorInfo.cuh"
+
+#include <assert.h>
 
 /// A utility for accessing THCuda*Tensor types in a generic manner
 
@@ -33,7 +33,7 @@ struct TensorUtils {
 
 #define TENSOR_UTILS(TENSOR_TYPE, DATA_TYPE, ACC_DATA_TYPE)             \
   template <>                                                           \
-  struct THC_CLASS TensorUtils<TENSOR_TYPE> {                                     \
+  struct THC_CLASS TensorUtils<TENSOR_TYPE> {                           \
     typedef DATA_TYPE DataType;                                         \
     typedef ACC_DATA_TYPE AccDataType;                                  \
                                                                         \
@@ -50,7 +50,7 @@ struct TensorUtils {
     static void resizeAs(THCState* state, TENSOR_TYPE* dst,             \
                          TENSOR_TYPE* src);                             \
     static DATA_TYPE* getData(THCState* state, TENSOR_TYPE* t);         \
-    static ptrdiff_t getNumElements(THCState* state, TENSOR_TYPE* t);        \
+    static ptrdiff_t getNumElements(THCState* state, TENSOR_TYPE* t);   \
     static long getSize(THCState* state, TENSOR_TYPE* t, int dim);      \
     static long getStride(THCState* state, TENSOR_TYPE* t, int dim);    \
     static int getDims(THCState* state, TENSOR_TYPE* t);                \

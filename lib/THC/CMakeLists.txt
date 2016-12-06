@@ -14,7 +14,12 @@ IF(NOT MAGMA_FOUND)
   FIND_PACKAGE(MAGMA)
 ENDIF()
 
-EXECUTE_PROCESS(COMMAND $ENV{HIP_PATH}/bin/hipconfig --cpp_config OUTPUT_VARIABLE HIP_CXX_FLAGS)
+#EXECUTE_PROCESS(COMMAND $ENV{HIP_PATH}/bin/hipconfig --cpp_config OUTPUT_VARIABLE HIP_CXX_FLAGS)
+
+# TODO: this is a temporary workaround.
+if(NOT WIN32)
+  SET(CMAKE_CXX_COMPILER ${HIP_HIPCC_EXECUTABLE})
+endif()
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "4.9.3")
@@ -28,7 +33,7 @@ endif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "4.7" OR CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL "4.7" )
     # add c++11 flag
-    set_property(SOURCE THCCachingAllocator.cpp APPEND PROPERTY COMPILE_FLAGS "-std=c++11") 
+    set_property(SOURCE THCCachingAllocator.cpp APPEND PROPERTY COMPILE_FLAGS "-std=c++11")
   else()
     # add c++0x flag
     set_property(SOURCE THCCachingAllocator.cpp APPEND PROPERTY COMPILE_FLAGS "-std=c++0x")
@@ -124,17 +129,17 @@ CONFIGURE_FILE(THCGeneral.h.in "${CMAKE_CURRENT_BINARY_DIR}/THCGeneral.h")
 IF(MSVC)
   LIST(APPEND CUDA_NVCC_FLAGS "-Xcompiler /wd4819")
 ELSE()
-  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${HIP_CXX_FLAGS}")
+  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -v")
 ENDIF()
 
 SET(src
     THCCachingAllocator.cpp
-    THCGeneral.c
-    THCStorageCopy.c
-    THCStream.c
-    THCTensor.c
-    THCTensorCopy.c
-    THCThreadLocal.c
+    THCGeneral.cpp
+    THCStorageCopy.cpp
+    THCStream.cpp
+    THCTensor.cpp
+    THCTensorCopy.cpp
+    THCThreadLocal.cpp
     )
 
 SET(src-cuda
@@ -186,7 +191,8 @@ ELSE(CUDA_HAS_FP16 OR NOT ${CUDA_VERSION} LESS 7.5)
 ENDIF(CUDA_HAS_FP16 OR NOT ${CUDA_VERSION} LESS 7.5)
 
 MESSAGE(STATUS "CUDA_NVCC_FLAGS: ${CUDA_NVCC_FLAGS}")
-
+set_source_files_properties(${src} PROPERTIES LANGUAGE CXX)
+set_source_files_properties(${src-cuda} PROPERTIES LANGUAGE CXX)
 HIP_ADD_LIBRARY(THC SHARED ${src} ${src-cuda})
 CUDA_ADD_CUBLAS_TO_TARGET(THC)
 TARGET_LINK_LIBRARIES(THC TH ${CUDA_curand_LIBRARY})
@@ -247,16 +253,16 @@ INSTALL(FILES
           DESTINATION "${THC_INSTALL_INCLUDE_SUBDIR}/THC")
 
 INSTALL(FILES
-          generic/THCStorage.c
+        generic/THCStorage.c
           generic/THCStorage.cu
           generic/THCStorage.h
-          generic/THCTensor.c
+        generic/THCTensor.c
           generic/THCTensor.cu
           generic/THCTensor.h
-          generic/THCStorageCopy.c
+        generic/THCStorageCopy.c
           generic/THCStorageCopy.cu
           generic/THCStorageCopy.h
-          generic/THCTensorCopy.c
+        generic/THCTensorCopy.c
           generic/THCTensorCopy.cu
           generic/THCTensorCopy.h
           generic/THCTensorMasked.h

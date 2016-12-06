@@ -1,10 +1,11 @@
-#include "hip/hip_runtime.h"
 #include "THCTensorMath.h"
 #include "THCGeneral.h"
 #include "THCHalf.h"
 #include "THCTensorCopy.h"
 #include "THCApply.cuh"
 #include "THCNumerics.cuh"
+
+#include <hip/hip_runtime.h>
 
 template <typename T>
 struct TensorAddConstantOp {
@@ -345,7 +346,9 @@ void THCudaTensor_triu(THCState *state, THCudaTensor *self_, THCudaTensor *src_,
 #include "THCGenerateAllTypes.h"
 
 // Copy the kth diagonal of a matrix B to a vector A.
-__global__ void THCudaTensor_copyFromDiagonal(hipLaunchParm lp, float* a, float* b, ptrdiff_t start, ptrdiff_t size, ptrdiff_t strideSum, ptrdiff_t strideA) {
+__global__
+inline
+void THCudaTensor_copyFromDiagonal(hipLaunchParm lp, float* a, float* b, ptrdiff_t start, ptrdiff_t size, ptrdiff_t strideSum, ptrdiff_t strideA) {
   for (ptrdiff_t linearIndex = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;
        linearIndex < size;
        linearIndex += hipGridDim_x * hipBlockDim_x) {
@@ -355,7 +358,9 @@ __global__ void THCudaTensor_copyFromDiagonal(hipLaunchParm lp, float* a, float*
 }
 
 // Copy vector B to the kth diagonal of a matrix A
-__global__ void THCudaTensor_copyToDiagonal(hipLaunchParm lp, float* a, float* b, ptrdiff_t start, ptrdiff_t size, ptrdiff_t strideSum, ptrdiff_t strideB) {
+__global__
+inline
+void THCudaTensor_copyToDiagonal(hipLaunchParm lp, float* a, float* b, ptrdiff_t start, ptrdiff_t size, ptrdiff_t strideSum, ptrdiff_t strideB) {
   for (ptrdiff_t linearIndex = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;
        linearIndex < size;
        linearIndex += hipGridDim_x * hipBlockDim_x) {

@@ -1,8 +1,9 @@
-#include "hip/hip_runtime.h"
 #ifndef THC_SCAN_UTILS_INC
 #define THC_SCAN_UTILS_INC
 
 #include "THCAsmUtils.cuh"
+
+#include <hip/hip_runtime.h>
 
 // Collection of in-kernel scan / prefix sum utilities
 

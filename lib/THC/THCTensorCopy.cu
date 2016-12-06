@@ -76,7 +76,7 @@ THC_copyTensor(THCState* state, TensorTypeDst* dst, TensorTypeSrc* src) {
     // src waits on dst barrier (src already waits on src)
     hipEvent_t dstReady;
     THCudaCheck(hipSetDevice(dstDev));
-    THCudaCheck(hipEventCreateWithFlags(&dstReady, cudaEventDisableTiming));
+    THCudaCheck(hipEventCreateWithFlags(&dstReady, hipEventDisableTiming));
     THCudaCheck(hipEventRecord(dstReady, NULL));
 
     THCudaCheck(hipSetDevice(srcDev));
@@ -184,7 +184,7 @@ THC_copyTensor(THCState* state, TensorTypeDst* dst, TensorTypeSrc* src) {
 
     // Still on srcDev, record default stream event
     hipEvent_t srcReady;
-    THCudaCheck(hipEventCreateWithFlags(&srcReady, cudaEventDisableTiming));
+    THCudaCheck(hipEventCreateWithFlags(&srcReady, hipEventDisableTiming));
     THCudaCheck(hipEventRecord(srcReady, NULL));
 
     THCudaCheck(hipSetDevice(dstDev));

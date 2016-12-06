@@ -20,13 +20,16 @@
 // indexCopyLargeIndex kernel is a better choice to increase
 // parallelism.
 template <typename T, typename IndexType, int DstDim, int SrcDim, int IdxDim>
-__global__ void indexCopySmallIndex(TensorInfo<T, IndexType> dst,
-                                    TensorInfo<T, IndexType> src,
-                                    TensorInfo<long, IndexType> indices,
-                                    int dstCopyDim,
-                                    int srcCopyDim,
-                                    IndexType innerSize,
-                                    long dstCopyDimSize) {
+__global__
+inline
+void indexCopySmallIndex(hipLaunchParm lp,
+                         TensorInfo<T, IndexType> dst,
+                         TensorInfo<T, IndexType> src,
+                         TensorInfo<long, IndexType> indices,
+                         int dstCopyDim,
+                         int srcCopyDim,
+                         IndexType innerSize,
+                         long dstCopyDimSize) {
   // In order to avoid reloading the index that we are copying, load
   // it once to handle all of the points that are being selected, so
   // it can be reused as much as possible. This kernel is chosen when
@@ -65,13 +68,16 @@ __global__ void indexCopySmallIndex(TensorInfo<T, IndexType> dst,
 // indexCopySmallIndex kernel is a better choice to reduce memory
 // accesses.
 template <typename T, typename IndexType, int DstDim, int SrcDim, int IdxDim>
-__global__ void indexCopyLargeIndex(TensorInfo<T, IndexType> dst,
-                                    TensorInfo<T, IndexType> src,
-                                    TensorInfo<long, IndexType> indices,
-                                    int dstCopyDim,
-                                    int srcCopyDim,
-                                    IndexType innerSize,
-                                    long dstCopyDimSize) {
+__global__
+inline
+void indexCopyLargeIndex(hipLaunchParm lp,
+                         TensorInfo<T, IndexType> dst,
+                         TensorInfo<T, IndexType> src,
+                         TensorInfo<long, IndexType> indices,
+                         int dstCopyDim,
+                         int srcCopyDim,
+                         IndexType innerSize,
+                         long dstCopyDimSize) {
   // We stride over the output including the indexed dimension
   // (totalSize), and calculate the destination index point based on that
   for (IndexType linearIndex = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;
@@ -105,7 +111,8 @@ __global__ void indexCopyLargeIndex(TensorInfo<T, IndexType> dst,
 // indexAddLargeIndex kernel is a better choice to increase
 // parallelism.
 template <typename T, typename IndexType, int DstDim, int SrcDim, int IdxDim>
-__global__ void indexAddSmallIndex(TensorInfo<T, IndexType> dst,
+__global__ void indexAddSmallIndex(hipLaunchParm lp,
+                                   TensorInfo<T, IndexType> dst,
                                    TensorInfo<T, IndexType> src,
                                    TensorInfo<long, IndexType> indices,
                                    int dstAddDim,
@@ -149,7 +156,8 @@ __global__ void indexAddSmallIndex(TensorInfo<T, IndexType> dst,
 // indexAddSmallIndex kernel is a better choice to reduce memory
 // accesses.
 template <typename T, typename IndexType, int DstDim, int SrcDim, int IdxDim>
-__global__ void indexAddLargeIndex(TensorInfo<T, IndexType> dst,
+__global__ void indexAddLargeIndex(hipLaunchParm lp,
+                                   TensorInfo<T, IndexType> dst,
                                    TensorInfo<T, IndexType> src,
                                    TensorInfo<long, IndexType> indices,
                                    int dstAddDim,
@@ -189,7 +197,8 @@ __global__ void indexAddLargeIndex(TensorInfo<T, IndexType> dst,
 // indexFillLargeIndex kernel is a better choice to increase
 // parallelism.
 template <typename T, typename IndexType, int DstDim, int IdxDim>
-__global__ void indexFillSmallIndex(TensorInfo<T, IndexType> dst,
+__global__ void indexFillSmallIndex(hipLaunchParm lp,
+                                    TensorInfo<T, IndexType> dst,
                                     TensorInfo<long, IndexType> indices,
                                     int dstFillDim,
                                     IndexType innerSize,
@@ -228,7 +237,8 @@ __global__ void indexFillSmallIndex(TensorInfo<T, IndexType> dst,
 // indexFillSmallIndex kernel is a better choice to reduce memory
 // accesses.
 template <typename T, typename IndexType, int DstDim, int IdxDim>
-__global__ void indexFillLargeIndex(TensorInfo<T, IndexType> dst,
+__global__ void indexFillLargeIndex(hipLaunchParm lp,
+                                    TensorInfo<T, IndexType> dst,
                                     TensorInfo<long, IndexType> indices,
                                     int dstFillDim,
                                     IndexType innerSize,
@@ -263,7 +273,8 @@ __global__ void indexFillLargeIndex(TensorInfo<T, IndexType> dst,
 // indexSelectLargeIndex kernel is a better choice to increase
 // parallelism.
 template <typename T, typename IndexType, int DstDim, int SrcDim, int IdxDim>
-__global__ void indexSelectSmallIndex(TensorInfo<T, IndexType> dst,
+__global__ void indexSelectSmallIndex(hipLaunchParm lp,
+                                      TensorInfo<T, IndexType> dst,
                                       TensorInfo<T, IndexType> src,
                                       TensorInfo<long, IndexType> indices,
                                       int dstSelectDim,
@@ -307,7 +318,8 @@ __global__ void indexSelectSmallIndex(TensorInfo<T, IndexType> dst,
 // indexSelectSmallIndex kernel is a better choice to reduce memory
 // accesses.
 template <typename T, typename IndexType, int DstDim, int SrcDim, int IdxDim>
-__global__ void indexSelectLargeIndex(TensorInfo<T, IndexType> dst,
+__global__ void indexSelectLargeIndex(hipLaunchParm lp,
+                                      TensorInfo<T, IndexType> dst,
                                       TensorInfo<T, IndexType> src,
                                       TensorInfo<long, IndexType> indices,
                                       int dstSelectDim,

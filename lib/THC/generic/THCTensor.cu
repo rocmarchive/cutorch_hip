@@ -1,8 +1,11 @@
 #ifndef THC_GENERIC_FILE
 #define THC_GENERIC_FILE "generic/THCTensor.cu"
-#include "hip/hip_runtime.h"
 #else
 
+#include <hip/hip_runtime.h>
+
+// TODO: we have no texture support in HIP for now.
+/*
 cudaTextureObject_t THCTensor_(getTextureObject)(THCState *state, THCTensor *self)
 {
   THAssert(THCTensor_(checkGPU)(state, 1, self));
@@ -28,6 +31,7 @@ cudaTextureObject_t THCTensor_(getTextureObject)(THCState *state, THCTensor *sel
   }
   return texObj;
 }
+*/
 
 THC_API int THCTensor_(getDevice)(THCState* state, const THCTensor* tensor) {
   if (!tensor->storage) return -1;

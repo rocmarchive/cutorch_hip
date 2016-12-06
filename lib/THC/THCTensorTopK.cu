@@ -6,11 +6,8 @@
 #include "THCAsmUtils.cuh"
 #include "THCScanUtils.cuh"
 #include "THCTensorTypeUtils.cuh"
-#include <algorithm> // for std::min
 
-#if CUDA_VERSION >= 7000
-#include <thrust/system/cuda/execution_policy.h>
-#endif
+#include <algorithm> // for std::min
 
 // Converts a float to an integer representation with the same
 // sorting; i.e., for floats f1, f2:
@@ -19,10 +16,11 @@
 // This also gives a relative order for NaNs, but that's ok, as they
 // will all be adjacent
 struct FloatToSortedInt {
-  inline __host__ __device__ FloatToSortedInt() {}
+  __host__ __device__
+  FloatToSortedInt() {}
 
   inline __device__ unsigned int convert(float v) const {
-    unsigned int x = __float_as_int(v);
+    unsigned int x = (unsigned int)v;//__float_as_int(v);
     unsigned int mask = (x & 0x80000000) ? 0xffffffff : 0x80000000;
 
     return (x ^ mask);
@@ -31,7 +29,7 @@ struct FloatToSortedInt {
   inline __device__ float deconvert(unsigned int v) const {
     unsigned int mask = (v & 0x80000000) ? 0x80000000 : 0xffffffff;
 
-    return __int_as_float(v ^ mask);
+    return (float)(v ^ mask);//__int_as_float(v ^ mask);
   }
 };
 
@@ -251,19 +249,19 @@ __device__ void radixSelect(const RadixConverter& conv,
 }
 
 template <typename IndexType, int Dim, bool Order>
-__global__ void gatherTopK(TensorInfo<float, IndexType> input,
-                           IndexType inputSliceSize,
-                           IndexType outputSliceSize, // aka `k`
-
-                           IndexType numInputSlices,
-                           IndexType inputWithinSliceStride,
-
-                           TensorInfo<float, IndexType> topK,
-                           IndexType numTopKSlices,
-                           IndexType topKWithinSliceStride,
-
-                           TensorInfo<long, IndexType> indices,
-                           IndexType indicesWithinSliceStride) {
+__global__
+inline
+void gatherTopK(hipLaunchParm lp,
+                TensorInfo<float, IndexType> input,
+                IndexType inputSliceSize,
+                IndexType outputSliceSize, // aka `k`
+                IndexType numInputSlices,
+                IndexType inputWithinSliceStride,
+                TensorInfo<float, IndexType> topK,
+                IndexType numTopKSlices,
+                IndexType topKWithinSliceStride,
+                TensorInfo<long, IndexType> indices,
+                IndexType indicesWithinSliceStride) {
   // Indices are limited to integer fp precision, so counts can fit in
   // int32, regardless of IndexType
   __shared__ int smem[32]; // one per each warp, up to warp limit
@@ -407,21 +405,24 @@ THC_API void THCudaTensor_topk(THCState* state,
   THCudaLongTensor_resize(state, indices, topKSize, NULL);
   THLongStorage_free(topKSize);
 
-#define RUN_K(INDEX_T, DIM, DIR)                                        \
-  gatherTopK<INDEX_T, DIM, DIR>                                         \
-    <<<grid, block, 0, THCState_getCurrentStream(state)>>>(             \
-      inputInfo,                                                        \
-      sliceSize,                                                        \
-      k,                                                                \
-      inputSlices,                                                      \
-      /* The actual dimension that the k-selection is running in */     \
-      /* may have changed from collapseDims() */                        \
-      inputInfo.strides[collapseInputDim],                              \
-      topKInfo,                                                         \
-      topKSlices,                                                       \
-      topKInfo.strides[collapseTopKDim],                                \
-      indicesInfo,                                                      \
-      indicesInfo.strides[collapseIndicesDim])
+#define RUN_K(INDEX_T, DIM, DIR)                                               \
+  hipLaunchKernel(HIP_KERNEL_NAME(gatherTopK<INDEX_T, DIM, DIR>),              \
+                  dim3{grid},                                                  \
+                  dim3{block},                                                 \
+                  0,                                                           \
+                  THCState_getCurrentStream(state),                            \
+                  inputInfo,                                                   \
+                  sliceSize,                                                   \
+                  k,                                                           \
+                  inputSlices,                                                 \
+                  /* The actual dimension that the k-selection is running in */\
+                  /* may have changed from collapseDims() */                   \
+                  inputInfo.strides[collapseInputDim],                         \
+                  topKInfo,                                                    \
+                  topKSlices,                                                  \
+                  topKInfo.strides[collapseTopKDim],                           \
+                  indicesInfo,                                                 \
+                  indicesInfo.strides[collapseIndicesDim])
 
 #define RUN_DIR(INDEX_T, DIM)                   \
   if (dir) {                                    \
