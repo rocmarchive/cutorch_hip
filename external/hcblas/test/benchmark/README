@@ -1,0 +1,30 @@
+==================================================================================
+HCBLAS PROFILING
+==================================================================================
+This folder has all shell scripts and python scripts to profile 
+HCBLAS kernels namely SGEMM, CGEMM, SGEMV, SGER and SAXPY.
+
+Prerequisites
+==================================================================================
+    dGPU: AMD R9 Fury X, R9 Fury, R9 Nano
+    OS : Ubuntu 14.04 LTS
+    Ubuntu Pack: libc6-dev-i386
+    Python 2.x or above with BeautifulSoup4
+    Profiler : Download from https://multicorewareinc.egnyte.com/dl/iYFJWWft6R
+
+To profile:
+==================================================================================
+Each kernel test script needs kernel_input.txt file that stores inputs. 
+The inputs to the kernels can be changed here if needed.
+
+$ sudo apt-get install libgtest-dev 
+
+$ export CODEXL_PATH=path/to/AMD_CodeXL_Linux_x86_64_2.0.10823
+
+$ cd ~/hcblas/test/benchmark/
+
+$ ./runme.sh
+
+After profiling, Kernel profile time outputs will be stored in separate CSV files 
+and their profiling data will be stored in respective kernelProfileData folders.
+===================================================================================
