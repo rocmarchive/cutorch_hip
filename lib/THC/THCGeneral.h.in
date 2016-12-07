@@ -1,6 +1,13 @@
 #ifndef THC_GENERAL_INC
 #define THC_GENERAL_INC
 
+#ifdef __NVCC__
+# define CUBLAS_PATH 1
+# define CURAND_PATH 1
+# define THRUST_PATH 1
+# define CUDA_PATH 1
+#endif 
+
 #include "THGeneral.h"
 #include "THAllocator.h"
 #include "THCThreadLocal.h"
