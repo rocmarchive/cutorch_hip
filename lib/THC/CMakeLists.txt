@@ -47,6 +47,7 @@ endif()
 
 INCLUDE_DIRECTORIES(${CUDA_INCLUDE_DIRS})
 INCLUDE_DIRECTORIES($ENV{HIP_THRUST_PATH})
+INCLUDE_DIRECTORIES(${HIPBLAS_PATH}/include)
 INCLUDE_DIRECTORIES("${CUDA_SDK_ROOT_DIR}/common/inc")
 LINK_DIRECTORIES("${HIP_PATH}/lib")
 
@@ -118,12 +119,12 @@ ENDIF()
 
 SET(src
     THCCachingAllocator.cpp
-    THCGeneral.c
-    THCStorageCopy.c
-    THCStream.c
-    THCTensor.c
-    THCTensorCopy.c
-    THCThreadLocal.c
+    THCGeneral.cc
+    THCStorageCopy.cc
+    THCStream.cc
+    THCTensor.cc
+    THCTensorCopy.cc
+    THCThreadLocal.cc
     )
 
 SET(src-cuda
@@ -162,7 +163,7 @@ foreach(THC_TYPE Byte Char Short Int Long Half Float Double)
 endforeach()
 
 IF(${PLATFORM} MATCHES "nvcc")
-MESSAGE(STATUS "got cuda version " ${CUDA_VERSION})
+  MESSAGE(STATUS "got cuda version " ${CUDA_VERSION})
 
 IF(CUDA_HAS_FP16 OR NOT ${CUDA_VERSION} LESS 7.5)
   MESSAGE(STATUS "Found CUDA with FP16 support, compiling with torch.CudaHalfTensor")
@@ -178,15 +179,17 @@ ENDIF(CUDA_HAS_FP16 OR NOT ${CUDA_VERSION} LESS 7.5)
 MESSAGE(STATUS "CUDA_NVCC_FLAGS: ${CUDA_NVCC_FLAGS}")
 ENDIF() #PLATFORM
 
+
 HIP_ADD_LIBRARY(THC SHARED ${src} ${src-cuda})
 
 IF(${PLATFORM} STREQUAL "nvcc")
-  CUDA_ADD_CUBLAS_TO_TARGET(THC)
+  CUDA_ADD_HIPBLAS_TO_TARGET(THC)
   TARGET_LINK_LIBRARIES(THC TH ${CUDA_curand_LIBRARY})
 ENDIF()
 
 IF(${PLATFORM} STREQUAL "hcc")
-  TARGET_LINK_LIBRARIES(THC TH hip_hcc)
+  FIND_LIBRARY(HIPBLAS_LIBRARY hipblas HINTS ${HIPBLAS_PATH}/lib)
+  TARGET_LINK_LIBRARIES(THC TH hip_hcc ${HIPBLAS_LIBRARY})
 ENDIF()
 IF(USE_MAGMA)
   TARGET_LINK_LIBRARIES(THC ${MAGMA_LIBRARIES} ${CUDA_cusparse_LIBRARY})

@@ -105,7 +105,7 @@ void THCudaInit(THCState* state)
   /* Restore to previous device */
   THCudaCheck(hipSetDevice(device));
 
-  /* There is no such thing as a default cublas handle.
+  /* There is no such thing as a default hipblas handle.
      To maintain consistency with streams API, handle 0 is always NULL and we
      start counting at 1. If currentPerDeviceBlasHandle is 0 (the default
      thread-local value), then we assume it means 1.
@@ -145,10 +145,8 @@ void THCudaShutdown(THCState* state)
     }
     /* Free Torch-defined handles (0 is NULL for consistency with streams API) */
     for (int handle = 1; handle <= state->numUserBlasHandles; ++handle) {
-#ifdef CUBLAS_PATH
-      THCublasCheck(cublasDestroy(
+      THCublasCheck(hipblasDestroy(
                       THCState_getDeviceBlasHandle(state, dev, handle)));
-#endif
     }
     /* Free per-stream scratch space; starts at 0 because there is space for
        the default stream as well*/
@@ -157,9 +155,7 @@ void THCudaShutdown(THCState* state)
     }
 
     free(res->streams);
-#ifdef CUBLAS_PATH
     free(res->blasHandles);
-#endif
     free(res->devScratchSpacePerStream);
     THCStream_free((THCStream*)THCThreadLocal_get(state->currentStreams[dev]));
     THCThreadLocal_free(state->currentStreams[dev]);
@@ -375,14 +371,13 @@ void THCState_reserveBlasHandles(THCState* state, int numBlasHandles)
   int prevDev = -1;
   THCudaCheck(hipGetDevice(&prevDev));
 
-#ifdef CUBLAS_PATH
   /* Otherwise, we have to allocate a new set of blasHandles */
   for (int dev = 0; dev < state->numDevices; ++dev) {
     THCudaCheck(hipSetDevice(dev));
 
     /* +1 to be consistent with stream API, blas handle 0 is NULL and unused */
-    cublasHandle_t* newBlasHandles =
-      (cublasHandle_t*) malloc((numBlasHandles + 1) * sizeof(cublasHandle_t));
+    hipblasHandle_t* newBlasHandles =
+      (hipblasHandle_t*) malloc((numBlasHandles + 1) * sizeof(hipblasHandle_t));
 
     /* Copy over old blasHandles
        (0 is NULL, 1 ... numUserBlasHandles are rest) */
@@ -394,7 +389,7 @@ void THCState_reserveBlasHandles(THCState* state, int numBlasHandles)
     /* Allocate new handles */
     for (int hndl = state->numUserBlasHandles + 1; hndl <= numBlasHandles; ++hndl) {
       newBlasHandles[hndl] = NULL;
-      THCublasCheck(cublasCreate(newBlasHandles + hndl));
+      THCublasCheck(hipblasCreate(newBlasHandles + hndl));
     }
 
     THCCudaResourcesPerDevice* res = THCState_getDeviceResourcePtr(state, dev);
@@ -404,7 +399,6 @@ void THCState_reserveBlasHandles(THCState* state, int numBlasHandles)
 
   state->numUserBlasHandles = numBlasHandles;
 
-#endif
   THCudaCheck(hipSetDevice(prevDev));
 }
 
@@ -441,8 +435,7 @@ hipStream_t THCState_getDeviceStream(THCState *state, int device, int streamInde
   return stream ? stream->stream : NULL;
 }
 
-#ifdef CUBLAS_PATH
-cublasHandle_t THCState_getDeviceBlasHandle(THCState *state, int device, int handle)
+hipblasHandle_t THCState_getDeviceBlasHandle(THCState *state, int device, int handle)
 {
   if (handle <= 0 || handle > state->numUserBlasHandles)
   {
@@ -451,7 +444,6 @@ cublasHandle_t THCState_getDeviceBlasHandle(THCState *state, int device, int han
   }
   return THCState_getDeviceResourcePtr(state, device)->blasHandles[handle];
 }
-#endif
 
 static THCStream* THCState_getStreamOnDevice(THCState* state, int device)
 {
@@ -493,8 +485,7 @@ hipStream_t THCState_getCurrentStream(THCState *state)
   }
 }
 
-#ifdef CUBLAS_PATH
-cublasHandle_t THCState_getCurrentBlasHandle(THCState *state)
+hipblasHandle_t THCState_getCurrentBlasHandle(THCState *state)
 {
   /* This is called at the point of kernel execution.
      For some debugging code or improperly instrumented kernels,
@@ -509,7 +500,6 @@ cublasHandle_t THCState_getCurrentBlasHandle(THCState *state)
   THError("THCState and blasHandles must be set as there is no default blasHandle");
   return NULL;
 }
-#endif
 
 int THCState_getCurrentStreamIndex(THCState *state)
 {
@@ -636,40 +626,41 @@ void __THCudaCheck(hipError_t err, const char *file, const int line)
   }
 }
 
-#ifdef CUBLAS_PATH
-void __THCublasCheck(cublasStatus_t status, const char *file, const int line)
+void __THCublasCheck(hipblasStatus_t status, const char *file, const int line)
 {
-  if(status != CUBLAS_STATUS_SUCCESS)
+  if(status != HIPBLAS_STATUS_SUCCESS)
   {
     const char* errmsg = NULL;
 
     switch(status)
     {
-      case CUBLAS_STATUS_NOT_INITIALIZED:
+      case HIPBLAS_STATUS_NOT_INITIALIZED:
         errmsg = "library not initialized";
         break;
 
-      case CUBLAS_STATUS_ALLOC_FAILED:
+      case HIPBLAS_STATUS_ALLOC_FAILED:
         errmsg = "resource allocation failed";
         break;
 
-      case CUBLAS_STATUS_INVALID_VALUE:
+      case HIPBLAS_STATUS_INVALID_VALUE:
         errmsg = "an invalid numeric value was used as an argument";
         break;
 
-      case CUBLAS_STATUS_ARCH_MISMATCH:
+#ifdef HIPBLAS_TODO
+      case HIPBLAS_STATUS_ARCH_MISMATCH:
         errmsg = "an absent device architectural feature is required";
         break;
+#endif
 
-      case CUBLAS_STATUS_MAPPING_ERROR:
+      case HIPBLAS_STATUS_MAPPING_ERROR:
         errmsg = "an access to GPU memory space failed";
         break;
 
-      case CUBLAS_STATUS_EXECUTION_FAILED:
+      case HIPBLAS_STATUS_EXECUTION_FAILED:
         errmsg = "the GPU program failed to execute";
         break;
 
-      case CUBLAS_STATUS_INTERNAL_ERROR:
+      case HIPBLAS_STATUS_INTERNAL_ERROR:
         errmsg = "an internal operation failed";
         break;
 
@@ -678,10 +669,9 @@ void __THCublasCheck(cublasStatus_t status, const char *file, const int line)
         break;
     }
 
-    _THError(file, line, "cublas runtime error : %s", errmsg);
+    _THError(file, line, "hipblas runtime error : %s", errmsg);
   }
 }
-#endif
 
 static ptrdiff_t heapSize = 0; // not thread-local
 static const ptrdiff_t heapMaxDelta = (ptrdiff_t)1e6;
@@ -753,5 +743,5 @@ void THCHeapUpdate(THCState *state, ptrdiff_t size) {
 
 #undef GLOBAL_SCRATCH_SPACE_PER_SM_STREAM
 
-#include "THCStorage.c"
-#include "THCAllocator.c"
+#include "THCStorage.cc"
+#include "THCAllocator.cc"

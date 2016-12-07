@@ -4,9 +4,9 @@ if ok then
    local cdefs = [[
 typedef struct CUstream_st *cudaStream_t;
 
-struct cublasContext;
-typedef struct cublasContext *cublasHandle_t;
-typedef struct CUhandle_st *cublasHandle_t;
+struct hipblasContext;
+typedef struct hipblasContext *hipblasHandle_t;
+typedef struct CUhandle_st *hipblasHandle_t;
 
 typedef struct _THCStream {
    cudaStream_t stream;
@@ -17,7 +17,7 @@ typedef struct _THCStream {
 
 typedef struct _THCCudaResourcesPerDevice {
   THCStream** streams;
-  cublasHandle_t* blasHandles;
+  hipblasHandle_t* blasHandles;
   size_t scratchSpacePerStream;
   void** devScratchSpacePerStream;
 } THCCudaResourcesPerDevice;
