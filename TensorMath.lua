@@ -865,10 +865,11 @@ for k, Tensor_ in pairs(handledTypenames) do
             end},
             {name="index"}})
 
+--[[
     wrap("abs",
          cname("abs"),
          {{name=Tensor, default=true, returned=true, method={default='nil'}},
-             {name=Tensor, method={default=1}}})
+             {name=Tensor, method={default=1}}})]]--
 
     wrap("sign",
          cname("sign"),
@@ -887,13 +888,8 @@ for k, Tensor_ in pairs(handledTypenames) do
 	    {name="index", default=lastdimarray(2)}})
 
     if real == 'float' or real == 'double' or real == 'half' then
-       for _,name in ipairs({"log", "log1p", "exp",
-                             "cos", "acos", "cosh",
-                             "sin", "asin", "sinh",
-                             "tan", "atan", "tanh",
-                             "sqrt", "rsqrt", "sigmoid",
-                             "cinv", "ceil", "floor",
-                             "neg", "round", "trunc", "frac"}) do
+        --TODO: FIX NUMERICS>H to get the beloq workable
+       for _,name in ipairs({}) do
 
           wrap(name,
                cname(name),
@@ -1292,7 +1288,7 @@ wrap("sort",
       {name="index", default=lastdim(3)},
       {name="boolean", default=0}})
 
-wrap("topk",
+--[[wrap("topk",
      cname("topk"),
      {{name=Tensor, default=true, returned=true},
        {name="CudaLongTensor", default=true, returned=true, noreadadd=true},
@@ -1300,7 +1296,7 @@ wrap("topk",
        {name="long", default=1},
        {name="index", default=lastdim(3)},
        {name="boolean", default=0},
-       {name="boolean", default=0}})
+       {name="boolean", default=0}})]]--
 
 do
    local Tensor = Tensor
@@ -1523,15 +1519,8 @@ wrap("trace",
      cname("trace"),
      {{name=Tensor},
       {name=real, creturned=true}})
-
-for _,name in ipairs({"log", "log1p", "exp",
-                      "cos", "acos", "cosh",
-                      "sin", "asin", "sinh",
-                      "tan", "atan", "tanh",
-                      "sqrt", "rsqrt", "sigmoid",
-                      "cinv", "ceil", "floor",
-                      "neg", "abs", "sign",
-                      "round", "trunc", "frac"}) do
+--TODO: Get Numerics.h to fix below
+for _,name in ipairs({}) do
 
    wrap(name,
         cname(name),
