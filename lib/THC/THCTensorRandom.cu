@@ -19,7 +19,7 @@
 #define BLOCK_SIZE 256
 
 /* Sets up generator. Allocates but does not create the generator states. */
-__host__ void initializeGenerator(THCState *state, Generator* gen)
+void initializeGenerator(THCState *state, Generator* gen)
 {
 #ifdef CURAND_PATH
   THCudaCheck(THCudaMalloc(state, (void**)&gen->gen_states, MAX_NUM_BLOCKS * sizeof(curandStateMtgp32)));
@@ -28,7 +28,7 @@ __host__ void initializeGenerator(THCState *state, Generator* gen)
 }
 
 /* Frees memory allocated during setup. */
-__host__ void destroyGenerator(THCState *state, Generator* gen)
+void destroyGenerator(THCState *state, Generator* gen)
 {
   if (gen->gen_states)
   {
@@ -43,7 +43,7 @@ __host__ void destroyGenerator(THCState *state, Generator* gen)
 }
 
 /* Creates a new generator state given the seed. */
-__host__ void createGeneratorState(Generator* gen, unsigned long seed)
+void createGeneratorState(Generator* gen, unsigned long seed)
 {
 #ifdef CURAND_PATH
   if (curandMakeMTGP32Constants(mtgp32dc_params_fast_11213, gen->kernel_params) != CURAND_STATUS_SUCCESS)
@@ -59,7 +59,7 @@ __host__ void createGeneratorState(Generator* gen, unsigned long seed)
 }
 
 /* Initialize generator array (must be called before any other function) */
-__host__ void THCRandom_init(THCState* state, int devices, int current_device)
+void THCRandom_init(THCState* state, int devices, int current_device)
 {
   THCRNGState* rng_state = THCState_getRngState(state);
   rng_state->num_devices = devices;
@@ -74,7 +74,7 @@ __host__ void THCRandom_init(THCState* state, int devices, int current_device)
 }
 
 /* Destroy generators and free memory */
-__host__ void THCRandom_shutdown(THCState* state)
+void THCRandom_shutdown(THCState* state)
 {
   THCRNGState* rng_state = THCState_getRngState(state);
   if (rng_state->gen == NULL) return;
@@ -87,7 +87,7 @@ __host__ void THCRandom_shutdown(THCState* state)
 }
 
 /* Manually set the generator seed */
-__host__ static void THCRandom_manualSeedGen(Generator* gen, unsigned long seed)
+static void THCRandom_manualSeedGen(Generator* gen, unsigned long seed)
 {
   gen->initial_seed = seed;
   createGeneratorState(gen, seed);
@@ -95,7 +95,7 @@ __host__ static void THCRandom_manualSeedGen(Generator* gen, unsigned long seed)
 }
 
 /* Get the generator for the current device */
-__host__ Generator* THCRandom_getGenerator(THCState* state)
+Generator* THCRandom_getGenerator(THCState* state)
 {
   THCRNGState* rng_state = THCState_getRngState(state);
 
@@ -113,20 +113,20 @@ __host__ Generator* THCRandom_getGenerator(THCState* state)
 }
 
 #ifdef CURAND_PATH
-__host__ struct curandStateMtgp32* THCRandom_generatorStates(struct THCState* state)
+struct curandStateMtgp32* THCRandom_generatorStates(struct THCState* state)
 {
   return THCRandom_getGenerator(state)->gen_states;
 }
 #endif
 /* Random seed */
-__host__ unsigned long THCRandom_seed(THCState* state)
+unsigned long THCRandom_seed(THCState* state)
 {
   unsigned long s = (unsigned long)time(0);
   THCRandom_manualSeed(state, s);
   return s;
 }
 
-__host__ unsigned long THCRandom_seedAll(THCState* state)
+unsigned long THCRandom_seedAll(THCState* state)
 {
   unsigned long s = (unsigned long)time(0);
   THCRandom_manualSeedAll(state, s);
@@ -134,13 +134,13 @@ __host__ unsigned long THCRandom_seedAll(THCState* state)
 }
 
 /* Manually set the seed */
-__host__ void THCRandom_manualSeed(THCState* state, unsigned long seed)
+void THCRandom_manualSeed(THCState* state, unsigned long seed)
 {
   Generator* gen = THCRandom_getGenerator(state);
   THCRandom_manualSeedGen(gen, seed);
 }
 
-__host__ void THCRandom_manualSeedAll(THCState* state, unsigned long seed)
+void THCRandom_manualSeedAll(THCState* state, unsigned long seed)
 {
   THCRNGState* rng_state = THCState_getRngState(state);
   int currentDevice;
@@ -155,12 +155,12 @@ __host__ void THCRandom_manualSeedAll(THCState* state, unsigned long seed)
 }
 
 /* Get the initial seed */
-__host__ unsigned long THCRandom_initialSeed(THCState* state)
+unsigned long THCRandom_initialSeed(THCState* state)
 {
   return THCRandom_getGenerator(state)->initial_seed;
 }
 
-__host__ void THCRandom_getRNGState(THCState* state, THByteTensor *rng_state)
+void THCRandom_getRNGState(THCState* state, THByteTensor *rng_state)
 {
   Generator* gen = THCRandom_getGenerator(state);
 
@@ -186,7 +186,7 @@ __global__ void set_rngstate_kernel(hipLaunchParm lp, curandStateMtgp32 *state, 
 }
 #endif
 
-__host__ void THCRandom_setRNGState(THCState* state, THByteTensor *rng_state)
+void THCRandom_setRNGState(THCState* state, THByteTensor *rng_state)
 {
   Generator* gen = THCRandom_getGenerator(state);
 

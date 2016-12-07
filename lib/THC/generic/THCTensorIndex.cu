@@ -1,7 +1,6 @@
 #ifndef THC_GENERIC_FILE
 #define THC_GENERIC_FILE "generic/THCTensorIndex.cu"
 #else
-#ifdef CUDA_PATH
 void THCTensor_(indexCopy_long)(THCState *state, THCTensor *dst, int dim, THLongTensor *indices, THCTensor *src)
 {
   THAssert(THCTensor_(checkGPU)(state, 2, dst, src));
@@ -50,17 +49,27 @@ void THCTensor_(indexCopy)(THCState *state, THCTensor *dst, int dim, THCudaLongT
 
   int mpc = THCState_getCurrentDeviceProperties(state)->multiProcessorCount;
 
+#ifdef CUDA_PATH
 #define SMALL_INDEX(TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM) \
   hipLaunchKernel(HIP_KERNEL_NAME(indexCopySmallIndex<TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM>),       \
     smallIndexGrid, smallIndexBlock, 0, stream,           \
       dstInfo, srcInfo, indicesInfo,                            \
-      dstCopyDim, srcCopyDim, sliceSize, dstCopyDimSize);\
+      dstCopyDim, srcCopyDim, sliceSize, dstCopyDimSize);
 
+#else
+#define SMALL_INDEX(TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM) 
+#endif
+
+#ifdef CUDA_PATH
 #define LARGE_INDEX(TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM) \
   hipLaunchKernel(HIP_KERNEL_NAME(indexCopyLargeIndex<TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM>),       \
       largeIndexGrid, largeIndexBlock, 0, stream,          \
       dstInfo, srcInfo, indicesInfo,                            \
-      dstCopyDim, srcCopyDim, sliceSize, dstCopyDimSize); \
+      dstCopyDim, srcCopyDim, sliceSize, dstCopyDimSize); 
+
+#else
+  #define LARGE_INDEX(TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM)
+#endif 
 
   dim3 smallIndexGrid(std::min(THCCeilDiv(sliceSize, (ptrdiff_t)128), (ptrdiff_t)(mpc * 8)));
   dim3 smallIndexBlock(std::min(sliceSize, (ptrdiff_t)128));
@@ -180,17 +189,27 @@ void THCTensor_(indexAdd)(THCState *state, THCTensor *dst, int dim, THCudaLongTe
 
   int mpc = THCState_getCurrentDeviceProperties(state)->multiProcessorCount;
 
+#ifdef CUDA_PATH
 #define SMALL_INDEX(TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM) \
   hipLaunchKernel(HIP_KERNEL_NAME(indexAddSmallIndex<TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM>), \
       smallIndexGrid, smallIndexBlock, 0, stream,   \
       dstInfo, srcInfo, indicesInfo,                    \
-      dstAddDim, srcAddDim, sliceSize, dstAddDimSize); \
+      dstAddDim, srcAddDim, sliceSize, dstAddDimSize);
+ 
+#else
+  #define SMALL_INDEX(TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM)
+#endif 
 
+#ifdef CUDA_PATH
 #define LARGE_INDEX(TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM) \
   hipLaunchKernel(HIP_KERNEL_NAME(indexAddLargeIndex<TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM>), \
       largeIndexGrid, largeIndexBlock, 0, stream,   \
       dstInfo, srcInfo, indicesInfo,                    \
-      dstAddDim, srcAddDim, sliceSize, dstAddDimSize); \
+      dstAddDim, srcAddDim, sliceSize, dstAddDimSize); 
+
+#else
+#define LARGE_INDEX(TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM) 
+#endif
 
   dim3 smallIndexGrid(std::min(THCCeilDiv(sliceSize, (ptrdiff_t)128), (ptrdiff_t)(mpc * 8)));
   dim3 smallIndexBlock(std::min(sliceSize, (ptrdiff_t)128));
@@ -305,17 +324,27 @@ void THCTensor_(indexFill)(THCState *state, THCTensor *dst, int dim, THCudaLongT
 
   int mpc = THCState_getCurrentDeviceProperties(state)->multiProcessorCount;
 
+#ifdef CUDA_PATH
 #define SMALL_INDEX(TENSOR_TYPE, TYPE, DST_DIM, IDX_DIM)  \
   hipLaunchKernel(HIP_KERNEL_NAME(indexFillSmallIndex<TENSOR_TYPE, TYPE, DST_DIM, IDX_DIM>), \
       smallIndexGrid, smallIndexBlock, 0, stream,   \
       dstInfo, indicesInfo,                             \
-      dstFillDim, sliceSize, dstFillDimSize, val); \
+      dstFillDim, sliceSize, dstFillDimSize, val);
+ 
+#else
+  #define SMALL_INDEX(TENSOR_TYPE, TYPE, DST_DIM, IDX_DIM)  
+#endif
 
+#ifdef CUDA_PATH
 #define LARGE_INDEX(TENSOR_TYPE, TYPE, DST_DIM, IDX_DIM)  \
   hipLaunchKernel(HIP_KERNEL_NAME(indexFillLargeIndex<TENSOR_TYPE, TYPE, DST_DIM, IDX_DIM>), \
       largeIndexGrid, largeIndexBlock, 0, stream,   \
       dstInfo, indicesInfo,                             \
-      dstFillDim, sliceSize, dstFillDimSize, val); \
+      dstFillDim, sliceSize, dstFillDimSize, val); 
+
+#else
+  #define LARGE_INDEX(TENSOR_TYPE, TYPE, DST_DIM, IDX_DIM)  
+#endif
 
   dim3 smallIndexGrid(std::min(THCCeilDiv(sliceSize, (ptrdiff_t)128), (ptrdiff_t)(mpc * 8)));
   dim3 smallIndexBlock(std::min(sliceSize, (ptrdiff_t)128));
@@ -428,17 +457,27 @@ void THCTensor_(indexSelect)(THCState *state, THCTensor *dst, THCTensor *src, in
 
   int mpc = THCState_getCurrentDeviceProperties(state)->multiProcessorCount;
 
+#ifdef CUDA_PATH
 #define SMALL_INDEX(TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM) \
   hipLaunchKernel(HIP_KERNEL_NAME(indexSelectSmallIndex<TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM>),     \
       smallIndexGrid, smallIndexBlock, 0, stream,          \
       dstInfo, srcInfo, indicesInfo,                            \
-      dstSelectDim, srcSelectDim, sliceSize, srcSelectDimSize);\
+      dstSelectDim, srcSelectDim, sliceSize, srcSelectDimSize);
 
+#else
+#define SMALL_INDEX(TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM)
+#endif
+
+#ifdef CUDA_PATH
 #define LARGE_INDEX(TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM)         \
   hipLaunchKernel(HIP_KERNEL_NAME(indexSelectLargeIndex<TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM>),     \
       largeIndexGrid, largeIndexBlock, 0, stream,                  \
       dstInfo, srcInfo, indicesInfo,                                    \
-      dstSelectDim, srcSelectDim, dstTotalSize, sliceSize, srcSelectDimSize); \
+      dstSelectDim, srcSelectDim, dstTotalSize, sliceSize, srcSelectDimSize);
+ 
+#else
+  #define LARGE_INDEX(TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM)         
+#endif
 
   dim3 smallIndexGrid(std::min(THCCeilDiv(sliceSize, (ptrdiff_t)128), (ptrdiff_t)(mpc * 8)));
   dim3 smallIndexBlock(std::min(sliceSize, (ptrdiff_t)128));
@@ -510,5 +549,4 @@ void THCTensor_(indexSelect)(THCState *state, THCTensor *dst, THCTensor *src, in
 #undef LARGE_INDEX
 }
 
-#endif
 #endif

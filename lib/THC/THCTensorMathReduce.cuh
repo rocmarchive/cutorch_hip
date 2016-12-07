@@ -126,7 +126,7 @@ struct LogicalAny {
 };
 
 template<typename Real>
-__global__ void THCTensor_kernel_renorm(hipLaunchParm lp, Real *data, const Real value, const ptrdiff_t size, const Real maxnorm)
+__global__ inline void THCTensor_kernel_renorm(hipLaunchParm lp, Real *data, const Real value, const ptrdiff_t size, const Real maxnorm)
 {
   __shared__ Real buffer[32];
   long tx = hipThreadIdx_x;
