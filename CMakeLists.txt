@@ -19,6 +19,8 @@ ENDIF()
 SET(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_CURRENT_SOURCE_DIR}/lib/THC/cmake ${CMAKE_MODULE_PATH} "${HIP_PATH}/cmake")
 EXECUTE_PROCESS(COMMAND ${HIP_PATH}/bin/hipconfig -P OUTPUT_VARIABLE PLATFORM)
 
+include(HipTorchWrap)
+
 FIND_PACKAGE(Torch REQUIRED)
 FIND_PACKAGE(HIP 1.0 REQUIRED)
 IF(${PLATFORM} STREQUAL "nvcc")
@@ -50,10 +52,10 @@ INCLUDE_DIRECTORIES("${CMAKE_CURRENT_SOURCE_DIR}/lib/THC")
 INCLUDE_DIRECTORIES("${CMAKE_CURRENT_SOURCE_DIR}/torch")
 LINK_DIRECTORIES("${HIP_PATH}/lib")
 
-SET(src Storage.c init.cc Tensor.cc TensorMath.c TensorOperator.cc torch/utils.c)
+SET(src Storage.c init.cc Tensor.cc TensorMath.cc TensorOperator.cc torch/utils.c)
 SET(luasrc init.lua Tensor.lua FFI.lua test/test.lua)
 
-ADD_TORCH_WRAP(cudatensormathwrap TensorMath.lua)
+ADD_HIP_TORCH_WRAP(HcTensormathwrap TensorMath.lua)
 ADD_TORCH_PACKAGE(cutorch "${src}" "${luasrc}")
 
 IF(${PLATFORM} MATCHES "hcc")
