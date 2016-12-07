@@ -328,7 +328,7 @@ __global__ void THCTensor_kernel_varOuterDim(hipLaunchParm lp, Real *tgt, Real *
 }
 
 template<typename TensorTypeK, typename Real, bool apply_sqrt>
-__host__ void THCTensor_varOuterDim(THCState *state, TensorTypeK *tgt, TensorTypeK *src, long dimension, int flag)
+void THCTensor_varOuterDim(THCState *state, TensorTypeK *tgt, TensorTypeK *src, long dimension, int flag)
 {
   unsigned ndim = TensorUtils<TensorTypeK>::getDims(state, src);
   // Treat all outer dimensions (i.e. dim < dimension) as one.
@@ -373,7 +373,7 @@ __host__ void THCTensor_varOuterDim(THCState *state, TensorTypeK *tgt, TensorTyp
  * per thread block is quicker than processing a single row, especially for short rows).
  */
 template<typename Real, bool flag, bool apply_sqrt>
-__global__ void THCTensor_kernel_varInnermostDim(hipLaunchParm lp, Real *tgt, Real *src_, unsigned num_rows, unsigned row_size)
+__global__ inline void THCTensor_kernel_varInnermostDim(hipLaunchParm lp, Real *tgt, Real *src_, unsigned num_rows, unsigned row_size)
 {
   __shared__ Real ssum[32][16];
   __shared__ Real ssum2[32][16];
@@ -415,7 +415,7 @@ __global__ void THCTensor_kernel_varInnermostDim(hipLaunchParm lp, Real *tgt, Re
 }
 
 template<typename TensorTypeK, typename Real, bool apply_sqrt>
-__host__ void THCTensor_varInnermostDim(THCState *state, TensorTypeK *tgt, TensorTypeK *src, int flag)
+void THCTensor_varInnermostDim(THCState *state, TensorTypeK *tgt, TensorTypeK *src, int flag)
 {
   unsigned ndim = TensorUtils<TensorTypeK>::getDims(state, src);
   // Treat all outer dimensions as a single dimension.
@@ -482,7 +482,7 @@ kernelTransformReduceOuterDimIndex(hipLaunchParm lp, K *tgt1,
 template <typename TensorTypeK,
           typename TensorTypeIndex,
           typename BinaryFunction>
-__host__ void
+void
 THC_transformReduceOuterDimIndex(THCState *state,
                                  TensorTypeK *tgt1,
                                  TensorTypeIndex *tgt2,
@@ -584,7 +584,7 @@ kernelTransformReduceInnermostDimIndex(hipLaunchParm lp, K *tgt1,
 template <typename TensorTypeK,
           typename TensorTypeIndex,
           typename BinaryFunction>
-__host__ void
+void
 THC_transformReduceInnermostDimIndex(THCState *state,
                                      TensorTypeK *tgt1,
                                      TensorTypeIndex *tgt2,
