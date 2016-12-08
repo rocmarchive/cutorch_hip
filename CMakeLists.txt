@@ -52,10 +52,10 @@ INCLUDE_DIRECTORIES("${CMAKE_CURRENT_SOURCE_DIR}/lib/THC")
 INCLUDE_DIRECTORIES("${CMAKE_CURRENT_SOURCE_DIR}/torch")
 LINK_DIRECTORIES("${HIP_PATH}/lib")
 
-SET(src Storage.c init.cc Tensor.cc TensorMath.cc TensorOperator.cc torch/utils.c)
+SET(src Storage.cc init.cc Tensor.cc TensorMath.cc TensorOperator.cc torch/utils.c)
 SET(luasrc init.lua Tensor.lua FFI.lua test/test.lua)
 
-ADD_HIP_TORCH_WRAP(HcTensormathwrap TensorMath.lua)
+ADD_HIP_TORCH_WRAP(HipTensormathwrap TensorMath.lua)
 ADD_TORCH_PACKAGE(cutorch "${src}" "${luasrc}")
 
 IF(${PLATFORM} MATCHES "hcc")

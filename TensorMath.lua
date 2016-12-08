@@ -1846,5 +1846,4 @@ void cutorch_%sMath_init(lua_State *L)
 }
 ]], Tensor, Tensor, Tensor, Tensor))
 
---[[This is a temporary workaround intended to get HCC compilation working]]
-interface:tofile(string.gsub(arg[1], "TensorMath.c", "TensorMath.cpp"))
+interface:tofile(arg[1])

@@ -14,41 +14,41 @@
 static int cutorch_Tensor_(copy)(lua_State *L)
 {
   THCState *state = cutorch_getstate(L);
-  THCTensor *tensor = luaT_checkudata(L, 1, torch_Tensor);
+  THCTensor *tensor = (THCTensor *)luaT_checkudata(L, 1, torch_Tensor);
   void *src;
   if( (src = luaT_toudata(L, 2, "torch.CudaTensor")) )
-    THCTensor_(copyCudaFloat)(state, tensor, src);
+    THCTensor_(copyCudaFloat)(state, tensor, (THCudaTensor *)src);
   else if( (src = luaT_toudata(L, 2, "torch.CudaByteTensor")) )
-    THCTensor_(copyCudaByte)(state, tensor, src);
+    THCTensor_(copyCudaByte)(state, tensor, (THCudaByteTensor *)src);
   else if( (src = luaT_toudata(L, 2, "torch.CudaCharTensor")) )
-    THCTensor_(copyCudaChar)(state, tensor, src);
+    THCTensor_(copyCudaChar)(state, tensor, (THCudaCharTensor *)src);
   else if( (src = luaT_toudata(L, 2, "torch.CudaShortTensor")) )
-    THCTensor_(copyCudaShort)(state, tensor, src);
+    THCTensor_(copyCudaShort)(state, tensor, (THCudaShortTensor *)src);
   else if( (src = luaT_toudata(L, 2, "torch.CudaIntTensor")) )
-    THCTensor_(copyCudaInt)(state, tensor, src);
+    THCTensor_(copyCudaInt)(state, tensor, (THCudaIntTensor *)src);
   else if( (src = luaT_toudata(L, 2, "torch.CudaLongTensor")) )
-    THCTensor_(copyCudaLong)(state, tensor, src);
+    THCTensor_(copyCudaLong)(state, tensor, (THCudaLongTensor*)src);
   else if( (src = luaT_toudata(L, 2, "torch.CudaDoubleTensor")) )
-    THCTensor_(copyCudaDouble)(state, tensor, src);
+    THCTensor_(copyCudaDouble)(state, tensor, (THCudaDoubleTensor *)src);
 #ifdef CUDA_HALF_TENSOR
   else if( (src = luaT_toudata(L, 2, "torch.CudaHalfTensor")) )
-    THCTensor_(copyCudaHalf)(state, tensor, src);
+    THCTensor_(copyCudaHalf)(state, tensor, (THCudaHalfTensor *)src);
 #endif
 
   else if( (src = luaT_toudata(L, 2, "torch.ByteTensor")) )
-    THCTensor_(copyByte)(state, tensor, src);
+    THCTensor_(copyByte)(state, tensor, (THByteTensor *)src);
   else if( (src = luaT_toudata(L, 2, "torch.CharTensor")) )
-    THCTensor_(copyChar)(state, tensor, src);
+    THCTensor_(copyChar)(state, tensor, (THCharTensor *)src);
   else if( (src = luaT_toudata(L, 2, "torch.ShortTensor")) )
-    THCTensor_(copyShort)(state, tensor, src);
+    THCTensor_(copyShort)(state, tensor, (THShortTensor *)src);
   else if( (src = luaT_toudata(L, 2, "torch.IntTensor")) )
-    THCTensor_(copyInt)(state, tensor, src);
+    THCTensor_(copyInt)(state, tensor, (THIntTensor *)src);
   else if( (src = luaT_toudata(L, 2, "torch.LongTensor")) )
-    THCTensor_(copyLong)(state, tensor, src);
+    THCTensor_(copyLong)(state, tensor, (THLongTensor *)src);
   else if( (src = luaT_toudata(L, 2, "torch.FloatTensor")) )
-    THCTensor_(copyFloat)(state, tensor, src);
+    THCTensor_(copyFloat)(state, tensor, (THFloatTensor *)src);
   else if( (src = luaT_toudata(L, 2, "torch.DoubleTensor")) )
-    THCTensor_(copyDouble)(state, tensor, src);
+    THCTensor_(copyDouble)(state, tensor, (THDoubleTensor *)src);
   else
     luaL_typerror(L, 2, "torch.*Tensor");
 
@@ -61,12 +61,12 @@ static int cutorch_Tensor_(copyAsyncCPU)(lua_State *L)
 {
 #define STRINGIFY_TENSOR(x) TH_CONCAT_STRING_3(torch.,x,Tensor)
   THCState *state = cutorch_getstate(L);
-  THCTensor *tensor = luaT_checkudata(L, 1, STRINGIFY_TENSOR(CReal));
+  THCTensor *tensor = (THCTensor *)luaT_checkudata(L, 1, STRINGIFY_TENSOR(CReal));
   void *src;
   if( (src = luaT_toudata(L, 2, STRINGIFY_TENSOR(CReal))))
-    THCTensor_(copy)(state, tensor, src);
+    THCTensor_(copy)(state, tensor, (THCTensor *)src);
   else if( (src = luaT_toudata(L, 2, STRINGIFY_TENSOR(Real))))
-    THCTensor_(copyAsyncCPU)(state, tensor, src);
+    THCTensor_(copyAsyncCPU)(state, tensor, (THTensor *)src);
   else
     luaL_typerror(L, 2, STRINGIFY_TENSOR(Real) " or " STRINGIFY_TENSOR(CReal));
 
@@ -80,41 +80,41 @@ static int cutorch_Tensor_(copyAsyncCPU)(lua_State *L)
 #ifndef THC_REAL_IS_HALF
 static int TH_CONCAT_3(cutorch_,Real,Tensor_copy)(lua_State *L)
 {
-  THTensor *tensor = luaT_checkudata(L, 1, TH_CONCAT_STRING_3(torch.,Real,Tensor));
+  THTensor *tensor = (THTensor *)luaT_checkudata(L, 1, TH_CONCAT_STRING_3(torch.,Real,Tensor));
   void *src;
   if( (src = luaT_toudata(L, 2, TH_CONCAT_STRING_3(torch.,Real,Tensor)) ))
-    THTensor_(copy)(tensor, src);
+    THTensor_(copy)(tensor, (THTensor*)src);
   else if( (src = luaT_toudata(L, 2, "torch.ByteTensor")) )
-    THTensor_(copyByte)(tensor, src);
+    THTensor_(copyByte)(tensor,(THByteTensor*)src);
   else if( (src = luaT_toudata(L, 2, "torch.CharTensor")) )
-    THTensor_(copyChar)(tensor, src);
+    THTensor_(copyChar)(tensor, (THCharTensor *)src);
   else if( (src = luaT_toudata(L, 2, "torch.ShortTensor")) )
-    THTensor_(copyShort)(tensor, src);
+    THTensor_(copyShort)(tensor, (THShortTensor *)src);
   else if( (src = luaT_toudata(L, 2, "torch.IntTensor")) )
-    THTensor_(copyInt)(tensor, src);
+    THTensor_(copyInt)(tensor, (THIntTensor *)src);
   else if( (src = luaT_toudata(L, 2, "torch.LongTensor")) )
-    THTensor_(copyLong)(tensor, src);
+    THTensor_(copyLong)(tensor, (THLongTensor *)src);
   else if( (src = luaT_toudata(L, 2, "torch.FloatTensor")) )
-    THTensor_(copyFloat)(tensor, src);
+    THTensor_(copyFloat)(tensor, (THFloatTensor *)src);
   else if( (src = luaT_toudata(L, 2, "torch.DoubleTensor")) )
-    THTensor_(copyDouble)(tensor, src);
+    THTensor_(copyDouble)(tensor, (THDoubleTensor *)src);
   else if( (src = luaT_toudata(L, 2, "torch.CudaByteTensor")) )
-    THTensor_(copyCudaByte)(cutorch_getstate(L), tensor, src);
+    THTensor_(copyCudaByte)(cutorch_getstate(L), tensor, (THCudaByteTensor *)src);
   else if( (src = luaT_toudata(L, 2, "torch.CudaCharTensor")) )
-    THTensor_(copyCudaChar)(cutorch_getstate(L), tensor, src);
+    THTensor_(copyCudaChar)(cutorch_getstate(L), tensor, (THCudaCharTensor *)src);
   else if( (src = luaT_toudata(L, 2, "torch.CudaShortTensor")) )
-    THTensor_(copyCudaShort)(cutorch_getstate(L), tensor, src);
+    THTensor_(copyCudaShort)(cutorch_getstate(L), tensor, (THCudaShortTensor *)src);
   else if( (src = luaT_toudata(L, 2, "torch.CudaIntTensor")) )
-    THTensor_(copyCudaInt)(cutorch_getstate(L), tensor, src);
+    THTensor_(copyCudaInt)(cutorch_getstate(L), tensor, (THCudaIntTensor *)src);
   else if( (src = luaT_toudata(L, 2, "torch.CudaLongTensor")) )
-    THTensor_(copyCudaLong)(cutorch_getstate(L), tensor, src);
+    THTensor_(copyCudaLong)(cutorch_getstate(L), tensor, (THCudaLongTensor *)src);
   else if( (src = luaT_toudata(L, 2, "torch.CudaTensor")) )
-    THTensor_(copyCudaFloat)(cutorch_getstate(L), tensor, src);
+    THTensor_(copyCudaFloat)(cutorch_getstate(L), tensor, (THCudaTensor *)src);
   else if( (src = luaT_toudata(L, 2, "torch.CudaDoubleTensor")) )
-    THTensor_(copyCudaDouble)(cutorch_getstate(L), tensor, src);
+    THTensor_(copyCudaDouble)(cutorch_getstate(L), tensor, (THCudaDoubleTensor *)src);
 #ifdef CUDA_HALF_TENSOR
   else if( (src = luaT_toudata(L, 2, "torch.CudaHalfTensor")) )
-    THTensor_(copyCudaHalf)(cutorch_getstate(L), tensor, src);
+    THTensor_(copyCudaHalf)(cutorch_getstate(L), tensor, (THCudaHalfTensor *)src);
 #endif
   else
     luaL_typerror(L, 2, "torch.*Tensor");
@@ -128,10 +128,10 @@ static int TH_CONCAT_3(cutorch_,Real,Tensor_copy)(lua_State *L)
 static int TH_CONCAT_3(cutorch_,Real,Tensor_copyAsyncCuda)(lua_State *L)
 {
 #define STRINGIFY_TENSOR(x) TH_CONCAT_STRING_3(torch.,x,Tensor)
-  THTensor *tensor = luaT_checkudata(L, 1, STRINGIFY_TENSOR(Real));
+  THTensor *tensor = (THTensor *)luaT_checkudata(L, 1, STRINGIFY_TENSOR(Real));
   void *src;
   if( (src = luaT_toudata(L, 2, STRINGIFY_TENSOR(CReal))))
-    THTensor_(copyAsyncCuda)(cutorch_getstate(L), tensor, src);
+    THTensor_(copyAsyncCuda)(cutorch_getstate(L), tensor, (THCTensor*)src);
   else
     luaL_typerror(L, 2, STRINGIFY_TENSOR(CReal));
 
@@ -203,8 +203,8 @@ void THFloatTensor_kernel_copy(float *dst,
 
 static int cuda_FloatTensor_fakecopy(lua_State *L)
 {
-  THFloatTensor *self = luaT_checkudata(L, 1, "torch.FloatTensor");
-  THFloatTensor *src = luaT_checkudata(L, 2, "torch.FloatTensor");
+  THFloatTensor *self = (THFloatTensor *)luaT_checkudata(L, 1, "torch.FloatTensor");
+  THFloatTensor *src = (THFloatTensor *)luaT_checkudata(L, 2, "torch.FloatTensor");
   long *d_self_sz, *d_self_st, *d_src_sz, *d_src_st;
   ptrdiff_t nElement = THFloatTensor_nElement(self);
 
@@ -230,7 +230,7 @@ static int cuda_FloatTensor_fakecopy(lua_State *L)
 #endif
 
 static int cutorch_Tensor_(getDevice)(lua_State *L) {
-  THCTensor *tensor = luaT_checkudata(L, 1, torch_Tensor);
+  THCTensor *tensor = (THCTensor *)luaT_checkudata(L, 1, torch_Tensor);
   lua_pushinteger(L, THCTensor_(getDevice)(cutorch_getstate(L), tensor) + 1);
   return 1;
 }
