@@ -339,7 +339,6 @@ void THCudaBlas_SgemmBatched(THCState *state, char transa, char transb, long m, 
   }
 
   adjustLd(transa, transb, m, n, k, &lda, &ldb, &ldc);
-#ifdef HIPBLAS_TODO 
   hipblasOperation_t opa = convertTransToCublasOperation(transa);
   hipblasOperation_t opb = convertTransToCublasOperation(transb);
 
@@ -349,7 +348,6 @@ void THCudaBlas_SgemmBatched(THCState *state, char transa, char transb, long m, 
                                    opa, opb, (int)m, (int)n, (int)k,
                                    &alpha, a, (int)lda, b, (int)ldb, &beta, c, (int)ldc,
                                    (int)batchCount));
-#endif
 }
 
 void THCudaBlas_DgemmBatched(THCState *state, char transa, char transb, long m, long n, long k,
@@ -363,7 +361,6 @@ void THCudaBlas_DgemmBatched(THCState *state, char transa, char transb, long m, 
   }
 
   adjustLd(transa, transb, m, n, k, &lda, &ldb, &ldc);
-#ifdef HIPBLAS_TODO 
   hipblasOperation_t opa = convertTransToCublasOperation(transa);
   hipblasOperation_t opb = convertTransToCublasOperation(transb);
 
@@ -373,7 +370,6 @@ void THCudaBlas_DgemmBatched(THCState *state, char transa, char transb, long m, 
                                    opa, opb, (int)m, (int)n, (int)k,
                                    &alpha, a, (int)lda, b, (int)ldb, &beta, c, (int)ldc,
                                    (int)batchCount));
-#endif
 }
 
 /* Inverse */
