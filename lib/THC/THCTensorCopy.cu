@@ -114,12 +114,10 @@ THC_copyTensor(THCState* state, TensorTypeDst* dst, TensorTypeSrc* src) {
     // case srcDev == dstDev
     if (THCState_getPeerToPeerAccess(state, srcDev, dstDev)) {
       bool succ = false;
-      #ifdef CUDA_PATH
       succ = THC_pointwiseApply2(
           state, dst, src,
           CopyOp<typename TensorUtils<TensorTypeDst>::DataType,
                  typename TensorUtils<TensorTypeSrc>::DataType>());
-      #endif 
 
       THArgCheck(succ, 2, CUTORCH_DIM_WARNING);
     } else {
@@ -142,12 +140,10 @@ THC_copyTensor(THCState* state, TensorTypeDst* dst, TensorTypeSrc* src) {
         TensorUtils<TensorTypeDst>::resizeAs(state, srcContig, dst);
 
         bool succ = false;
-      #ifdef CUDA_PATH
           succ = THC_pointwiseApply2(
             state, srcContig, src,
             CopyOp<typename TensorUtils<TensorTypeDst>::DataType,
                    typename TensorUtils<TensorTypeSrc>::DataType>());
-      #endif
 
         THArgCheck(succ, 2, CUTORCH_DIM_WARNING);
       }

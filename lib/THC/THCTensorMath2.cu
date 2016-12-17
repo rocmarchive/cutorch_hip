@@ -36,18 +36,14 @@ void THCudaTensor_tpow(THCState *state, THCudaTensor *self_, float value, THCuda
 {
   THAssert(THCudaTensor_checkGPU(state, 2, self_, src));
   if (self_ == src) {
-#ifdef CUDA_PATH
     if (!THC_pointwiseApply1(state, self_, TensorTPowOp(value))) {
       THArgCheck(false, 2, CUTORCH_DIM_WARNING);
     }
-#endif
   } else {
     THCudaTensor_resizeAs(state, self_, src);
-#ifdef CUDA_PATH
     if (!THC_pointwiseApply2(state, self_, src, TensorTPowOp(value))) {
       THArgCheck(false, 2, CUTORCH_DIM_WARNING);
     }
-#endif
   }
 
   THCudaCheck(hipGetLastError());
@@ -65,11 +61,9 @@ void THCudaTensor_atan2(THCState *state, THCudaTensor *self_, THCudaTensor *tx, 
   THArgCheck(THCudaTensor_nElement(state, tx) ==
              THCudaTensor_nElement(state, ty), 3, "sizes do not match");
   THCudaTensor_resizeAs(state, self_, tx);
-#ifdef CUDA_PATH
   if (!THC_pointwiseApply3(state, self_, tx, ty, TensorATan2Op())) {
     THArgCheck(false, 2, CUTORCH_DIM_WARNING);
   }
-#endif
 
   THCudaCheck(hipGetLastError());
 }

@@ -229,17 +229,17 @@ template <typename T, typename IndexType, int Dims>
 struct IndexToOffset {
   static __host__ __device__ IndexType get(
     IndexType linearId,
-    const TensorInfo<T, IndexType>& info) {
+    IndexType* sizes, IndexType* strides, int dims) {
     IndexType offset = 0;
 
     // Use static dims
-    for (int i = Dims - 1; i >= 0; --i) {
-      IndexType curDimIndex = linearId % info.sizes[i];
-      IndexType curDimOffset = curDimIndex * info.strides[i];
+    for (int i = dims - 1; i >= 0; --i) {
+      IndexType curDimIndex = linearId % sizes[i];
+      IndexType curDimOffset = curDimIndex * strides[i];
       offset += curDimOffset;
 
       if (i > 0) {
-        linearId /= info.sizes[i];
+        linearId /= sizes[i];
       }
     }
 
@@ -250,7 +250,7 @@ struct IndexToOffset {
 template <typename T, typename IndexType>
 struct IndexToOffset<T, IndexType, -2> {
   static inline __host__ __device__ IndexType
-    get(IndexType linearId, const TensorInfo<T, IndexType>& info) {
+    get(IndexType linearId, IndexType* sizes, IndexType* strides, int dims) {
     return linearId;
   }
 };
@@ -259,17 +259,17 @@ template <typename T, typename IndexType>
 struct IndexToOffset<T, IndexType, -1> {
   static inline __host__ __device__ IndexType get(
     IndexType linearId,
-    const TensorInfo<T, IndexType>& info) {
+    IndexType* sizes, IndexType* strides, int dims) {
 
     IndexType offset = 0;
 
     // Use dynamic dims
-    for (int i = info.dims - 1; i >= 0; --i) {
-      IndexType curDimIndex = linearId % info.sizes[i];
-      IndexType curDimOffset = curDimIndex * info.strides[i];
+    for (int i = dims - 1; i >= 0; --i) {
+      IndexType curDimIndex = linearId % sizes[i];
+      IndexType curDimOffset = curDimIndex * strides[i];
       offset += curDimOffset;
 
-      linearId /= info.sizes[i];
+      linearId /= sizes[i];
     }
 
     return offset;
