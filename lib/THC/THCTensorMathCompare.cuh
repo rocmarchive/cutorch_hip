@@ -13,7 +13,7 @@ struct TensorLTValueOp {
   __device__ __forceinline__ void operator()(TOut* out, T* in) {
     *out = ScalarConvert<bool, TOut>::to(THCNumerics<T>::lt(*in, value));
   }
-
+  __device__ ~TensorLTValueOp() {}
   const T value;
 };
 
@@ -24,6 +24,7 @@ struct TensorGTValueOp {
     *out = ScalarConvert<bool, TOut>::to(THCNumerics<T>::gt(*in, value));
   }
 
+  __device__ ~TensorGTValueOp() {}
   const T value;
 };
 
@@ -35,6 +36,7 @@ struct TensorLEValueOp {
     *out = ScalarConvert<bool, TOut>::to(THCNumerics<T>::le(*in, value));
   }
 
+  __device__ ~TensorLEValueOp() {}
   const T value;
 };
 
@@ -45,6 +47,7 @@ struct TensorGEValueOp {
     *out = ScalarConvert<bool, TOut>::to(THCNumerics<T>::ge(*in, value));
   }
 
+  __device__ ~TensorGEValueOp() {}
   const T value;
 };
 
@@ -55,6 +58,7 @@ struct TensorEQValueOp {
     *out = ScalarConvert<bool, TOut>::to(THCNumerics<T>::eq(*in, value));
   }
 
+  __device__ ~TensorEQValueOp() {}
   const T value;
 };
 
@@ -65,6 +69,7 @@ struct TensorNEValueOp {
     *out = ScalarConvert<bool, TOut>::to(THCNumerics<T>::ne(*in, value));
   }
 
+  __device__ ~TensorNEValueOp() {}
   const T value;
 };
 

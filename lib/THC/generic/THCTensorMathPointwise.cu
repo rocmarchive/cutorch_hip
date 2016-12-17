@@ -58,9 +58,9 @@ IMPLEMENT_CUDA_TENSOR_BASIC_FUNC(round, THCNumerics<real>::round, Real)
 IMPLEMENT_CUDA_TENSOR_BASIC_FUNC( frac, THCNumerics<real>::frac,  Real)
 IMPLEMENT_CUDA_TENSOR_BASIC_FUNC( cinv, THCNumerics<real>::cinv,  Real)
 
-
+#ifdef CUDA_PATH
 IMPLEMENT_CUDA_TENSOR_BASIC_FUNC(  abs, THCNumerics<real>::abs,   Real)
-
+#endif
 #undef IMPLEMENT_CUDA_TENSOR_BASIC_FUNC_
 #undef IMPLEMENT_CUDA_TENSOR_BASIC_FUNC
 #endif
