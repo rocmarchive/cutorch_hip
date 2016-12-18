@@ -24,7 +24,7 @@ template <typename Op,
 #if __CUDA_ARCH__ >= 350
 __launch_bounds__(32 * 16, 4)
 #endif
-inline __global__ void
+__global__ void
 kernelPointwiseApply1(hipLaunchParm lp, Ta* Adata, IndexType* Asizes, 
                       IndexType* Astrides,
                       IndexType totalElements,

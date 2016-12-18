@@ -150,7 +150,7 @@ struct TensorCAddOp {
     *out = *in1 + val * *in2;
   }
 
-  __device__ ~TensorCAddOp() {}
+ __host__  __device__ ~TensorCAddOp() {}
 
   T val;
 };
@@ -412,7 +412,7 @@ struct TensorClampOp {
     *v = THCNumerics<T>::gt(minValue, val) ? minValue : val;
   }
 
-  __device__ ~TensorClampOp() {}
+  __host__  __device__ ~TensorClampOp() {}
   const T minValue;
   const T maxValue;
 };
@@ -492,7 +492,7 @@ struct TensorMaxValueOp {
     *out = THCNumerics<T>::gt(*in, val) ? *in : val;
   }
 
-  __device__ ~TensorMaxValueOp() {}
+  __host__ __device__ ~TensorMaxValueOp() {}
 
   T val;
 };
@@ -509,7 +509,7 @@ struct TensorMinValueOp {
     *out = THCNumerics<T>::lt(*in, val) ? *in : val;
   }
 
-  __device__ ~TensorMinValueOp() {}
+  __host__ __device__ ~TensorMinValueOp() {}
 
   T val;
 };
@@ -528,7 +528,7 @@ struct TensorAddCMulOp {
     );
   }
 
-  __device__ ~TensorAddCMulOp() {}
+  __host__ __device__ ~TensorAddCMulOp() {}
   T val;
 };
 
@@ -545,7 +545,7 @@ struct TensorAddCDivOp {
       )
     );
   }
-  __device__ ~TensorAddCDivOp() {}
+  __host__ __device__ ~TensorAddCDivOp() {}
   T val;
 };
 

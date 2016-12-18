@@ -22,7 +22,7 @@ struct TensorMaskedFillOp {
       *t = value;
     }
   }
-  __device__ ~TensorMaskedFillOp() {}
+  __host__ __device__ ~TensorMaskedFillOp() {}
   T value;
 };
 
@@ -37,7 +37,7 @@ struct TensorMaskedCopyOp {
       *out = in[*maskPrefixSum];
     }
   }
-  __device__ ~TensorMaskedCopyOp() {}
+  __host__ __device__ ~TensorMaskedCopyOp() {}
   // Where we are copying from
   T* in;
 };
@@ -52,7 +52,7 @@ struct TensorMaskedSelectOp {
       out[*maskPrefixSum] = *in;
     }
   }
-  __device__ ~TensorMaskedSelectOp() {}
+  __host__ __device__ ~TensorMaskedSelectOp() {}
   T* out;
 };
 

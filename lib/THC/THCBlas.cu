@@ -294,9 +294,9 @@ void THCudaBlas_Hgemm(THCState *state, char transa, char transb, long m, long n,
 				  i_ldb, &fBeta, c, CUDA_R_16F, i_ldc));
     }
 
+#endif
     return;
   }
-#endif
   THError("Cublas_Hgemm only supports m, n, k, lda, ldb, ldc"
           "with th bound [val] <= %d", INT_MAX);
 

@@ -37,7 +37,7 @@ kernelReduceAll(hipLaunchParm lp, TensorInfo<InT, IndexType> in,
   // With a block-wide stride, have each thread perform its own reduction.
   AccT r = init;
   for (IndexType i = hipThreadIdx_x; i < totalElements; i += hipBlockDim_x) {
-    const IndexType inOffset = IndexToOffset<InT, IndexType, ADims>::get(i, in);
+    const IndexType inOffset = IndexToOffset<InT, IndexType, ADims>::get(i, in.sizes, in.strides, in.dims);
     r = reduceOp(r, modifyOp(in.data[inOffset]));
   }
 
@@ -86,7 +86,7 @@ kernelReduceAllPass1(hipLaunchParm lp, TensorInfo<InT, IndexType> in,
   // With a block-wide stride, have each thread perform its own reduction.
   AccT r = init;
   for (IndexType i = startIndex + hipThreadIdx_x; i < endIndex; i += hipBlockDim_x) {
-    const IndexType inOffset = IndexToOffset<InT, IndexType, ADims>::get(i, in);
+    const IndexType inOffset = IndexToOffset<InT, IndexType, ADims>::get(i, in.sizes, in.strides, in.dims);
     r = reduceOp(r, modifyOp(in.data[inOffset]));
   }
 

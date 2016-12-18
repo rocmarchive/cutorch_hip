@@ -48,9 +48,9 @@ kernelReduceNoncontigDim(hipLaunchParm lp, TensorInfo<T, IndexType> out,
   // Each thread picks a point in `out` and `in` for which it is
   // producing the reduction
   const IndexType outOffset =
-    IndexToOffset<T, IndexType, ADims>::get(sliceIndex, out);
+    IndexToOffset<T, IndexType, ADims>::get(sliceIndex, out.sizes, out.strides, out.dims);
   const IndexType inBaseOffset =
-    IndexToOffset<T, IndexType, BDims>::get(sliceIndex, in);
+    IndexToOffset<T, IndexType, BDims>::get(sliceIndex, in.sizes, in.strides, in.dims);
 
   // For each point in reductionSize, reduce into `r`
   IndexType inOffset = inBaseOffset;
@@ -94,11 +94,11 @@ kernelReduceContigDim(hipLaunchParm lp, TensorInfo<T, IndexType> out,
 
   // Get the offset in `out` for the reduction
   const IndexType outOffset =
-    IndexToOffset<T, IndexType, ADims>::get(sliceIndex, out);
+    IndexToOffset<T, IndexType, ADims>::get(sliceIndex, out.sizes, out.strides, out.dims);
 
   // Get the base offset in `in` for this block's reduction
   const IndexType inBaseOffset =
-    IndexToOffset<T, IndexType, BDims>::get(sliceIndex, in);
+    IndexToOffset<T, IndexType, BDims>::get(sliceIndex, in.sizes, in.strides, in.dims);
 
   // Each thread in the block will reduce some subset of elements in
   // the slice. The elements are guaranteed contiguous starting at

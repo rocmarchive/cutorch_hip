@@ -17,7 +17,7 @@ struct TensorAddConstantOp {
     *v += val;
   }
 
-  __device__ ~TensorAddConstantOp() {}
+ __host__  __device__ ~TensorAddConstantOp() {}
 
   const T val;
 };
@@ -71,7 +71,7 @@ struct TensorSubConstantOp {
     *v -= val;
   }
   
-  __device__ ~TensorSubConstantOp() {}
+  __host__ __device__ ~TensorSubConstantOp() {}
 
   const T val;
 };
@@ -126,7 +126,7 @@ struct TensorMulConstantOp {
     *v *= val;
   }
   
-  __device__ ~TensorMulConstantOp() {}
+ __host__  __device__ ~TensorMulConstantOp() {}
  
   const T val;
 };
@@ -179,7 +179,7 @@ struct TensorDivConstantOp {
     *v /= val;
   }
 
-  __device__ ~TensorDivConstantOp() {}
+  __host__ __device__ ~TensorDivConstantOp() {}
 
   const T val;
 };
@@ -195,7 +195,7 @@ struct TensorDivConstantOp<float> {
     *v *= val;
   }
 
-  __device__ ~TensorDivConstantOp() {}
+  __host__ __device__ ~TensorDivConstantOp() {}
   const float val;
 };
 
@@ -210,7 +210,7 @@ struct TensorDivConstantOp<double> {
     *v *= val;
   }
 
-  __device__ ~TensorDivConstantOp() {}
+  __host__ __device__ ~TensorDivConstantOp() {}
   const double val;
 };
 

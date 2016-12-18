@@ -275,11 +275,11 @@ __global__ void gatherTopK(hipLaunchParm lp, TensorInfo<float, IndexType> input,
 
   // Find the start offset for our slice
   IndexType sliceStartIndex =
-    IndexToOffset<float, IndexType, Dim>::get(slice, input);
+    IndexToOffset<float, IndexType, Dim>::get(slice, input.sizes, input.strides, input.dims);
   IndexType topKSliceStartIndex =
-    IndexToOffset<float, IndexType, Dim>::get(slice, topK);
+    IndexToOffset<float, IndexType, Dim>::get(slice, topK.sizes, topK.strides, topK.dims);
   IndexType indicesSliceStartIndex =
-    IndexToOffset<long, IndexType, Dim>::get(slice, indices);
+    IndexToOffset<long, IndexType, Dim>::get(slice, indices.sizes, indices.strides, indices.dims);
 
   float* inputSliceStart = &input.data[sliceStartIndex];
   float* topKSliceStart = &topK.data[topKSliceStartIndex];

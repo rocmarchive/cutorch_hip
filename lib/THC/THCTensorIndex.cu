@@ -36,7 +36,7 @@ __global__ void indexCopySmallIndex(hipLaunchParm lp, TensorInfo<T, IndexType> d
   for (IndexType srcIndex = 0; srcIndex < indices.sizes[0]; ++srcIndex) {
     // Lua indices begin at 1
     IndexType dstIndex =
-      indices.data[IndexToOffset<long, IndexType, IdxDim>::get(srcIndex, indices)] - TH_INDEX_BASE;
+      indices.data[IndexToOffset<long, IndexType, IdxDim>::get(srcIndex, indices.sizes, indices.strides, indices.dims)] - TH_INDEX_BASE;
 
     if (dstIndex < dstCopyDimSize) {
       // We stride over the output ignoring the indexed dimension
@@ -45,12 +45,12 @@ __global__ void indexCopySmallIndex(hipLaunchParm lp, TensorInfo<T, IndexType> d
            linearIndex < innerSize;
            linearIndex += hipGridDim_x * hipBlockDim_x) {
         IndexType dstOffset =
-          IndexToOffset<T, IndexType, DstDim>::get(linearIndex, dst);
+          IndexToOffset<T, IndexType, DstDim>::get(linearIndex, dst.sizes, dst.strides, dst.dims);
 
         dstOffset += dstIndex * dst.strides[dstCopyDim];
 
         IndexType srcOffset =
-          IndexToOffset<T, IndexType, SrcDim>::get(linearIndex, src);
+          IndexToOffset<T, IndexType, SrcDim>::get(linearIndex, src.sizes, src.strides, src.dims);
         srcOffset += srcIndex * src.strides[srcCopyDim];
 
         dst.data[dstOffset] = src.data[srcOffset];
@@ -83,15 +83,15 @@ __global__ void indexCopyLargeIndex(hipLaunchParm lp, TensorInfo<T, IndexType> d
 
     // Lua indices begin at 1
     IndexType dstIndex =
-      indices.data[IndexToOffset<long, IndexType, IdxDim>::get(srcIndex, indices)] - TH_INDEX_BASE;
+      indices.data[IndexToOffset<long, IndexType, IdxDim>::get(srcIndex, indices.sizes, indices.strides, indices.dims)] - TH_INDEX_BASE;
 
     if (dstIndex < dstCopyDimSize) {
       IndexType dstOffset =
-        IndexToOffset<T, IndexType, DstDim>::get(elementInSlice, dst);
+        IndexToOffset<T, IndexType, DstDim>::get(elementInSlice, dst.sizes, dst.strides, dst.dims);
       dstOffset += dstIndex * dst.strides[dstCopyDim];
 
       IndexType srcOffset =
-        IndexToOffset<T, IndexType, SrcDim>::get(elementInSlice, src);
+        IndexToOffset<T, IndexType, SrcDim>::get(elementInSlice, src.sizes, src.strides, src.dims);
       srcOffset += srcIndex * src.strides[srcCopyDim];
 
       dst.data[dstOffset] = src.data[srcOffset];
@@ -121,7 +121,7 @@ __global__ void indexAddSmallIndex(hipLaunchParm lp, TensorInfo<T, IndexType> ds
   for (IndexType srcIndex = 0; srcIndex < indices.sizes[0]; ++srcIndex) {
     // Lua indices begin at 1
     IndexType dstIndex =
-      indices.data[IndexToOffset<long, IndexType, IdxDim>::get(srcIndex, indices)] - TH_INDEX_BASE;
+      indices.data[IndexToOffset<long, IndexType, IdxDim>::get(srcIndex, indices.sizes, indices.strides, indices.dims)] - TH_INDEX_BASE;
 
     if (dstIndex < dstAddDimSize) {
       // We stride over the output ignoring the indexed dimension
@@ -130,11 +130,11 @@ __global__ void indexAddSmallIndex(hipLaunchParm lp, TensorInfo<T, IndexType> ds
            linearIndex < innerSize;
            linearIndex += hipGridDim_x * hipBlockDim_x) {
         IndexType dstOffset =
-          IndexToOffset<T, IndexType, DstDim>::get(linearIndex, dst);
+          IndexToOffset<T, IndexType, DstDim>::get(linearIndex, dst.sizes, dst.strides, dst.dims);
         dstOffset += dstIndex * dst.strides[dstAddDim];
 
         IndexType srcOffset =
-          IndexToOffset<T, IndexType, SrcDim>::get(linearIndex, src);
+          IndexToOffset<T, IndexType, SrcDim>::get(linearIndex, src.sizes, src.strides, src.dims);
         srcOffset += srcIndex * src.strides[srcAddDim];
        #ifdef CUDA_PATH
         atomicAdd(&dst.data[dstOffset], src.data[srcOffset]);
@@ -168,15 +168,15 @@ __global__ void indexAddLargeIndex(hipLaunchParm lp, TensorInfo<T, IndexType> ds
 
     // Lua indices begin at 1
     IndexType dstIndex =
-      indices.data[IndexToOffset<long, IndexType, IdxDim>::get(srcIndex, indices)] - TH_INDEX_BASE;
+      indices.data[IndexToOffset<long, IndexType, IdxDim>::get(srcIndex, indices.sizes, indices.strides, indices.dims)] - TH_INDEX_BASE;
 
     if (dstIndex < dstAddDimSize) {
       IndexType dstOffset =
-        IndexToOffset<T, IndexType, DstDim>::get(elementInSlice, dst);
+        IndexToOffset<T, IndexType, DstDim>::get(elementInSlice, dst.sizes, dst.strides, dst.dims);
       dstOffset += dstIndex * dst.strides[dstAddDim];
 
       IndexType srcOffset =
-        IndexToOffset<T, IndexType, SrcDim>::get(elementInSlice, src);
+        IndexToOffset<T, IndexType, SrcDim>::get(elementInSlice, src.sizes, src.strides, src.dims);
       srcOffset += srcIndex * src.strides[srcAddDim];
 
       #ifdef CUDA_PATH
@@ -207,7 +207,7 @@ __global__ void indexFillSmallIndex(hipLaunchParm lp, TensorInfo<T, IndexType> d
   for (IndexType dstIndex = 0; dstIndex < indices.sizes[0]; ++dstIndex) {
     // Lua indices begin at 1
     IndexType dstIndex_ =
-      indices.data[IndexToOffset<long, IndexType, IdxDim>::get(dstIndex, indices)] - TH_INDEX_BASE;
+      indices.data[IndexToOffset<long, IndexType, IdxDim>::get(dstIndex, indices.sizes, indices.strides, indices.dims)] - TH_INDEX_BASE;
 
     if (dstIndex < dstFillDimSize) {
       // We stride over the output ignoring the indexed dimension
@@ -216,7 +216,7 @@ __global__ void indexFillSmallIndex(hipLaunchParm lp, TensorInfo<T, IndexType> d
            linearIndex < innerSize;
            linearIndex += hipGridDim_x * hipBlockDim_x) {
         IndexType dstOffset =
-          IndexToOffset<T, IndexType, DstDim>::get(linearIndex, dst);
+          IndexToOffset<T, IndexType, DstDim>::get(linearIndex, dst.sizes, dst.strides, dst.dims);
         dstOffset += dstIndex_ * dst.strides[dstFillDim];
 
         dst.data[dstOffset] = val;
@@ -248,11 +248,11 @@ __global__ void indexFillLargeIndex(hipLaunchParm lp, TensorInfo<T, IndexType> d
 
     // Lua indices begin at 1
     IndexType dstIndex_ =
-      indices.data[IndexToOffset<long, IndexType, IdxDim>::get(dstIndex, indices)] - TH_INDEX_BASE;
+      indices.data[IndexToOffset<long, IndexType, IdxDim>::get(dstIndex, indices.sizes, indices.strides, indices.dims)] - TH_INDEX_BASE;
 
     if (dstIndex_ < dstFillDimSize) {
       IndexType dstOffset =
-        IndexToOffset<T, IndexType, DstDim>::get(elementInSlice, dst);
+        IndexToOffset<T, IndexType, DstDim>::get(elementInSlice, dst.sizes, dst.strides, dst.dims);
       dstOffset += dstIndex_ * dst.strides[dstFillDim];
 
       dst.data[dstOffset] = val;
@@ -282,7 +282,7 @@ __global__ void indexSelectSmallIndex(hipLaunchParm lp, TensorInfo<T, IndexType>
   for (IndexType dstIndex = 0; dstIndex < indices.sizes[0]; ++dstIndex) {
     // Lua indices begin at 1
     IndexType srcIndex =
-      indices.data[IndexToOffset<long, IndexType, IdxDim>::get(dstIndex, indices)] - TH_INDEX_BASE;
+      indices.data[IndexToOffset<long, IndexType, IdxDim>::get(dstIndex, indices.sizes, indices.strides, indices.dims)] - TH_INDEX_BASE;
 
     if (srcIndex < srcSelectDimSize) {
       // We stride over the output ignoring the indexed dimension
@@ -291,11 +291,11 @@ __global__ void indexSelectSmallIndex(hipLaunchParm lp, TensorInfo<T, IndexType>
            linearIndex < innerSize;
            linearIndex += hipGridDim_x * hipBlockDim_x) {
         IndexType dstOffset =
-          IndexToOffset<T, IndexType, DstDim>::get(linearIndex, dst);
+          IndexToOffset<T, IndexType, DstDim>::get(linearIndex, dst.sizes, dst.strides, dst.dims);
         dstOffset += dstIndex * dst.strides[dstSelectDim];
 
         IndexType srcOffset =
-          IndexToOffset<T, IndexType, SrcDim>::get(linearIndex, src);
+          IndexToOffset<T, IndexType, SrcDim>::get(linearIndex, src.sizes, src.strides, src.dims);
         srcOffset += srcIndex * src.strides[srcSelectDim];
 
         dst.data[dstOffset] = src.data[srcOffset];
@@ -329,15 +329,15 @@ __global__ void indexSelectLargeIndex(hipLaunchParm lp, TensorInfo<T, IndexType>
 
     // Lua indices begin at 1
     IndexType srcIndex =
-      indices.data[IndexToOffset<long, IndexType, IdxDim>::get(dstIndex, indices)] - TH_INDEX_BASE;
+      indices.data[IndexToOffset<long, IndexType, IdxDim>::get(dstIndex, indices.sizes, indices.strides, indices.dims)] - TH_INDEX_BASE;
 
     if (srcIndex < srcSelectDimSize) {
       IndexType dstOffset =
-        IndexToOffset<T, IndexType, DstDim>::get(elementInSlice, dst);
+        IndexToOffset<T, IndexType, DstDim>::get(elementInSlice, dst.sizes, dst.strides, dst.dims);
       dstOffset += dstIndex * dst.strides[dstSelectDim];
 
       IndexType srcOffset =
-        IndexToOffset<T, IndexType, SrcDim>::get(elementInSlice, src);
+        IndexToOffset<T, IndexType, SrcDim>::get(elementInSlice, src.sizes, src.strides, src.dims);
       srcOffset += srcIndex * src.strides[srcSelectDim];
 
       dst.data[dstOffset] = src.data[srcOffset];
