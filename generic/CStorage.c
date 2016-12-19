@@ -131,7 +131,7 @@ static int TH_CONCAT_3(cutorch_,Real,Storage_copy)(lua_State *L)
     THStorage_(copyCudaDouble)(cutorch_getstate(L), storage, (THCudaDoubleStorage *)src);
 #ifdef CUDA_HALF_TENSOR
   else if( (src = luaT_toudata(L, 2, "torch.CudaHalfStorage")) )
-    THStorage_(copyCudaHalf)(cutorch_getstate(L), storage, src);
+    THStorage_(copyCudaHalf)(cutorch_getstate(L), storage, (THCudaHalfStorage *)src);
 #endif
   else
     luaL_typerror(L, 2, "torch.*Storage");
