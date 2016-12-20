@@ -46,7 +46,7 @@ fillSliceWithIndex(hipLaunchParm lp, TensorInfo<long, IndexType> out,
   }
 
   const unsigned long offset =
-    IndexToOffset<long, IndexType, Dim>::get(slice, out.sizes, out.strides, out.dims);
+    IndexToOffset<long, IndexType, Dim>::get(slice, out.dSizes, out.dStrides, out.dims);
   long* base = &out.data[offset];
 
   for (long i = hipThreadIdx_x; i < sliceSize; i += hipBlockDim_x) {

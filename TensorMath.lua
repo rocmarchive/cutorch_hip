@@ -818,13 +818,13 @@ for k, Tensor_ in pairs(handledTypenames) do
 	    {name=real}}
     )
 
-    wrap("sort",
+    --[[wrap("sort",
          cname("sort"),
          {{name=Tensor, default=true, returned=true},
              {name="CudaLongTensor", default=true, returned=true, noreadadd=true},
              {name=Tensor},
              {name="index", default=lastdim(3)},
-             {name="boolean", default=0}}
+             {name="boolean", default=0}}]]--
     )
 
     wrap("squeeze",
@@ -865,10 +865,10 @@ for k, Tensor_ in pairs(handledTypenames) do
             end},
             {name="index"}})
 
-    wrap("abs",
+    --[[wrap("abs",
          cname("abs"),
          {{name=Tensor, default=true, returned=true, method={default='nil'}},
-             {name=Tensor, method={default=1}}})
+             {name=Tensor, method={default=1}}})]]--
 
     wrap("sign",
          cname("sign"),
@@ -1284,13 +1284,13 @@ wrap("scatter",
 	{name=real}}
 )
 
-wrap("sort",
+--[[wrap("sort",
      cname("sort"),
      {{name=Tensor, default=true, returned=true},
       {name="CudaLongTensor", default=true, returned=true, noreadadd=true},
       {name=Tensor},
       {name="index", default=lastdim(3)},
-      {name="boolean", default=0}})
+      {name="boolean", default=0}})]]--
 
 wrap("topk",
      cname("topk"),

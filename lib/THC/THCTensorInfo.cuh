@@ -18,10 +18,14 @@
 // CUDA kernel argument that defines tensor layout
 template <typename T, typename IndexType>
 struct TensorInfo {
+  // constructor
   TensorInfo(T* p,
              int dim,
              IndexType sz[MAX_CUTORCH_DIMS],
              IndexType st[MAX_CUTORCH_DIMS]);
+
+  // Destructor
+  ~TensorInfo(void); 
 
   // Set the size of the given dimension to 1, as if it were a
   // reduction dim (allows you to calculate offsets of the reduction
@@ -46,6 +50,8 @@ struct TensorInfo {
   T* data;
   IndexType sizes[MAX_CUTORCH_DIMS];
   IndexType strides[MAX_CUTORCH_DIMS];
+  IndexType* dSizes;
+  IndexType* dStrides;
   int dims;
 };
 
@@ -58,10 +64,28 @@ TensorInfo<T, IndexType>::TensorInfo(T* p,
   dims = dim;
   assert(dims > 0 && dims < MAX_CUTORCH_DIMS);
 
+  // Allocate to accomodate device strides and sizes for the tensor
+  THCudaCheck(hipMalloc((void **)&dSizes, sizeof(IndexType) * dims));
+  THCudaCheck(hipMalloc((void **)&dStrides, sizeof(IndexType) * dims));
+
   for (int i = 0; i < dim; ++i) {
     sizes[i] = sz[i];
     strides[i] = st[i];
   }
+
+  // Copy the size and strides to the device pointer
+  THCudaCheck(hipMemcpy(dSizes, sizes, sizeof(IndexType) * dims, hipMemcpyHostToDevice));
+  THCudaCheck(hipMemcpy(dStrides, strides, sizeof(IndexType) * dims, hipMemcpyHostToDevice));
+}
+
+
+//Destructor
+template <typename T, typename IndexType>
+TensorInfo<T, IndexType>::~TensorInfo(void) {
+
+  // Free up allocated resource
+  // THCudaCheck(hipFree(dStrides));
+  // THCudaCheck(hipFree(dSizes));
 }
 
 template <typename T, typename IndexType>
@@ -233,7 +257,7 @@ struct IndexToOffset {
     IndexType offset = 0;
 
     // Use static dims
-    for (int i = dims - 1; i >= 0; --i) {
+    for (int i = Dims - 1; i >= 0; --i) {
       IndexType curDimIndex = linearId % sizes[i];
       IndexType curDimOffset = curDimIndex * strides[i];
       offset += curDimOffset;

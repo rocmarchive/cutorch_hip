@@ -275,11 +275,11 @@ __global__ void gatherTopK(hipLaunchParm lp, TensorInfo<float, IndexType> input,
 
   // Find the start offset for our slice
   IndexType sliceStartIndex =
-    IndexToOffset<float, IndexType, Dim>::get(slice, input.sizes, input.strides, input.dims);
+    IndexToOffset<float, IndexType, Dim>::get(slice, input.dSizes, input.dStrides, input.dims);
   IndexType topKSliceStartIndex =
-    IndexToOffset<float, IndexType, Dim>::get(slice, topK.sizes, topK.strides, topK.dims);
+    IndexToOffset<float, IndexType, Dim>::get(slice, topK.dSizes, topK.dStrides, topK.dims);
   IndexType indicesSliceStartIndex =
-    IndexToOffset<long, IndexType, Dim>::get(slice, indices.sizes, indices.strides, indices.dims);
+    IndexToOffset<long, IndexType, Dim>::get(slice, indices.dSizes, indices.dStrides, indices.dims);
 
   float* inputSliceStart = &input.data[sliceStartIndex];
   float* topKSliceStart = &topK.data[topKSliceStartIndex];
@@ -416,12 +416,12 @@ THC_API void THCudaTensor_topk(THCState* state,
       inputSlices,                                                      \
       /* The actual dimension that the k-selection is running in */     \
       /* may have changed from collapseDims() */                        \
-      inputInfo.strides[collapseInputDim],                              \
+      inputInfo.dStrides[collapseInputDim],                              \
       topKInfo,                                                         \
       topKSlices,                                                       \
-      topKInfo.strides[collapseTopKDim],                                \
+      topKInfo.dStrides[collapseTopKDim],                                \
       indicesInfo,                                                      \
-      indicesInfo.strides[collapseIndicesDim])
+      indicesInfo.dStrides[collapseIndicesDim])
 
 #define RUN_DIR(INDEX_T, DIM)                   \
   if (dir) {                                    \
