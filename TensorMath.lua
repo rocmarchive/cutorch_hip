@@ -1292,7 +1292,7 @@ wrap("scatter",
       {name="index", default=lastdim(3)},
       {name="boolean", default=0}})]]--
 
-wrap("topk",
+--[[wrap("topk",
      cname("topk"),
      {{name=Tensor, default=true, returned=true},
        {name="CudaLongTensor", default=true, returned=true, noreadadd=true},
@@ -1300,7 +1300,7 @@ wrap("topk",
        {name="long", default=1},
        {name="index", default=lastdim(3)},
        {name="boolean", default=0},
-       {name="boolean", default=0}})
+       {name="boolean", default=0}})]]--
 
 do
    local Tensor = Tensor
