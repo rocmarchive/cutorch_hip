@@ -126,7 +126,7 @@ struct LogicalAny {
 };
 
 template<typename Real>
-__global__ inline void THCTensor_kernel_renorm(hipLaunchParm lp, Real *data, const Real value, const ptrdiff_t size, const Real maxnorm)
+__global__ void THCTensor_kernel_renorm(hipLaunchParm lp, Real *data, const Real value, const ptrdiff_t size, const Real maxnorm)
 {
   __shared__ Real buffer[32];
   long tx = hipThreadIdx_x;
@@ -373,7 +373,7 @@ void THCTensor_varOuterDim(THCState *state, TensorTypeK *tgt, TensorTypeK *src, 
  * per thread block is quicker than processing a single row, especially for short rows).
  */
 template<typename Real, bool flag, bool apply_sqrt>
-__global__ inline void THCTensor_kernel_varInnermostDim(hipLaunchParm lp, Real *tgt, Real *src_, unsigned num_rows, unsigned row_size)
+__global__ void THCTensor_kernel_varInnermostDim(hipLaunchParm lp, Real *tgt, Real *src_, unsigned num_rows, unsigned row_size)
 {
   __shared__ Real ssum[32][16];
   __shared__ Real ssum2[32][16];

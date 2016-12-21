@@ -15,7 +15,7 @@
 #include "hip/hip_runtime_api.h"
 #include "hipblas.h"
 
-#cmakedefine USE_MAGMA
+//#define USE_MAGMA
 
 #ifdef __cplusplus
 # define THC_EXTERNC extern "C"
