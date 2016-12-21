@@ -824,8 +824,8 @@ for k, Tensor_ in pairs(handledTypenames) do
              {name="CudaLongTensor", default=true, returned=true, noreadadd=true},
              {name=Tensor},
              {name="index", default=lastdim(3)},
-             {name="boolean", default=0}}]]--
-    )
+             {name="boolean", default=0}}
+    )]]--
 
     wrap("squeeze",
          cname("squeeze"),
