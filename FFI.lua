@@ -2,14 +2,14 @@ local ok, ffi = pcall(require, 'ffi')
 if ok then
    local unpack = unpack or table.unpack
    local cdefs = [[
-typedef struct CUstream_st *cudaStream_t;
+typedef struct CUstream_st *hipStream_t;
 
 struct hipblasContext;
 typedef struct hipblasContext *hipblasHandle_t;
 typedef struct CUhandle_st *hipblasHandle_t;
 
 typedef struct _THCStream {
-   cudaStream_t stream;
+   hipStream_t stream;
    int device;
    int refcount;
 } THCStream;
@@ -34,7 +34,7 @@ typedef struct THCState
   struct THAllocator* cudaHostAllocator;
 } THCState;
 
-cudaStream_t THCState_getCurrentStream(THCState *state);
+hipStream_t THCState_getCurrentStream(THCState *state);
 
 ]]
 
