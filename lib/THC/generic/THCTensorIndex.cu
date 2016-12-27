@@ -1,6 +1,7 @@
 #ifndef THC_GENERIC_FILE
 #define THC_GENERIC_FILE "generic/THCTensorIndex.cu"
 #else
+
 void THCTensor_(indexCopy_long)(THCState *state, THCTensor *dst, int dim, THLongTensor *indices, THCTensor *src)
 {
   THAssert(THCTensor_(checkGPU)(state, 2, dst, src));
@@ -49,22 +50,21 @@ void THCTensor_(indexCopy)(THCState *state, THCTensor *dst, int dim, THCudaLongT
 
   int mpc = THCState_getCurrentDeviceProperties(state)->multiProcessorCount;
 
-#ifdef CUDA_PATH
 #define SMALL_INDEX(TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM) \
-  hipLaunchKernel(HIP_KERNEL_NAME(indexCopySmallIndex<TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM>),       \
+  invokeSmallIndex<TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM>(       \
     smallIndexGrid, smallIndexBlock, 0, stream,           \
-      dstInfo, srcInfo, indicesInfo,                            \
+      dstData, dstSizes, dstStrides, dstDims, \
+      srcData, srcSizes, srcStrides, srcDims, \
+      indData, indSizes, indStrides, indDims,\
       dstCopyDim, srcCopyDim, sliceSize, dstCopyDimSize);
-
-#else
-#define SMALL_INDEX(TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM) 
-#endif
 
 #ifdef CUDA_PATH
 #define LARGE_INDEX(TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM) \
-  hipLaunchKernel(HIP_KERNEL_NAME(indexCopyLargeIndex<TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM>),       \
+  invokeLargeIndex<TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM>(       \
       largeIndexGrid, largeIndexBlock, 0, stream,          \
-      dstInfo, srcInfo, indicesInfo,                            \
+      dstData, dstSizes, dstStrides, dstDims, \
+      srcData, srcSizes, srcStrides, srcDims, \
+      indData, indSizes, indStrides, indDims,\
       dstCopyDim, srcCopyDim, sliceSize, dstCopyDimSize); 
 
 #else
@@ -94,25 +94,44 @@ void THCTensor_(indexCopy)(THCState *state, THCTensor *dst, int dim, THCudaLongT
       getTensorInfo<THCudaLongTensor, unsigned int>(state, indices);
     indicesInfo.collapseDims();
 
+    // Declaration of extra variables
+    real* srcData, *dstData; 
+    long *indData;
+    unsigned int *srcSizes, *srcStrides, *dstSizes, *dstStrides, *indSizes, *indStrides;
+    int srcDims, dstDims, indDims;
+    // Assign value to data 
+    srcData = srcInfo.data;
+    dstData = dstInfo.data;
+    indData = indicesInfo.data;
+    srcStrides = srcInfo.dStrides;
+    dstStrides = dstInfo.dStrides;
+    indStrides = indicesInfo.dStrides;
+    srcSizes = srcInfo.dSizes;
+    dstSizes = dstInfo.dSizes;
+    indSizes = indicesInfo.dSizes;
+    srcDims = srcInfo.dims;
+    dstDims = dstInfo.dims;
+    indDims = indicesInfo.dims;
+
     // A reasonable choice for when to have each thread iterate over
     // indices to choose
 #ifdef CUDA_PATH
     if (numIndices <= 16) {
-      if (dstInfo.dims == 1 && srcInfo.dims == 1 && indContig) {
+      if (dstDims == 1 && srcDims == 1 && indContig) {
         SMALL_INDEX(real, unsigned int, 1, 1, -2);
-      } else if (dstInfo.dims == 2 && srcInfo.dims == 2 && indContig) {
+      } else if (dstDims == 2 && srcDims == 2 && indContig) {
         SMALL_INDEX(real, unsigned int, 2, 2, -2);
-      } else if (dstInfo.dims == 3 && srcInfo.dims == 3 && indContig) {
+      } else if (dstDims == 3 && srcDims == 3 && indContig) {
         SMALL_INDEX(real, unsigned int, 3, 3, -2);
       } else {
         SMALL_INDEX(real, unsigned int, -1, -1, -1);
       }
     } else {
-      if (dstInfo.dims == 1 && srcInfo.dims == 1 && indContig) {
+      if (dstDims == 1 && srcDims == 1 && indContig) {
         LARGE_INDEX(real, unsigned int, 1, 1, -2);
-      } else if (dstInfo.dims == 2 && srcInfo.dims == 2 && indContig) {
+      } else if (dstDims == 2 && srcDims == 2 && indContig) {
         LARGE_INDEX(real, unsigned int, 2, 2, -2);
-      } else if (dstInfo.dims == 3 && srcInfo.dims == 3 && indContig) {
+      } else if (dstDims == 3 && srcDims == 3 && indContig) {
         LARGE_INDEX(real, unsigned int, 3, 3, -2);
       } else {
         LARGE_INDEX(real, unsigned int, -1, -1, -1);
@@ -133,6 +152,25 @@ void THCTensor_(indexCopy)(THCState *state, THCTensor *dst, int dim, THCudaLongT
     TensorInfo<long, unsigned long> indicesInfo =
       getTensorInfo<THCudaLongTensor, unsigned long>(state, indices);
     indicesInfo.collapseDims();
+    // Declaration of extra variables
+    real* srcData, *dstData; 
+    long *indData;
+    unsigned long *srcSizes, *srcStrides, *dstSizes, *dstStrides, *indSizes, *indStrides;
+    int srcDims, dstDims, indDims;
+    // Assign value to data 
+    srcData = srcInfo.data;
+    dstData = dstInfo.data;
+    indData = indicesInfo.data;
+    srcStrides = srcInfo.dStrides;
+    dstStrides = dstInfo.dStrides;
+    indStrides = indicesInfo.dStrides;
+    srcSizes = srcInfo.dSizes;
+    dstSizes = dstInfo.dSizes;
+    indSizes = indicesInfo.dSizes;
+    srcDims = srcInfo.dims;
+    dstDims = dstInfo.dims;
+    indDims = indicesInfo.dims;
+
 
     LARGE_INDEX(real, unsigned long, -1, -1, -1);
   }
@@ -191,9 +229,11 @@ void THCTensor_(indexAdd)(THCState *state, THCTensor *dst, int dim, THCudaLongTe
 
 #ifdef CUDA_PATH
 #define SMALL_INDEX(TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM) \
-  hipLaunchKernel(HIP_KERNEL_NAME(indexAddSmallIndex<TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM>), \
+  invokeAddSmallIndex<TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM>( \
       smallIndexGrid, smallIndexBlock, 0, stream,   \
-      dstInfo, srcInfo, indicesInfo,                    \
+      dstData, dstSizes, dstStrides, dstDims, \
+      srcData, srcSizes, srcStrides, srcDims, \
+      indData, indSizes, indStrides, indDims,\
       dstAddDim, srcAddDim, sliceSize, dstAddDimSize);
  
 #else
@@ -202,9 +242,11 @@ void THCTensor_(indexAdd)(THCState *state, THCTensor *dst, int dim, THCudaLongTe
 
 #ifdef CUDA_PATH
 #define LARGE_INDEX(TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM) \
-  hipLaunchKernel(HIP_KERNEL_NAME(indexAddLargeIndex<TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM>), \
+  invokeAddLargeIndex<TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM>( \
       largeIndexGrid, largeIndexBlock, 0, stream,   \
-      dstInfo, srcInfo, indicesInfo,                    \
+      dstData, dstSizes, dstStrides, dstDims, \
+      srcData, srcSizes, srcStrides, srcDims, \
+      indData, indSizes, indStrides, indDims,\
       dstAddDim, srcAddDim, sliceSize, dstAddDimSize); 
 
 #else
@@ -234,25 +276,44 @@ void THCTensor_(indexAdd)(THCState *state, THCTensor *dst, int dim, THCudaLongTe
       getTensorInfo<THCudaLongTensor, unsigned int>(state, indices);
     indicesInfo.collapseDims();
 
+    // Declaration of extra variables
+    real* srcData, *dstData; 
+    long *indData;
+    unsigned int *srcSizes, *srcStrides, *dstSizes, *dstStrides, *indSizes, *indStrides;
+    int srcDims, dstDims, indDims;
+    // Assign value to data 
+    srcData = srcInfo.data;
+    dstData = dstInfo.data;
+    indData = indicesInfo.data;
+    srcStrides = srcInfo.dStrides;
+    dstStrides = dstInfo.dStrides;
+    indStrides = indicesInfo.dStrides;
+    srcSizes = srcInfo.dSizes;
+    dstSizes = dstInfo.dSizes;
+    indSizes = indicesInfo.dSizes;
+    srcDims = srcInfo.dims;
+    dstDims = dstInfo.dims;
+    indDims = indicesInfo.dims;
+
     // A reasonable choice for when to have each thread iterate over
     // indices to choose
 #ifdef CUDA_PATH
     if (numIndices <= 16) {
-      if (dstInfo.dims == 1 && srcInfo.dims == 1 && indContig) {
+      if (dstDims == 1 && srcDims == 1 && indContig) {
         SMALL_INDEX(real, unsigned int, 1, 1, -2);
-      } else if (dstInfo.dims == 2 && srcInfo.dims == 2 && indContig) {
+      } else if (dstDims == 2 && srcDims == 2 && indContig) {
         SMALL_INDEX(real, unsigned int, 2, 2, -2);
-      } else if (dstInfo.dims == 3 && srcInfo.dims == 3 && indContig) {
+      } else if (dstDims == 3 && srcDims == 3 && indContig) {
         SMALL_INDEX(real, unsigned int, 3, 3, -2);
       } else {
         SMALL_INDEX(real, unsigned int, -1, -1, -1);
       }
     } else {
-      if (dstInfo.dims == 1 && srcInfo.dims == 1 && indContig) {
+      if (dstDims == 1 && srcDims == 1 && indContig) {
         LARGE_INDEX(real, unsigned int, 1, 1, -2);
-      } else if (dstInfo.dims == 2 && srcInfo.dims == 2 && indContig) {
+      } else if (dstDims == 2 && srcDims == 2 && indContig) {
         LARGE_INDEX(real, unsigned int, 2, 2, -2);
-      } else if (dstInfo.dims == 3 && srcInfo.dims == 3 && indContig) {
+      } else if (dstDims == 3 && srcDims == 3 && indContig) {
         LARGE_INDEX(real, unsigned int, 3, 3, -2);
       } else {
         LARGE_INDEX(real, unsigned int, -1, -1, -1);
@@ -273,6 +334,25 @@ void THCTensor_(indexAdd)(THCState *state, THCTensor *dst, int dim, THCudaLongTe
     TensorInfo<long, unsigned long> indicesInfo =
       getTensorInfo<THCudaLongTensor, unsigned long>(state, indices);
     indicesInfo.collapseDims();
+    // Declaration of extra variables
+    real* srcData, *dstData; 
+    long *indData;
+    unsigned long *srcSizes, *srcStrides, *dstSizes, *dstStrides, *indSizes, *indStrides;
+    int srcDims, dstDims, indDims;
+    // Assign value to data 
+    srcData = srcInfo.data;
+    dstData = dstInfo.data;
+    indData = indicesInfo.data;
+    srcStrides = srcInfo.dStrides;
+    dstStrides = dstInfo.dStrides;
+    indStrides = indicesInfo.dStrides;
+    srcSizes = srcInfo.dSizes;
+    dstSizes = dstInfo.dSizes;
+    indSizes = indicesInfo.dSizes;
+    srcDims = srcInfo.dims;
+    dstDims = dstInfo.dims;
+    indDims = indicesInfo.dims;
+
 
     LARGE_INDEX(real, unsigned long, -1, -1, -1);
   }
@@ -326,9 +406,10 @@ void THCTensor_(indexFill)(THCState *state, THCTensor *dst, int dim, THCudaLongT
 
 #ifdef CUDA_PATH
 #define SMALL_INDEX(TENSOR_TYPE, TYPE, DST_DIM, IDX_DIM)  \
-  hipLaunchKernel(HIP_KERNEL_NAME(indexFillSmallIndex<TENSOR_TYPE, TYPE, DST_DIM, IDX_DIM>), \
+  invokeFillSmallIndex<TENSOR_TYPE, TYPE, DST_DIM, IDX_DIM>( \
       smallIndexGrid, smallIndexBlock, 0, stream,   \
-      dstInfo, indicesInfo,                             \
+      dstData, dstSizes, dstStrides, dstDims, \
+      indData, indSizes, indStrides, indDims,\
       dstFillDim, sliceSize, dstFillDimSize, val);
  
 #else
@@ -337,9 +418,10 @@ void THCTensor_(indexFill)(THCState *state, THCTensor *dst, int dim, THCudaLongT
 
 #ifdef CUDA_PATH
 #define LARGE_INDEX(TENSOR_TYPE, TYPE, DST_DIM, IDX_DIM)  \
-  hipLaunchKernel(HIP_KERNEL_NAME(indexFillLargeIndex<TENSOR_TYPE, TYPE, DST_DIM, IDX_DIM>), \
+  invokeFillLargeIndex<TENSOR_TYPE, TYPE, DST_DIM, IDX_DIM>(\
       largeIndexGrid, largeIndexBlock, 0, stream,   \
-      dstInfo, indicesInfo,                             \
+      dstData, dstSizes, dstStrides, dstDims, \
+      indData, indSizes, indStrides, indDims,\
       dstFillDim, sliceSize, dstFillDimSize, val); 
 
 #else
@@ -363,25 +445,40 @@ void THCTensor_(indexFill)(THCState *state, THCTensor *dst, int dim, THCudaLongT
       getTensorInfo<THCudaLongTensor, unsigned int>(state, indices);
     indicesInfo.collapseDims();
 
+    // Declaration of extra variables
+    real* dstData; 
+    long *indData;
+    unsigned int *dstSizes, *dstStrides, *indSizes, *indStrides;
+    int dstDims, indDims;
+    // Assign value to data 
+    dstData = dstInfo.data;
+    indData = indicesInfo.data;
+    dstStrides = dstInfo.dStrides;
+    indStrides = indicesInfo.dStrides;
+    dstSizes = dstInfo.dSizes;
+    indSizes = indicesInfo.dSizes;
+    dstDims = dstInfo.dims;
+    indDims = indicesInfo.dims;
+
     // A reasonable choice for when to have each thread iterate over
     // indices to choose
 #ifdef CUDA_PATH
     if (numIndices <= 16) {
-      if (dstInfo.dims == 1 && indContig) {
+      if (dstDims == 1 && indContig) {
         SMALL_INDEX(real, unsigned int, 1, -2);
-      } else if (dstInfo.dims == 2 && indContig) {
+      } else if (dstDims == 2 && indContig) {
         SMALL_INDEX(real, unsigned int, 2, -2);
-      } else if (dstInfo.dims == 3 && indContig) {
+      } else if (dstDims == 3 && indContig) {
         SMALL_INDEX(real, unsigned int, 3, -2);
       } else {
         SMALL_INDEX(real, unsigned int, -1, -1);
       }
     } else {
-      if (dstInfo.dims == 1 && indContig) {
+      if (dstDims == 1 && indContig) {
         LARGE_INDEX(real, unsigned int, 1, -2);
-      } else if (dstInfo.dims == 2 && indContig) {
+      } else if (dstDims == 2 && indContig) {
         LARGE_INDEX(real, unsigned int, 2, -2);
-      } else if (dstInfo.dims == 3 && indContig) {
+      } else if (dstDims == 3 && indContig) {
         LARGE_INDEX(real, unsigned int, 3, -2);
       } else {
         LARGE_INDEX(real, unsigned int, -1, -1);
@@ -397,6 +494,21 @@ void THCTensor_(indexFill)(THCState *state, THCTensor *dst, int dim, THCudaLongT
     TensorInfo<long, unsigned long> indicesInfo =
       getTensorInfo<THCudaLongTensor, unsigned long>(state, indices);
     indicesInfo.collapseDims();
+    // Declaration of extra variables
+    real* dstData; 
+    long *indData;
+    unsigned long *dstSizes, *dstStrides, *indSizes, *indStrides;
+    int dstDims, indDims;
+    // Assign value to data 
+    dstData = dstInfo.data;
+    indData = indicesInfo.data;
+    dstStrides = dstInfo.dStrides;
+    indStrides = indicesInfo.dStrides;
+    dstSizes = dstInfo.dSizes;
+    indSizes = indicesInfo.dSizes;
+    dstDims = dstInfo.dims;
+    indDims = indicesInfo.dims;
+
 
     LARGE_INDEX(real, unsigned long, -1, -1);
   }
@@ -459,9 +571,11 @@ void THCTensor_(indexSelect)(THCState *state, THCTensor *dst, THCTensor *src, in
 
 #ifdef CUDA_PATH
 #define SMALL_INDEX(TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM) \
-  hipLaunchKernel(HIP_KERNEL_NAME(indexSelectSmallIndex<TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM>),     \
+  invokeSelectSmallIndex<TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM>(     \
       smallIndexGrid, smallIndexBlock, 0, stream,          \
-      dstInfo, srcInfo, indicesInfo,                            \
+      dstData, dstSizes, dstStrides, dstDims, \
+      srcData, srcSizes, srcStrides, srcDims, \
+      indData, indSizes, indStrides, indDims,\
       dstSelectDim, srcSelectDim, sliceSize, srcSelectDimSize);
 
 #else
@@ -470,9 +584,11 @@ void THCTensor_(indexSelect)(THCState *state, THCTensor *dst, THCTensor *src, in
 
 #ifdef CUDA_PATH
 #define LARGE_INDEX(TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM)         \
-  hipLaunchKernel(HIP_KERNEL_NAME(indexSelectLargeIndex<TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM>),     \
+  invokeSelectLargeIndex<TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM>(     \
       largeIndexGrid, largeIndexBlock, 0, stream,                  \
-      dstInfo, srcInfo, indicesInfo,                                    \
+      dstData, dstSizes, dstStrides, dstDims, \
+      srcData, srcSizes, srcStrides, srcDims, \
+      indData, indSizes, indStrides, indDims,\
       dstSelectDim, srcSelectDim, dstTotalSize, sliceSize, srcSelectDimSize);
  
 #else
@@ -502,25 +618,45 @@ void THCTensor_(indexSelect)(THCState *state, THCTensor *dst, THCTensor *src, in
       getTensorInfo<THCudaLongTensor, unsigned int>(state, indices);
     indicesInfo.collapseDims();
 
+    // Declaration of extra variables
+    real* srcData, *dstData; 
+    long *indData;
+    unsigned int *srcSizes, *srcStrides, *dstSizes, *dstStrides, *indSizes, *indStrides;
+    int srcDims, dstDims, indDims;
+    // Assign value to data 
+    srcData = srcInfo.data;
+    dstData = dstInfo.data;
+    indData = indicesInfo.data;
+    srcStrides = srcInfo.dStrides;
+    dstStrides = dstInfo.dStrides;
+    indStrides = indicesInfo.dStrides;
+    srcSizes = srcInfo.dSizes;
+    dstSizes = dstInfo.dSizes;
+    indSizes = indicesInfo.dSizes;
+    srcDims = srcInfo.dims;
+    dstDims = dstInfo.dims;
+    indDims = indicesInfo.dims;
+
+
     // A reasonable choice for when to have each thread iterate over
     // indices to choose
 #ifdef CUDA_PATH
     if (numIndices <= 16) {
-      if (dstInfo.dims == 1 && srcInfo.dims == 1 && indContig) {
+      if (dstDims == 1 && srcDims == 1 && indContig) {
         SMALL_INDEX(real, unsigned int, 1, 1, -2);
-      } else if (dstInfo.dims == 2 && srcInfo.dims == 2 && indContig) {
+      } else if (dstDims == 2 && srcDims == 2 && indContig) {
         SMALL_INDEX(real, unsigned int, 2, 2, -2);
-      } else if (dstInfo.dims == 3 && srcInfo.dims == 3 && indContig) {
+      } else if (dstDims == 3 && srcDims == 3 && indContig) {
         SMALL_INDEX(real, unsigned int, 3, 3, -2);
       } else {
         SMALL_INDEX(real, unsigned int, -1, -1, -1);
       }
     } else {
-      if (dstInfo.dims == 1 && srcInfo.dims == 1 && indContig) {
+      if (dstDims == 1 && srcDims == 1 && indContig) {
         LARGE_INDEX(real, unsigned int, 1, 1, -2);
-      } else if (dstInfo.dims == 2 && srcInfo.dims == 2 && indContig) {
+      } else if (dstDims == 2 && srcDims == 2 && indContig) {
         LARGE_INDEX(real, unsigned int, 2, 2, -2);
-      } else if (dstInfo.dims == 3 && srcInfo.dims == 3 && indContig) {
+      } else if (dstDims == 3 && srcDims == 3 && indContig) {
         LARGE_INDEX(real, unsigned int, 3, 3, -2);
       } else {
         LARGE_INDEX(real, unsigned int, -1, -1, -1);
@@ -541,6 +677,25 @@ void THCTensor_(indexSelect)(THCState *state, THCTensor *dst, THCTensor *src, in
     TensorInfo<long, unsigned long> indicesInfo =
       getTensorInfo<THCudaLongTensor, unsigned long>(state, indices);
     indicesInfo.collapseDims();
+    // Declaration of extra variables
+    real* srcData, *dstData; 
+    long *indData;
+    unsigned long *srcSizes, *srcStrides, *dstSizes, *dstStrides, *indSizes, *indStrides;
+    int srcDims, dstDims, indDims;
+    // Assign value to data 
+    srcData = srcInfo.data;
+    dstData = dstInfo.data;
+    indData = indicesInfo.data;
+    srcStrides = srcInfo.dStrides;
+    dstStrides = dstInfo.dStrides;
+    indStrides = indicesInfo.dStrides;
+    srcSizes = srcInfo.dSizes;
+    dstSizes = dstInfo.dSizes;
+    indSizes = indicesInfo.dSizes;
+    srcDims = srcInfo.dims;
+    dstDims = dstInfo.dims;
+    indDims = indicesInfo.dims;
+
 
     LARGE_INDEX(real, unsigned long, -1, -1, -1);
   }
