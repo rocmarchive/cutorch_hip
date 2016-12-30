@@ -14,7 +14,6 @@
 #include <algorithm> // for std::min
 #include "hip/hip_runtime.h"
 
-
 // We prefer this kernel to avoid reloading index points if the number
 // of indices is a small number.
 // This kernel in fact works for all choices of problem size, but if
@@ -22,9 +21,9 @@
 // indexCopyLargeIndex kernel is a better choice to increase
 // parallelism.
 template <typename T, typename IndexType, int DstDim, int SrcDim, int IdxDim>
-__global__ void indexCopySmallIndex(hipLaunchParm lp, T* dstData, IndexType* dstSizes, IndexType* dstStrides, int dstDims,
-                                    T* srcData, IndexType* srcSizes, IndexType* srcStrides, int srcDims,
-                                    T* indData, IndexType* indSizes, IndexType* indStrides, int indDims,
+__global__ void indexCopySmallIndex(hipLaunchParm lp, TensorInfo<T, IndexType> dst,
+                                    TensorInfo<T, IndexType> src,
+                                    TensorInfo<long, IndexType> indices,
                                     int dstCopyDim,
                                     int srcCopyDim,
                                     IndexType innerSize,
@@ -34,10 +33,10 @@ __global__ void indexCopySmallIndex(hipLaunchParm lp, T* dstData, IndexType* dst
   // it can be reused as much as possible. This kernel is chosen when
   // this is a good choice (small number of chosen indices), since
   // re-accessing indices in addition to src elements can be slow.
-  for (IndexType srcIndex = 0; srcIndex < indSizes[0]; ++srcIndex) {
+  for (IndexType srcIndex = 0; srcIndex < indices.dSizes[0]; ++srcIndex) {
     // Lua indices begin at 1
     IndexType dstIndex =
-      indData[IndexToOffset<long, IndexType, IdxDim>::get(srcIndex, indSizes, indStrides, indDims)] - TH_INDEX_BASE;
+      indices.data[IndexToOffset<long, IndexType, IdxDim>::get(srcIndex, indices.dSizes, indices.dStrides, indices.dims)] - TH_INDEX_BASE;
 
     if (dstIndex < dstCopyDimSize) {
       // We stride over the output ignoring the indexed dimension
@@ -46,21 +45,19 @@ __global__ void indexCopySmallIndex(hipLaunchParm lp, T* dstData, IndexType* dst
            linearIndex < innerSize;
            linearIndex += hipGridDim_x * hipBlockDim_x) {
         IndexType dstOffset =
-          IndexToOffset<T, IndexType, DstDim>::get(linearIndex, dstSizes, dstStrides, dstDims);
+          IndexToOffset<T, IndexType, DstDim>::get(linearIndex, dst.dSizes, dst.dStrides, dst.dims);
 
-        dstOffset += dstIndex * dstStrides[dstCopyDim];
+        dstOffset += dstIndex * dst.dStrides[dstCopyDim];
 
         IndexType srcOffset =
-          IndexToOffset<T, IndexType, SrcDim>::get(linearIndex, srcSizes, srcStrides, srcDims);
-        srcOffset += srcIndex * srcStrides[srcCopyDim];
+          IndexToOffset<T, IndexType, SrcDim>::get(linearIndex, src.dSizes, src.dStrides, src.dims);
+        srcOffset += srcIndex * src.dStrides[srcCopyDim];
 
-        dstData[dstOffset] = srcData[srcOffset];
+        dst.data[dstOffset] = src.data[srcOffset];
       }
     }
   }
 }
-
-
 
 // We prefer this kernel to balance parallelism across index points,
 // if there are a large number of indices.
@@ -69,9 +66,9 @@ __global__ void indexCopySmallIndex(hipLaunchParm lp, T* dstData, IndexType* dst
 // indexCopySmallIndex kernel is a better choice to reduce memory
 // accesses.
 template <typename T, typename IndexType, int DstDim, int SrcDim, int IdxDim>
-__global__ void indexCopyLargeIndex(hipLaunchParm lp, T* dstData, IndexType* dstSizes, IndexType* dstStrides, int dstDims,
-                                    T* srcData, IndexType* srcSizes, IndexType* srcStrides, int srcDims,
-                                    T* indData, IndexType* indSizes, IndexType* indStrides, int indDims,
+__global__ void indexCopyLargeIndex(hipLaunchParm lp, TensorInfo<T, IndexType> dst,
+                                    TensorInfo<T, IndexType> src,
+                                    TensorInfo<long, IndexType> indices,
                                     int dstCopyDim,
                                     int srcCopyDim,
                                     IndexType innerSize,
@@ -79,25 +76,25 @@ __global__ void indexCopyLargeIndex(hipLaunchParm lp, T* dstData, IndexType* dst
   // We stride over the output including the indexed dimension
   // (totalSize), and calculate the destination index point based on that
   for (IndexType linearIndex = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;
-       linearIndex < innerSize * indSizes[0];
+       linearIndex < innerSize * indices.dSizes[0];
        linearIndex += hipGridDim_x * hipBlockDim_x) {
     IndexType srcIndex = linearIndex / innerSize;
     IndexType elementInSlice = linearIndex % innerSize;
 
     // Lua indices begin at 1
     IndexType dstIndex =
-      indData[IndexToOffset<long, IndexType, IdxDim>::get(srcIndex, indSizes, indStrides, indDims)] - TH_INDEX_BASE;
+      indices.data[IndexToOffset<long, IndexType, IdxDim>::get(srcIndex, indices.dSizes, indices.dStrides, indices.dims)] - TH_INDEX_BASE;
 
     if (dstIndex < dstCopyDimSize) {
       IndexType dstOffset =
-        IndexToOffset<T, IndexType, DstDim>::get(elementInSlice, dstSizes, dstStrides, dstDims);
-      dstOffset += dstIndex * dstStrides[dstCopyDim];
+        IndexToOffset<T, IndexType, DstDim>::get(elementInSlice, dst.dSizes, dst.dStrides, dst.dims);
+      dstOffset += dstIndex * dst.dStrides[dstCopyDim];
 
       IndexType srcOffset =
-        IndexToOffset<T, IndexType, SrcDim>::get(elementInSlice, srcSizes, srcStrides, srcDims);
-      srcOffset += srcIndex * srcStrides[srcCopyDim];
+        IndexToOffset<T, IndexType, SrcDim>::get(elementInSlice, src.dSizes, src.dStrides, src.dims);
+      srcOffset += srcIndex * src.dStrides[srcCopyDim];
 
-      dstData[dstOffset] = srcData[srcOffset];
+      dst.data[dstOffset] = src.data[srcOffset];
     }
   }
 }
@@ -109,9 +106,9 @@ __global__ void indexCopyLargeIndex(hipLaunchParm lp, T* dstData, IndexType* dst
 // indexAddLargeIndex kernel is a better choice to increase
 // parallelism.
 template <typename T, typename IndexType, int DstDim, int SrcDim, int IdxDim>
-__global__ void indexAddSmallIndex(hipLaunchParm lp, T* dstData, IndexType* dstSizes, IndexType* dstStrides, int dstDims,
-                                    T* srcData, IndexType* srcSizes, IndexType* srcStrides, int srcDims,
-                                    T* indData, IndexType* indSizes, IndexType* indStrides, int indDims,
+__global__ void indexAddSmallIndex(hipLaunchParm lp, TensorInfo<T, IndexType> dst,
+                                   TensorInfo<T, IndexType> src,
+                                   TensorInfo<long, IndexType> indices,
                                    int dstAddDim,
                                    int srcAddDim,
                                    IndexType innerSize,
@@ -121,10 +118,10 @@ __global__ void indexAddSmallIndex(hipLaunchParm lp, T* dstData, IndexType* dstS
   // it can be reused as much as possible. This kernel is chosen when
   // this is a good choice (small number of chosen indices), since
   // re-accessing indices in addition to src elements can be slow.
-  for (IndexType srcIndex = 0; srcIndex < indSizes[0]; ++srcIndex) {
+  for (IndexType srcIndex = 0; srcIndex < indices.dSizes[0]; ++srcIndex) {
     // Lua indices begin at 1
     IndexType dstIndex =
-      indData[IndexToOffset<long, IndexType, IdxDim>::get(srcIndex, indSizes, indStrides, indDims)] - TH_INDEX_BASE;
+      indices.data[IndexToOffset<long, IndexType, IdxDim>::get(srcIndex, indices.dSizes, indices.dStrides, indices.dims)] - TH_INDEX_BASE;
 
     if (dstIndex < dstAddDimSize) {
       // We stride over the output ignoring the indexed dimension
@@ -133,14 +130,14 @@ __global__ void indexAddSmallIndex(hipLaunchParm lp, T* dstData, IndexType* dstS
            linearIndex < innerSize;
            linearIndex += hipGridDim_x * hipBlockDim_x) {
         IndexType dstOffset =
-          IndexToOffset<T, IndexType, DstDim>::get(linearIndex, dstSizes, dstStrides, dstDims);
-        dstOffset += dstIndex * dstStrides[dstAddDim];
+          IndexToOffset<T, IndexType, DstDim>::get(linearIndex, dst.dSizes, dst.dStrides, dst.dims);
+        dstOffset += dstIndex * dst.dStrides[dstAddDim];
 
         IndexType srcOffset =
-          IndexToOffset<T, IndexType, SrcDim>::get(linearIndex, srcSizes, srcStrides, srcDims);
-        srcOffset += srcIndex * srcStrides[srcAddDim];
+          IndexToOffset<T, IndexType, SrcDim>::get(linearIndex, src.dSizes, src.dStrides, src.dims);
+        srcOffset += srcIndex * src.dStrides[srcAddDim];
        #ifdef CUDA_PATH
-        atomicAdd(&dstData[dstOffset], srcData[srcOffset]);
+        atomicAdd(&dst.data[dstOffset], src.data[srcOffset]);
        #endif
       }
     }
@@ -154,9 +151,9 @@ __global__ void indexAddSmallIndex(hipLaunchParm lp, T* dstData, IndexType* dstS
 // indexAddSmallIndex kernel is a better choice to reduce memory
 // accesses.
 template <typename T, typename IndexType, int DstDim, int SrcDim, int IdxDim>
-__global__ void indexAddLargeIndex(hipLaunchParm lp, T* dstData, IndexType* dstSizes, IndexType* dstStrides, int dstDims,
-                                    T* srcData, IndexType* srcSizes, IndexType* srcStrides, int srcDims,
-                                    T* indData, IndexType* indSizes, IndexType* indStrides, int indDims,
+__global__ void indexAddLargeIndex(hipLaunchParm lp, TensorInfo<T, IndexType> dst,
+                                   TensorInfo<T, IndexType> src,
+                                   TensorInfo<long, IndexType> indices,
                                    int dstAddDim,
                                    int srcAddDim,
                                    IndexType innerSize,
@@ -164,31 +161,30 @@ __global__ void indexAddLargeIndex(hipLaunchParm lp, T* dstData, IndexType* dstS
   // We stride over the output including the indexed dimension
   // (totalSize), and calculate the destination index point based on that
   for (IndexType linearIndex = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;
-       linearIndex < innerSize * indSizes[0];
+       linearIndex < innerSize * indices.dSizes[0];
        linearIndex += hipGridDim_x * hipBlockDim_x) {
     IndexType srcIndex = linearIndex / innerSize;
     IndexType elementInSlice = linearIndex % innerSize;
 
     // Lua indices begin at 1
     IndexType dstIndex =
-      indData[IndexToOffset<long, IndexType, IdxDim>::get(srcIndex, indSizes, indStrides, indDims)] - TH_INDEX_BASE;
+      indices.data[IndexToOffset<long, IndexType, IdxDim>::get(srcIndex, indices.dSizes, indices.dStrides, indices.dims)] - TH_INDEX_BASE;
 
     if (dstIndex < dstAddDimSize) {
       IndexType dstOffset =
-        IndexToOffset<T, IndexType, DstDim>::get(elementInSlice, dstSizes, dstStrides, dstDims);
-      dstOffset += dstIndex * dstStrides[dstAddDim];
+        IndexToOffset<T, IndexType, DstDim>::get(elementInSlice, dst.dSizes, dst.dStrides, dst.dims);
+      dstOffset += dstIndex * dst.dStrides[dstAddDim];
 
       IndexType srcOffset =
-        IndexToOffset<T, IndexType, SrcDim>::get(elementInSlice, srcSizes, srcStrides, srcDims);
-      srcOffset += srcIndex * srcStrides[srcAddDim];
+        IndexToOffset<T, IndexType, SrcDim>::get(elementInSlice, src.dSizes, src.dStrides, src.dims);
+      srcOffset += srcIndex * src.dStrides[srcAddDim];
 
       #ifdef CUDA_PATH
-      atomicAdd(&dstData[dstOffset], srcData[srcOffset]);
+      atomicAdd(&dst.data[dstOffset], src.data[srcOffset]);
       #endif
     }
   }
 }
-
 
 // We prefer this kernel to avoid reloading index points if the number
 // of indices is a small number.
@@ -197,8 +193,8 @@ __global__ void indexAddLargeIndex(hipLaunchParm lp, T* dstData, IndexType* dstS
 // indexFillLargeIndex kernel is a better choice to increase
 // parallelism.
 template <typename T, typename IndexType, int DstDim, int IdxDim>
-__global__ void indexFillSmallIndex(hipLaunchParm lp, T* dstData, IndexType* dstSizes, IndexType* dstStrides, int dstDims,
-                                    T* indData, IndexType* indSizes, IndexType* indStrides, int indDims,
+__global__ void indexFillSmallIndex(hipLaunchParm lp, TensorInfo<T, IndexType> dst,
+                                    TensorInfo<long, IndexType> indices,
                                     int dstFillDim,
                                     IndexType innerSize,
                                     long dstFillDimSize,
@@ -208,10 +204,10 @@ __global__ void indexFillSmallIndex(hipLaunchParm lp, T* dstData, IndexType* dst
   // it can be reused as much as possible. This kernel is chosen when
   // this is a good choice (small number of chosen indices), since
   // re-accessing indices in addition to src elements can be slow.
-  for (IndexType dstIndex = 0; dstIndex < indSizes[0]; ++dstIndex) {
+  for (IndexType dstIndex = 0; dstIndex < indices.dSizes[0]; ++dstIndex) {
     // Lua indices begin at 1
     IndexType dstIndex_ =
-      indData[IndexToOffset<long, IndexType, IdxDim>::get(dstIndex, indSizes, indStrides, indDims)] - TH_INDEX_BASE;
+      indices.data[IndexToOffset<long, IndexType, IdxDim>::get(dstIndex, indices.dSizes, indices.dStrides, indices.dims)] - TH_INDEX_BASE;
 
     if (dstIndex < dstFillDimSize) {
       // We stride over the output ignoring the indexed dimension
@@ -220,15 +216,14 @@ __global__ void indexFillSmallIndex(hipLaunchParm lp, T* dstData, IndexType* dst
            linearIndex < innerSize;
            linearIndex += hipGridDim_x * hipBlockDim_x) {
         IndexType dstOffset =
-          IndexToOffset<T, IndexType, DstDim>::get(linearIndex, dstSizes, dstStrides, dstDims);
-        dstOffset += dstIndex_ * dstStrides[dstFillDim];
+          IndexToOffset<T, IndexType, DstDim>::get(linearIndex, dst.dSizes, dst.dStrides, dst.dims);
+        dstOffset += dstIndex_ * dst.dStrides[dstFillDim];
 
-        dstData[dstOffset] = val;
+        dst.data[dstOffset] = val;
       }
     }
   }
 }
-
 
 // We prefer this kernel to balance parallelism across index points,
 // if there are a large number of indices.
@@ -237,8 +232,8 @@ __global__ void indexFillSmallIndex(hipLaunchParm lp, T* dstData, IndexType* dst
 // indexFillSmallIndex kernel is a better choice to reduce memory
 // accesses.
 template <typename T, typename IndexType, int DstDim, int IdxDim>
-__global__ void indexFillLargeIndex(hipLaunchParm lp, T* dstData, IndexType* dstSizes, IndexType* dstStrides, int dstDims,
-                                    T* indData, IndexType* indSizes, IndexType* indStrides, int indDims,
+__global__ void indexFillLargeIndex(hipLaunchParm lp, TensorInfo<T, IndexType> dst,
+                                    TensorInfo<long, IndexType> indices,
                                     int dstFillDim,
                                     IndexType innerSize,
                                     long dstFillDimSize,
@@ -246,21 +241,21 @@ __global__ void indexFillLargeIndex(hipLaunchParm lp, T* dstData, IndexType* dst
   // We stride over the output including the indexed dimension
   // (totalSize), and calculate the destination index point based on that
   for (IndexType linearIndex = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;
-       linearIndex < innerSize * indSizes[0];
+       linearIndex < innerSize * indices.dSizes[0];
        linearIndex += hipGridDim_x * hipBlockDim_x) {
     IndexType dstIndex = linearIndex / innerSize;
     IndexType elementInSlice = linearIndex % innerSize;
 
     // Lua indices begin at 1
     IndexType dstIndex_ =
-      indData[IndexToOffset<long, IndexType, IdxDim>::get(dstIndex, indSizes, indStrides, indDims)] - TH_INDEX_BASE;
+      indices.data[IndexToOffset<long, IndexType, IdxDim>::get(dstIndex, indices.dSizes, indices.dStrides, indices.dims)] - TH_INDEX_BASE;
 
     if (dstIndex_ < dstFillDimSize) {
       IndexType dstOffset =
-        IndexToOffset<T, IndexType, DstDim>::get(elementInSlice, dstSizes, dstStrides, dstDims);
-      dstOffset += dstIndex_ * dstStrides[dstFillDim];
+        IndexToOffset<T, IndexType, DstDim>::get(elementInSlice, dst.dSizes, dst.dStrides, dst.dims);
+      dstOffset += dstIndex_ * dst.dStrides[dstFillDim];
 
-      dstData[dstOffset] = val;
+      dst.data[dstOffset] = val;
     }
   }
 }
@@ -272,9 +267,9 @@ __global__ void indexFillLargeIndex(hipLaunchParm lp, T* dstData, IndexType* dst
 // indexSelectLargeIndex kernel is a better choice to increase
 // parallelism.
 template <typename T, typename IndexType, int DstDim, int SrcDim, int IdxDim>
-__global__ void indexSelectSmallIndex(hipLaunchParm lp, T* dstData, IndexType* dstSizes, IndexType* dstStrides, int dstDims,
-                                    T* srcData, IndexType* srcSizes, IndexType* srcStrides, int srcDims,
-                                    T* indData, IndexType* indSizes, IndexType* indStrides, int indDims,
+__global__ void indexSelectSmallIndex(hipLaunchParm lp, TensorInfo<T, IndexType> dst,
+                                      TensorInfo<T, IndexType> src,
+                                      TensorInfo<long, IndexType> indices,
                                       int dstSelectDim,
                                       int srcSelectDim,
                                       IndexType innerSize,
@@ -284,10 +279,10 @@ __global__ void indexSelectSmallIndex(hipLaunchParm lp, T* dstData, IndexType* d
   // it can be reused as much as possible. This kernel is chosen when
   // this is a good choice (small number of chosen indices), since
   // re-accessing indices in addition to src elements can be slow.
-  for (IndexType dstIndex = 0; dstIndex < indSizes[0]; ++dstIndex) {
+  for (IndexType dstIndex = 0; dstIndex < indices.dSizes[0]; ++dstIndex) {
     // Lua indices begin at 1
     IndexType srcIndex =
-      indData[IndexToOffset<long, IndexType, IdxDim>::get(dstIndex, indSizes, indStrides, indDims)] - TH_INDEX_BASE;
+      indices.data[IndexToOffset<long, IndexType, IdxDim>::get(dstIndex, indices.dSizes, indices.dStrides, indices.dims)] - TH_INDEX_BASE;
 
     if (srcIndex < srcSelectDimSize) {
       // We stride over the output ignoring the indexed dimension
@@ -296,14 +291,14 @@ __global__ void indexSelectSmallIndex(hipLaunchParm lp, T* dstData, IndexType* d
            linearIndex < innerSize;
            linearIndex += hipGridDim_x * hipBlockDim_x) {
         IndexType dstOffset =
-          IndexToOffset<T, IndexType, DstDim>::get(linearIndex, dstSizes, dstStrides, dstDims);
-        dstOffset += dstIndex * dstStrides[dstSelectDim];
+          IndexToOffset<T, IndexType, DstDim>::get(linearIndex, dst.dSizes, dst.dStrides, dst.dims);
+        dstOffset += dstIndex * dst.dStrides[dstSelectDim];
 
         IndexType srcOffset =
-          IndexToOffset<T, IndexType, SrcDim>::get(linearIndex, srcSizes, srcStrides, srcDims);
-        srcOffset += srcIndex * srcStrides[srcSelectDim];
+          IndexToOffset<T, IndexType, SrcDim>::get(linearIndex, src.dSizes, src.dStrides, src.dims);
+        srcOffset += srcIndex * src.dStrides[srcSelectDim];
 
-        dstData[dstOffset] = srcData[srcOffset];
+        dst.data[dstOffset] = src.data[srcOffset];
       }
     }
   }
@@ -316,9 +311,9 @@ __global__ void indexSelectSmallIndex(hipLaunchParm lp, T* dstData, IndexType* d
 // indexSelectSmallIndex kernel is a better choice to reduce memory
 // accesses.
 template <typename T, typename IndexType, int DstDim, int SrcDim, int IdxDim>
-__global__ void indexSelectLargeIndex(hipLaunchParm lp, T* dstData, IndexType* dstSizes, IndexType* dstStrides, int dstDims,
-                                    T* srcData, IndexType* srcSizes, IndexType* srcStrides, int srcDims,
-                                    T* indData, IndexType* indSizes, IndexType* indStrides, int indDims,
+__global__ void indexSelectLargeIndex(hipLaunchParm lp, TensorInfo<T, IndexType> dst,
+                                      TensorInfo<T, IndexType> src,
+                                      TensorInfo<long, IndexType> indices,
                                       int dstSelectDim,
                                       int srcSelectDim,
                                       IndexType totalSize,
@@ -334,141 +329,21 @@ __global__ void indexSelectLargeIndex(hipLaunchParm lp, T* dstData, IndexType* d
 
     // Lua indices begin at 1
     IndexType srcIndex =
-      indData[IndexToOffset<long, IndexType, IdxDim>::get(dstIndex, indSizes, indStrides, indDims)] - TH_INDEX_BASE;
+      indices.data[IndexToOffset<long, IndexType, IdxDim>::get(dstIndex, indices.dSizes, indices.dStrides, indices.dims)] - TH_INDEX_BASE;
 
     if (srcIndex < srcSelectDimSize) {
       IndexType dstOffset =
-        IndexToOffset<T, IndexType, DstDim>::get(elementInSlice, dstSizes, dstStrides, dstDims);
-      dstOffset += dstIndex * dstStrides[dstSelectDim];
+        IndexToOffset<T, IndexType, DstDim>::get(elementInSlice, dst.dSizes, dst.dStrides, dst.dims);
+      dstOffset += dstIndex * dst.dStrides[dstSelectDim];
 
       IndexType srcOffset =
-        IndexToOffset<T, IndexType, SrcDim>::get(elementInSlice, srcSizes, srcStrides, srcDims);
-      srcOffset += srcIndex * srcStrides[srcSelectDim];
+        IndexToOffset<T, IndexType, SrcDim>::get(elementInSlice, src.dSizes, src.dStrides, src.dims);
+      srcOffset += srcIndex * src.dStrides[srcSelectDim];
 
-      dstData[dstOffset] = srcData[srcOffset];
+      dst.data[dstOffset] = src.data[srcOffset];
     }
   }
 }
 
-
-// Support functions to invoke the kernels
-
-template <typename T, typename IndexType, int DstDim, int SrcDim, int IdxDim>
-void invokeSmallIndex(dim3 grid_dim, dim3 block_dim, int idx, hipStream_t stream, T* dstData, IndexType* dstSizes, IndexType* dstStrides, int dstDims,
-                                    T* srcData, IndexType* srcSizes, IndexType* srcStrides, int srcDims,
-                                    T* indData, IndexType* indSizes, IndexType* indStrides, int indDims,
-                                    int dstCopyDim,
-                                    int srcCopyDim,
-                                    IndexType innerSize,
-                                    long dstCopyDimSize) {
-   hipLaunchKernel(HIP_KERNEL_NAME(indexCopySmallIndex<T, IndexType, DstDim, SrcDim, IdxDim>), grid_dim, block_dim, idx, stream, 
-                             dstData, dstSizes, dstStrides, dstDims,
-                             srcData, srcSizes, srcStrides, srcDims,
-                             indData, indSizes, indStrides, indDims,
-                             dstCopyDim, srcCopyDim, innerSize, dstCopyDimSize);
-}
-
-template <typename T, typename IndexType, int DstDim, int SrcDim, int IdxDim>
-void invokeLargeIndex(dim3 grid_dim, dim3 block_dim, int idx, hipStream_t stream, T* dstData, IndexType* dstSizes, IndexType* dstStrides, int dstDims,
-                                    T* srcData, IndexType* srcSizes, IndexType* srcStrides, int srcDims,
-                                    T* indData, IndexType* indSizes, IndexType* indStrides, int indDims,
-                                    int dstCopyDim,
-                                    int srcCopyDim,
-                                    IndexType innerSize,
-                                    long dstCopyDimSize) {
-   hipLaunchKernel(HIP_KERNEL_NAME(indexCopyLargeIndex<T, IndexType, DstDim, SrcDim, IdxDim>), grid_dim, block_dim, idx, stream, 
-                             dstData, dstSizes, dstStrides, dstDims,
-                             srcData, srcSizes, srcStrides, srcDims,
-                             indData, indSizes, indStrides, indDims,
-                             dstCopyDim, srcCopyDim, innerSize, dstCopyDimSize);
-}
-
-template <typename T, typename IndexType, int DstDim, int SrcDim, int IdxDim>
-void invokeAddSmallIndex(dim3 grid_dim, dim3 block_dim, int idx, hipStream_t stream, T* dstData, IndexType* dstSizes, IndexType* dstStrides, int dstDims,
-                                    T* srcData, IndexType* srcSizes, IndexType* srcStrides, int srcDims,
-                                    T* indData, IndexType* indSizes, IndexType* indStrides, int indDims,
-                                    int dstCopyDim,
-                                    int srcCopyDim,
-                                    IndexType innerSize,
-                                    long dstCopyDimSize) {
-   hipLaunchKernel(HIP_KERNEL_NAME(indexAddSmallIndex<T, IndexType, DstDim, SrcDim, IdxDim>), grid_dim, block_dim, idx, stream, 
-                             dstData, dstSizes, dstStrides, dstDims,
-                             srcData, srcSizes, srcStrides, srcDims,
-                             indData, indSizes, indStrides, indDims,
-                             dstCopyDim, srcCopyDim, innerSize, dstCopyDimSize);
-}
-
-template <typename T, typename IndexType, int DstDim, int SrcDim, int IdxDim>
-void invokeAddLargeIndex(dim3 grid_dim, dim3 block_dim, int idx, hipStream_t stream, T* dstData, IndexType* dstSizes, IndexType* dstStrides, int dstDims,
-                                    T* srcData, IndexType* srcSizes, IndexType* srcStrides, int srcDims,
-                                    T* indData, IndexType* indSizes, IndexType* indStrides, int indDims,
-                                    int dstCopyDim,
-                                    int srcCopyDim,
-                                    IndexType innerSize,
-                                    long dstCopyDimSize) {
-   hipLaunchKernel(HIP_KERNEL_NAME(indexAddLargeIndex<T, IndexType, DstDim, SrcDim, IdxDim>), grid_dim, block_dim, idx, stream, 
-                             dstData, dstSizes, dstStrides, dstDims,
-                             srcData, srcSizes, srcStrides, srcDims,
-                             indData, indSizes, indStrides, indDims,
-                             dstCopyDim, srcCopyDim, innerSize, dstCopyDimSize);
-}
-
-template <typename T, typename IndexType, int DstDim, int SrcDim, int IdxDim>
-void invokeSelectSmallIndex(dim3 grid_dim, dim3 block_dim, int idx, hipStream_t stream, T* dstData, IndexType* dstSizes, IndexType* dstStrides, int dstDims,
-                                    T* srcData, IndexType* srcSizes, IndexType* srcStrides, int srcDims,
-                                    T* indData, IndexType* indSizes, IndexType* indStrides, int indDims,
-                                    int dstSelectDim,
-                                    int srcSelectDim,
-                                    IndexType innerSize,
-                                    long srcSelectDimSize) {
-   hipLaunchKernel(HIP_KERNEL_NAME(indexSelectSmallIndex<T, IndexType, DstDim, SrcDim, IdxDim>), grid_dim, block_dim, idx, stream, 
-                             dstData, dstSizes, dstStrides, dstDims,
-                             srcData, srcSizes, srcStrides, srcDims,
-                             indData, indSizes, indStrides, indDims,
-                             dstSelectDim, srcSelectDim, innerSize, srcSelectDimSize);
-}
-
-template <typename T, typename IndexType, int DstDim, int SrcDim, int IdxDim>
-void invokeSelectLargeIndex(dim3 grid_dim, dim3 block_dim, int idx, hipStream_t stream, T* dstData, IndexType* dstSizes, IndexType* dstStrides, int dstDims,
-                                    T* srcData, IndexType* srcSizes, IndexType* srcStrides, int srcDims,
-                                    T* indData, IndexType* indSizes, IndexType* indStrides, int indDims,
-                                    int dstSelectDim,
-                                    int srcSelectDim,
-                                    IndexType totalSize,
-                                    IndexType innerSize,
-                                    long srcSelectDimSize) {
-   hipLaunchKernel(HIP_KERNEL_NAME(indexSelectLargeIndex<T, IndexType, DstDim, SrcDim, IdxDim>), grid_dim, block_dim, idx, stream, 
-                             dstData, dstSizes, dstStrides, dstDims,
-                             srcData, srcSizes, srcStrides, srcDims,
-                             indData, indSizes, indStrides, indDims,
-                             dstSelectDim, srcSelectDim, totalSize
-, innerSize, srcSelectDimSize);
-}
-
-template <typename T, typename IndexType, int DstDim, int SrcDim, int IdxDim>
-void invokeFillSmallIndex(dim3 grid_dim, dim3 block_dim, int idx, hipStream_t stream, T* dstData, IndexType* dstSizes, IndexType* dstStrides, int dstDims,
-                                    T* indData, IndexType* indSizes, IndexType* indStrides, int indDims,
-                                    int dstCopyDim,
-                                    IndexType innerSize,
-                                    long dstCopyDimSize, T val) {
-   hipLaunchKernel(HIP_KERNEL_NAME(indexFillSmallIndex<T, IndexType, DstDim, SrcDim, IdxDim>), grid_dim, block_dim, idx, stream, 
-                             dstData, dstSizes, dstStrides, dstDims,
-                             indData, indSizes, indStrides, indDims,
-                             dstCopyDim, innerSize, dstCopyDimSize, val);
-}
-
-template <typename T, typename IndexType, int DstDim, int SrcDim, int IdxDim>
-void invokeFillLargeIndex(dim3 grid_dim, dim3 block_dim, int idx, hipStream_t stream, T* dstData, IndexType* dstSizes, IndexType* dstStrides, int dstDims,
-                                    T* indData, IndexType* indSizes, IndexType* indStrides, int indDims,
-                                    int dstCopyDim,
-                                    IndexType innerSize,
-                                    long dstCopyDimSize, T val) {
-   hipLaunchKernel(HIP_KERNEL_NAME(indexFillLargeIndex<T, IndexType, DstDim, SrcDim, IdxDim>), grid_dim, block_dim, idx, stream, 
-                             dstData, dstSizes, dstStrides, dstDims,
-                             indData, indSizes, indStrides, indDims,
-                             dstCopyDim, innerSize, dstCopyDimSize, val);
-}
-
-#include "THCTensorIndex.h"
 #include "generic/THCTensorIndex.cu"
 #include "THCGenerateAllTypes.h"
