@@ -6,12 +6,9 @@
 void THCStorage_(fill)(THCState *state, THCStorage *self, real value)
 {
 #ifdef THRUST_PATH
-  thrust::device_ptr<real> self_data(self->data);
-  thrust::fill(
-#if CUDA_VERSION >= 7000
-    thrust::cuda::par.on(THCState_getCurrentStream(state)),
-#endif
-    self_data, self_data+self->size, value);
+//  thrust::device_ptr<real> self_data(self->data);
+//  thrust::fill(
+//    self_data, self_data+self->size, value);
 #endif
 }
 
@@ -27,11 +24,14 @@ void THCStorage_(resize)(THCState *state, THCStorage *self, ptrdiff_t size)
 
   if (self->allocator->realloc) {
     THCHeapUpdate(state, (size - self->size) * sizeof(real));
-    hipError_t err = (*self->allocator->realloc)(
-      self->allocatorContext,
-      (void**)&(self->data),
-      self->size * sizeof(real),
-      size * sizeof(real), THCState_getCurrentStream(state));
+    THCudaCheck(hipFree(self->data));
+    hipError_t err = hipMalloc((void **)&(self->data), size * sizeof(real));
+
+      //(*self->allocator->realloc)(
+      //self->allocatorContext,
+      //(void**)&(self->data),
+      //self->size * sizeof(real),
+      //size * sizeof(real), THCState_getCurrentStream(state));
     if (err != hipSuccess) {
       THCHeapUpdate(state, (self->size - size) * sizeof(real));
       THCudaCheck(err);
@@ -45,7 +45,7 @@ void THCStorage_(resize)(THCState *state, THCStorage *self, ptrdiff_t size)
   {
     if(self->flag & TH_STORAGE_FREEMEM) {
       THCudaCheck(
-        (*self->allocator->free)(self->allocatorContext, self->data));
+       (*self->allocator->free)(self->allocatorContext, self->data));
       THCHeapUpdate(state, -self->size * sizeof(real));
     }
     self->data = NULL;
@@ -57,11 +57,11 @@ void THCStorage_(resize)(THCState *state, THCStorage *self, ptrdiff_t size)
     real *data = NULL;
     // update heap *before* attempting malloc, to free space for the malloc
     THCHeapUpdate(state, size * sizeof(real));
-    hipError_t err =
-      (*self->allocator->malloc)(self->allocatorContext,
-                                 (void**)&(data),
-                                 size * sizeof(real),
-                                 THCState_getCurrentStream(state));
+    hipError_t err = hipMalloc((void**)&(data), sizeof(real) * size);
+      //(*self->allocator->malloc)(self->allocatorContext,
+      //                           (void**)&(data),
+      //                           size * sizeof(real),
+      //                           THCState_getCurrentStream(state));
     if(err != hipSuccess) {
       THCHeapUpdate(state, -size * sizeof(real));
     }
@@ -75,7 +75,7 @@ void THCStorage_(resize)(THCState *state, THCStorage *self, ptrdiff_t size)
                                   THCState_getCurrentStream(state)));
       if(self->flag & TH_STORAGE_FREEMEM) {
         THCudaCheck(
-          (*self->allocator->free)(self->allocatorContext, self->data));
+         (*self->allocator->free)(self->allocatorContext, self->data));
         THCHeapUpdate(state, -self->size * sizeof(real));
       }
     }
