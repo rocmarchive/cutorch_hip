@@ -5,9 +5,7 @@
 #include "THCTensorCopy.h"
 #include "THCTensorMath.h"
 #include "THCReduceApplyUtils.cuh"
-#ifdef THRUST_PATH
-#include <thrust/functional.h>
-#endif
+#include "THCThrustAlternate.h"
 #ifdef CURAND_PATH
 #include <curand.h>
 #include <curand_kernel.h>
@@ -409,9 +407,7 @@ __global__ void renormRowsL1(hipLaunchParm lp, float* dist, long rows, long cols
     for (long col = hipThreadIdx_x; col < cols; col += hipBlockDim_x) {
       sum += dist[row * cols + col];
     }
-    #ifdef THRUST_PATH
-    sum = reduceBlock(smem, hipBlockDim_x, sum, thrust::plus<float>(), 0.0f);
-    #endif
+    sum = reduceBlock(smem, hipBlockDim_x, sum, thrust_alternate::sum<float>(), 0.0f);
     if (hipThreadIdx_x == 0) {
       smem[0] = sum;
     }
@@ -462,9 +458,7 @@ sampleMultinomialOnce(hipLaunchParm lp, float* dest,
     }
 
     // hipThreadIdx_x == 0 has the sum value from this
-    #ifdef THRUST_PATH
-    sum = reduceBlock(smem, hipBlockDim_x, sum, thrust::plus<float>(), 0.0f);
-    #endif
+    sum = reduceBlock(smem, hipBlockDim_x, sum, thrust_alternate::sum<float>(), 0.0f);
 
     // Broadcast sum and sample value
     if (hipThreadIdx_x == 0) {

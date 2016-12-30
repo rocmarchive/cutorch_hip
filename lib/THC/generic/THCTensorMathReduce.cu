@@ -2,34 +2,31 @@
 #ifndef THC_GENERIC_FILE
 #define THC_GENERIC_FILE "generic/THCTensorMathReduce.cu"
 #else
+#include "THCThrustAlternate.h"
 
 THC_API void
 THCTensor_(sum)(THCState* state, THCTensor *self, THCTensor *src, long dimension) {
   THAssert(THCTensor_(checkGPU)(state, 2, self, src));
-#ifdef THRUST_PATH
   if (!THC_reduceDim(state, self, src,
-                     thrust::identity<real>(),
+                     thrust_alternate::identity<real>(),
                      ReduceAdd<real, real>(),
                      ScalarConvert<int, real>::to(0),
                      dimension)) {
     THArgCheck(false, 2, CUTORCH_DIM_WARNING);
   }
-#endif
   THCudaCheck(hipGetLastError());
 }
 
 THC_API void
 THCTensor_(prod)(THCState* state, THCTensor *self, THCTensor *src, long dimension) {
   THAssert(THCTensor_(checkGPU)(state, 2, self, src));
-#ifdef THRUST_PATH
   if (!THC_reduceDim(state, self, src,
-                     thrust::identity<real>(),
+                     thrust_alternate::identity<real>(),
                      ReduceMultiply<real, real>(),
                      ScalarConvert<int, real>::to(1),
                      dimension)) {
     THArgCheck(false, 2, CUTORCH_DIM_WARNING);
   }
-#endif
   THCudaCheck(hipGetLastError());
 }
 
@@ -228,16 +225,14 @@ THC_API accreal
 THCTensor_(sumall)(THCState *state, THCTensor *self) {
   THAssert(THCTensor_(checkGPU)(state, 1, self));
   accreal val;
-#ifdef THRUST_PATH
   if (!THC_reduceAll(state, self,
-                     thrust::identity<real>(),
+                     thrust_alternate::identity<real>(),
                      ReduceAdd<real, accreal>(),
                      ReduceAdd<accreal, accreal>(),
                      ScalarConvert<int, accreal>::to(0),
                      &val, 0)) {
     THArgCheck(false, 1, CUTORCH_DIM_WARNING);
   }
-#endif
   THCudaCheck(hipGetLastError());
   return val;
 }
@@ -246,16 +241,14 @@ THC_API accreal
 THCTensor_(prodall)(THCState *state, THCTensor *self) {
   THAssert(THCTensor_(checkGPU)(state, 1, self));
   accreal val;
-#ifdef THRUST_PATH
   if (!THC_reduceAll(state, self,
-                     thrust::identity<real>(),
+                     thrust_alternate::identity<real>(),
                      ReduceMultiply<real, accreal>(),
                      ReduceMultiply<accreal, accreal>(),
                      ScalarConvert<int, accreal>::to(1),
                      &val, 0)) {
     THArgCheck(false, 1, CUTORCH_DIM_WARNING);
   }
-#endif
   val = THCNumerics<accreal>::div(
     val,
     ScalarConvert<long, accreal>::to(THCTensor_(nElement)(state, self)) - 1
@@ -277,15 +270,13 @@ THC_API real
 THCTensor_(minall)(THCState *state, THCTensor *self) {
   THAssert(THCTensor_(checkGPU)(state, 1, self));
   real val;
-#ifdef THRUST_PATH
   if (!THC_reduceAll(state, self,
-                     thrust::identity<real>(),
+                     thrust_alternate::identity<real>(),
                      ReduceMin<real>(),
                      ReduceMin<real>(),
                      THCNumerics<real>::max(), &val, 0)) {
     THArgCheck(false, 1, CUTORCH_DIM_WARNING);
   }
-#endif
   THCudaCheck(hipGetLastError());
   return val;
 }
@@ -294,15 +285,13 @@ THC_API real
 THCTensor_(maxall)(THCState *state, THCTensor *self) {
   THAssert(THCTensor_(checkGPU)(state, 1, self));
   real val;
-#ifdef THRUST_PATH
   if (!THC_reduceAll(state, self,
-                     thrust::identity<real>(),
+                     thrust_alternate::identity<real>(),
                      ReduceMax<real>(),
                      ReduceMax<real>(),
                      THCNumerics<real>::min(), &val, 0)) {
     THArgCheck(false, 1, CUTORCH_DIM_WARNING);
   }
-#endif
   THCudaCheck(hipGetLastError());
   return val;
 }
@@ -314,15 +303,13 @@ THCTensor_(max)(THCState *state,
                 THCTensor *src,
                 long dimension) {
   THAssert(THCTensor_(checkGPU)(state, 3, values, indices, src));
-#ifdef THRUST_PATH
-  thrust::pair<typename TensorUtils<THCTensor>::DataType, long>
+  thrust_alternate::Pair<typename TensorUtils<THCTensor>::DataType, long>
     init =
-    thrust::make_pair<typename TensorUtils<THCTensor>::DataType, long>(
+    thrust_alternate::Make_Pair<typename TensorUtils<THCTensor>::DataType, long>(
       THCNumerics<typename TensorUtils<THCTensor>::DataType>::min(), 1);
   return THC_reduceDimIndex(
     state, values, indices, src, dimension, init,
     MaxValuePair<typename TensorUtils<THCTensor>::DataType, long>());
-#endif
 }
 
 THC_API void
@@ -332,15 +319,13 @@ THCTensor_(min)(THCState *state,
                 THCTensor *src,
                 long dimension) {
   THAssert(THCTensor_(checkGPU)(state, 3, values, indices, src));
-#ifdef THRUST_PATH
-  thrust::pair<typename TensorUtils<THCTensor>::DataType, long>
+  thrust_alternate::Pair<typename TensorUtils<THCTensor>::DataType, long>
     init =
-    thrust::make_pair<typename TensorUtils<THCTensor>::DataType, long>(
+    thrust_alternate::Make_Pair<typename TensorUtils<THCTensor>::DataType, long>(
       THCNumerics<typename TensorUtils<THCTensor>::DataType>::max(), 1);
   return THC_reduceDimIndex(
     state, values, indices, src, dimension, init,
     MinValuePair<typename TensorUtils<THCTensor>::DataType, long>());
-#endif
 }
 
 #endif

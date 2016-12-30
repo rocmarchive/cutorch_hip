@@ -5,10 +5,7 @@
 #include "THCTensorCopy.h"
 #include "THCApply.cuh"
 #include "THCReduce.cuh"
-
-#ifdef THRUST_PATH
-#include <thrust/functional.h>
-#endif
+#include "THCThrustAlternate.h"
 
 /* Perform an inclusive scan along an outer dimension of a tensor.
  *
@@ -199,15 +196,11 @@ void THCudaTensor_scanDim(THCState *state, THCudaTensor *self_, THCudaTensor *sr
 void THCudaTensor_cumsum(THCState *state, THCudaTensor *self, THCudaTensor *src, long dimension)
 {
   THAssert(THCudaTensor_checkGPU(state, 2, self, src));
-#ifdef THRUST_PATH
-  return THCudaTensor_scanDim(state, self, src, dimension, 0.0f, thrust::plus<float>());
-#endif
+  return THCudaTensor_scanDim(state, self, src, dimension, 0.0f, thrust_alternate::sum<float>());
 }
 
 void THCudaTensor_cumprod(THCState *state, THCudaTensor *self, THCudaTensor *src, long dimension)
 {
   THAssert(THCudaTensor_checkGPU(state, 2, self, src));
-#ifdef THRUST_PATH
-  return THCudaTensor_scanDim(state, self, src, dimension, 1.0f, thrust::multiplies<float>());
-#endif
+  return THCudaTensor_scanDim(state, self, src, dimension, 1.0f, thrust_alternate::multiply<float>());
 }

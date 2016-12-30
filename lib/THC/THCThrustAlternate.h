@@ -4,7 +4,7 @@
 
 #include "THCTensor.h"
 #include "THCGeneral.h"
-
+namespace thrust_alternate {
 // Common Operators definition
 template <class T> struct identity {
 __device__ __host__  T operator() (const T& x) const  {return x;}
@@ -42,15 +42,26 @@ template <class T> struct is_not_equal_to {
  __device__ __host__  bool operator() (const T& x, const T& y) const  {return x!=y;}
 };
 
-// Pair structure
-template<typename T, typename U>
-struct pair_t{
-  T first;
-  U second;
 
-  // constructor
- __device__ __host__  inline pair_t<T, U>(T a, U b)  : first(a), second(b) {}
+// pair holds two objects of arbitrary type.
+template<class _T1, class _T2>
+struct Pair
+{
+  typedef _T1 first_type;
+  typedef _T2 second_type;
+
+  _T1 first;
+  _T2 second;
+
+  __device__ __host__  Pair() : first(), second() { }
+  __device__ __host__  Pair(const _T1& __a, const _T2& __b) : first(__a), second(__b) { }
 };
+
+template<class _T1, class _T2>
+ __device__ __host__ Pair<_T1, _T2> Make_Pair(_T1 src, _T2 col)  {
+  return (Pair<_T1, _T2>(src, col));
+}
+
 
 
 
@@ -143,7 +154,7 @@ struct cpow_functor {
 struct atan2_functor {
  __device__ __host__  atan2_functor()  {}
  __device__ __host__  float operator()(const float& x, const float& y) const  {
-    return std::atan2f(x, y);
+    return atan2f(x, y);
   }
 };
 
@@ -269,32 +280,6 @@ struct kl_updateGradInput_functor {
     return y > 0 ? norm * (-y) : 0;
   }
 };
-#define IMPLEMENT_Hc_TENSOR_BASIC_FUNCTOR(NAME, CFUNC) \
-struct NAME##_functor {                                 \
- __device__ __host__ NAME##_functor()  {}                \
- __device__ __host__ float operator()(const float& x) const {              \
-    return CFUNC(x);                                    \
-  }                                                     \
-};
-
-IMPLEMENT_Hc_TENSOR_BASIC_FUNCTOR(log, std::log)
-IMPLEMENT_Hc_TENSOR_BASIC_FUNCTOR(log1p, std::log1p)
-IMPLEMENT_Hc_TENSOR_BASIC_FUNCTOR(exp, std::exp)
-IMPLEMENT_Hc_TENSOR_BASIC_FUNCTOR(cos, std::cos)
-IMPLEMENT_Hc_TENSOR_BASIC_FUNCTOR(acos, std::acos)
-IMPLEMENT_Hc_TENSOR_BASIC_FUNCTOR(cosh, std::cosh)
-IMPLEMENT_Hc_TENSOR_BASIC_FUNCTOR(sin, std::sin)
-IMPLEMENT_Hc_TENSOR_BASIC_FUNCTOR(asin, std::asin)
-IMPLEMENT_Hc_TENSOR_BASIC_FUNCTOR(sinh, std::sinh)
-IMPLEMENT_Hc_TENSOR_BASIC_FUNCTOR(tan, std::tan)
-IMPLEMENT_Hc_TENSOR_BASIC_FUNCTOR(atan, std::atan)
-IMPLEMENT_Hc_TENSOR_BASIC_FUNCTOR(tanh, std::tanh)
-IMPLEMENT_Hc_TENSOR_BASIC_FUNCTOR(sqrt, std::sqrt)
-IMPLEMENT_Hc_TENSOR_BASIC_FUNCTOR(ceil, std::ceil)
-IMPLEMENT_Hc_TENSOR_BASIC_FUNCTOR(floor, std::floor)
-IMPLEMENT_Hc_TENSOR_BASIC_FUNCTOR(abs, std::fabs)
-IMPLEMENT_Hc_TENSOR_BASIC_FUNCTOR(round, std::roundf)
-
 /*
 // Define transform functions
 
@@ -444,51 +429,6 @@ inline T inner_product(THCState* state, THCTensor* first1, THCTensor* first2, T 
   transform(state, first1, first2, temp, op2);
   return reduce<T>(state, temp, init, op1);
 }*/
-
-float InnerProduct_plus_mse(THCState* state, THCTensor* input, THCTensor* target);
-float InnerProduct_plus_abs(THCState* state, THCTensor* input, THCTensor* target);
-float InnerProduct_plus_kl(THCState* state, THCTensor* input, THCTensor* target);
-float InnerProduct_plus_dist(THCState* state, THCTensor* self, THCTensor* src, float value);
-
-float transform_var_all(THCState* state, THCTensor* self, float mean);
-void transform_clamp(THCState* state, THCTensor* src, THCTensor* self, float min_value, float max_value);
-void transform_mse(THCState* state, THCTensor* input, THCTensor* target, THCTensor* gradInput, float norm);
-void transform_abs(THCState* state, THCTensor* input, THCTensor* target, THCTensor* gradInput, float norm);
-void transform_kl(THCState* state, THCTensor* input, THCTensor* target, THCTensor* gradInput, float norm);
-void transform_addvalue(THCState* state, THCTensor* src, THCTensor* self, float value);
-void transform_mulvalue(THCState* state, THCTensor* src, THCTensor* self, float value);
-void transform_divvalue(THCState* state, THCTensor* src, THCTensor* self, float value);
-void transform_pow(THCState* state, THCTensor* src, THCTensor* self, float value);
-void transform_tpow(THCState* state, THCTensor* src, THCTensor* self, float value);
-void transformBinary_cpow(THCState* state, THCTensor* src1, THCTensor* src2, THCTensor* self);
-void transform_log(THCState* state, THCTensor* src, THCTensor* self);
-void transform_log1p(THCState* state, THCTensor* src, THCTensor* self);
-void transform_exp(THCState* state, THCTensor* src, THCTensor* self);
-void transform_cos(THCState* state, THCTensor* src, THCTensor* self);
-void transform_acos(THCState* state, THCTensor* src, THCTensor* self);
-void transform_cosh(THCState* state, THCTensor* src, THCTensor* self);
-void transform_sin(THCState* state, THCTensor* src, THCTensor* self);
-void transform_asin(THCState* state, THCTensor* src, THCTensor* self);
-void transform_sinh(THCState* state, THCTensor* src, THCTensor* self);
-void transform_tan(THCState* state, THCTensor* src, THCTensor* self);
-void transform_atan(THCState* state, THCTensor* src, THCTensor* self);
-void transform_tanh(THCState* state, THCTensor* src, THCTensor* self);
-void transform_sqrt(THCState* state, THCTensor* src, THCTensor* self);
-void transform_ceil(THCState* state, THCTensor* src, THCTensor* self);
-void transform_floor(THCState* state, THCTensor* src, THCTensor* self);
-void transform_abs(THCState* state, THCTensor* src, THCTensor* self);
-void transform_round(THCState* state, THCTensor* src, THCTensor* self);
-void transform_sign(THCState* state, THCTensor* src, THCTensor* self);
-
-void transformBinary_multiply(THCState* state, THCTensor* src1, THCTensor* src2, THCTensor* self);
-void transformBinary_divide(THCState* state, THCTensor* src1, THCTensor* src2, THCTensor* self);
-void transformBinary_atan2(THCState* state, THCTensor* src1, THCTensor* src2, THCTensor* self);
-
-float Reduce_minimum(THCState* state, THCTensor* self);
-float Reduce_maximum(THCState* state, THCTensor* self);
-float Reduce_plus(THCState* state, THCTensor* self);
-float Reduce_multiply(THCState* state, THCTensor* self);
-float InnerPdt(THCState* state, THCTensor* self, THCTensor* src);
-void fill(THCState* state, float*& dest, long size, float  val);
+} 
 #endif
 
