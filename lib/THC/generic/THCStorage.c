@@ -180,7 +180,7 @@ void THCStorage_(free)(THCState *state, THCStorage *self)
       THCHeapUpdate(state, -self->size * sizeof(real));
       //THCudaCheck(
        // (*self->allocator->free)(self->allocatorContext, self->data));
-      //THCudaCheck(hipFree(self->data));
+      THCudaCheck(hipFree(self->data));
     }
     THFree(self);
   }
