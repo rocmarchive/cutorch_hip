@@ -24,14 +24,12 @@ void THCStorage_(resize)(THCState *state, THCStorage *self, ptrdiff_t size)
 
   if (self->allocator->realloc) {
     THCHeapUpdate(state, (size - self->size) * sizeof(real));
-    THCudaCheck(hipFree(self->data));
+    if(self->data) {
+      THCudaCheck(hipFree(self->data));
+      self->data = NULL;
+    }
     hipError_t err = hipMalloc((void **)&(self->data), size * sizeof(real));
 
-      //(*self->allocator->realloc)(
-      //self->allocatorContext,
-      //(void**)&(self->data),
-      //self->size * sizeof(real),
-      //size * sizeof(real), THCState_getCurrentStream(state));
     if (err != hipSuccess) {
       THCHeapUpdate(state, (self->size - size) * sizeof(real));
       THCudaCheck(err);
@@ -44,8 +42,8 @@ void THCStorage_(resize)(THCState *state, THCStorage *self, ptrdiff_t size)
   if(size == 0)
   {
     if(self->flag & TH_STORAGE_FREEMEM) {
-      THCudaCheck(
-       (*self->allocator->free)(self->allocatorContext, self->data));
+      if(self->data)
+         THCudaCheck(hipFree(self->data));
       THCHeapUpdate(state, -self->size * sizeof(real));
     }
     self->data = NULL;
@@ -58,10 +56,6 @@ void THCStorage_(resize)(THCState *state, THCStorage *self, ptrdiff_t size)
     // update heap *before* attempting malloc, to free space for the malloc
     THCHeapUpdate(state, size * sizeof(real));
     hipError_t err = hipMalloc((void**)&(data), sizeof(real) * size);
-      //(*self->allocator->malloc)(self->allocatorContext,
-      //                           (void**)&(data),
-      //                           size * sizeof(real),
-      //                           THCState_getCurrentStream(state));
     if(err != hipSuccess) {
       THCHeapUpdate(state, -size * sizeof(real));
     }
@@ -74,8 +68,11 @@ void THCStorage_(resize)(THCState *state, THCStorage *self, ptrdiff_t size)
                                   hipMemcpyDeviceToDevice,
                                   THCState_getCurrentStream(state)));
       if(self->flag & TH_STORAGE_FREEMEM) {
-        THCudaCheck(
-         (*self->allocator->free)(self->allocatorContext, self->data));
+        if(self->data) {
+          THCudaCheck(hipFree(self->data));
+          // Reset the deleted pointer to NULL
+          self->data = NULL;
+        }
         THCHeapUpdate(state, -self->size * sizeof(real));
       }
     }

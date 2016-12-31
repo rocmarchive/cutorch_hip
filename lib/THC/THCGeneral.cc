@@ -692,21 +692,18 @@ void THCSetGCHandler(THCState *state, void (*cutorchGCFunction_)(void *data), vo
 hipError_t THCudaMalloc(THCState *state, void** ptr, size_t size)
 {
   THCudaCheck(hipGetLastError());
-  hipStream_t stream = THCState_getCurrentStream(state);
-  THCDeviceAllocator* allocator = state->cudaDeviceAllocator;
-  hipError_t err = allocator->malloc(allocator->state, ptr, size, stream);
+  hipError_t err =  hipMalloc(ptr, size);
   if (state->cutorchGCFunction != NULL && err != hipSuccess) {
     hipGetLastError(); // reset OOM error
     (state->cutorchGCFunction)(state->cutorchGCData);
-    err = allocator->malloc(allocator->state, ptr, size, stream);
+    err = hipMalloc(ptr, size);
   }
   return err;
 }
 
 hipError_t THCudaFree(THCState *state, void *ptr)
 {
-  THCDeviceAllocator* allocator = state->cudaDeviceAllocator;
-  return allocator->free(allocator->state, ptr);
+  return hipFree(ptr); 
 }
 
 static ptrdiff_t applyHeapDelta(THCState *state) {

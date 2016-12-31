@@ -238,7 +238,7 @@ void waitMultiDeviceEvents(lua_State *L, THCState *state, int arg,
 /* Synchronizes the host with respect to the current device */
 static int cutorch_synchronize(lua_State *L)
 {
-  THCudaCheck(hipDeviceSynchronize());
+  //THCudaCheck(hipDeviceSynchronize());
   return 0;
 }
 
