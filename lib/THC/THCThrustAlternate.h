@@ -54,6 +54,7 @@ struct Pair
   _T2 second;
 
   __device__ __host__  Pair() : first(), second() { }
+  __device__ __host__  ~Pair() { }
   __device__ __host__  Pair(const _T1& __a, const _T2& __b) : first(__a), second(__b) { }
 };
 
