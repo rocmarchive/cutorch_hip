@@ -38,38 +38,35 @@ __global__ void binary_transform_kernel(hipLaunchParm lp, real*& first1, long fi
 // Unary transforms
 template <typename UnaryFunction>
 void transform(THCState* state, THCTensor* first, THCTensor* result, UnaryFunction op) {
-  real* avData_first = first->storage->data;
-  real* avData_result = result->storage->data;
-  long size = result->storage->size;
+  real* avData_first = THCTensor_(data)(state, first); 
+  real* avData_result = THCTensor_(data)(state, result);
+  long size = THCTensor_(nElement)(state, result);
   dim3 grid((size + 255)/256, 1, 1);
   dim3 block(256, 1, 1);
-  hipLaunchKernel(HIP_KERNEL_NAME(unary_transform_kernel<op>), grid, block, 0, THCState_getCurrentStream(state), avData_first, first->storageOffset, avData_result, result->storageOffset, size, op);
+  hipLaunchKernel(HIP_KERNEL_NAME(unary_transform_kernel<UnaryFunction>), grid, block, 0, THCState_getCurrentStream(state), avData_first, first->storageOffset, avData_result, result->storageOffset, size, op);
 }
 
 // Binary transform
 template <typename BinaryFunction>
 void transform(THCState* state, THCTensor* first1, THCTensor* first2, THCTensor* result, BinaryFunction op) {
-  real* avData_first1 = first1->storage->data;
-  real* avData_first2 = first2->storage->data;
-  real* avData_result = result->storage->data;
-  long size = result->storage->size;
+  real* avData_first1 = THCTensor_(data)(state, first1);
+  real* avData_first2 = THCTensor_(data)(state, first2);
+  real* avData_result = THCTensor_(data)(state, result);
+  long size = THCTensor_(nElement)(state, result);
   dim3 grid((size + 255)/256, 1, 1);
   dim3 block(256, 1, 1);
-  hipLaunchKernel(HIP_KERNEL_NAME(binary_transform_kernel<op>), grid, block, 0, THCState_getCurrentStream(state), avData_first1, first1->storageOffset, avData_first2, first2->storageOffset,
+  hipLaunchKernel(HIP_KERNEL_NAME(binary_transform_kernel<BinaryFunction>), grid, block, 0, THCState_getCurrentStream(state), avData_first1, first1->storageOffset, avData_first2, first2->storageOffset,
                    avData_result, result->storageOffset, size, op);
 }
 
 
 
 
-
-/*
 // Reduce routines
 
-#define BLOCK_SIZE 256
 template <class T, typename BinaryFunction>
-inline void reduce_operation(THCState* state, T *g_idata, T *g_odata, unsigned int n, T val,  BinaryFunction f) {
-  
+__global__ void reduce_kernel(hipLaunchParm lp, THCState* state, T *g_idata, T *g_odata, unsigned int n, T val,  BinaryFunction f);  
+/*
   THCDeviceState* device_state = state->deviceState;
   hc::accelerator accl = state->deviceState->get_current_accelerator();
   hc::accelerator_view accl_view = device_state->get_current_accelerator_view();
@@ -121,16 +118,16 @@ inline void reduce_operation(THCState* state, T *g_idata, T *g_odata, unsigned i
   }).wait(); 
 
   hc::am_free(devPartialOut); 
-}
+}*/
 
 template<class T, typename BinaryFunction>
-inline T reduce(THCState* state, THCTensor* input, T init, BinaryFunction f) {
+T reduce(THCState* state, THCTensor* input, T init, BinaryFunction f) {
   T hRes, *dRes = NULL;
-  real dv_input_data = input->get_device_data(state);
-  THCCheck(THCMalloc(state, (void**)&dRes, 1 * sizeof(T)));
-  reduce_operation(state, dv_input_data + input->storageOffset, dRes, THCTensor_nElement(state, input), init, f);
-  hc::am_copy(&hRes, dRes, 1*sizeof(T));
-  THCFree(state, dRes);
+  real* dv_input_data = THCTensor_(data)(state, input);
+  THCudaCheck(THCudaMalloc(state, (void**)&dRes, 1 * sizeof(T)));
+  //reduce_kernel<T, BinaryFunction>(state, dv_input_data + input->storageOffset, dRes, THCTensor_(nElement)(state, input), init, f);
+  //hc::am_copy(&hRes, dRes, 1*sizeof(T));
+  THCudaFree(state, dRes);
   return hRes;
 }
 
@@ -138,12 +135,12 @@ inline T reduce(THCState* state, THCTensor* input, T init, BinaryFunction f) {
 
 // Innerproduct
 template <class T, typename BinaryFunction1, typename BinaryFunction2>
-inline T inner_product(THCState* state, THCTensor* first1, THCTensor* first2, T init, BinaryFunction1 op1, BinaryFunction2 op2) {
+T inner_product(THCState* state, THCTensor* first1, THCTensor* first2, T init, BinaryFunction1 op1, BinaryFunction2 op2) {
   // Create temp contiguous array to store intermediate transform results  
-  THCTensor* temp = THCTensor_newContiguous(state, first1);
+  THCTensor* temp = THCTensor_(newContiguous)(state, first1);
   transform(state, first1, first2, temp, op2);
   return reduce<T>(state, temp, init, op1);
-}*/
+}
 
 
 #endif

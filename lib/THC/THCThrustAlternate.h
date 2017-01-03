@@ -68,5 +68,6 @@ template<class _T1, class _T2>
   return (Pair<_T1, _T2>(src, col));
 }
 
+}
 #endif
 
