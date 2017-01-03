@@ -1,0 +1,5 @@
+#include "THCThrustAlternate.h"
+#include "THCGeneral.h"
+#include "THCTensor.h"
+#include "generic/THCThrustAlternate.cu"
+#include "THCGenerateAllTypes.h"
