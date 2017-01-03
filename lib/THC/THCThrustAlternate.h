@@ -1,9 +1,15 @@
-#ifndef THHC_FUNCTOR_OPNS_H
-#define THHC_FUNCTOR_OPNS_H
+#ifndef THC_THRUST_ALTERNATE_H
+#define THC_THRUST_ALTERNATE_H
 
 
 #include "THCTensor.h"
 #include "THCGeneral.h"
+
+#include "generic/THCThrustAlternate.h"
+#include "THCGenerateAllTypes.h"
+
+
+
 namespace thrust_alternate {
 // Common Operators definition
 template <class T> struct identity {
@@ -302,6 +308,7 @@ void transform(THCState* state, THCTensor* first1, THCTensor* first2, THCTensor*
   binary_transform(state, avData_first1, first1->storageOffset, avData_first2, first2->storageOffset,
                    avData_result, result->storageOffset, size, op);
 }
+
 
 template <typename BinaryFunction>
 void binary_transform(THCState* state, float*& first1, long first1Offset,
