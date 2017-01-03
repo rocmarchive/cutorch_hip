@@ -63,27 +63,15 @@ void transform(THCState* state, THCTensor* first1, THCTensor* first2, THCTensor*
 
 
 // Reduce routines
-
-template <class T, typename BinaryFunction>
-__global__ void reduce_kernel(hipLaunchParm lp, THCState* state, T *g_idata, T *g_odata, unsigned int n, T val,  BinaryFunction f);  
-/*
-  THCDeviceState* device_state = state->deviceState;
-  hc::accelerator accl = state->deviceState->get_current_accelerator();
-  hc::accelerator_view accl_view = device_state->get_current_accelerator_view();
-  long reduce_num_blocks = (n + (BLOCK_SIZE - 1) & ~(BLOCK_SIZE - 1))/BLOCK_SIZE;
-
-  real* devPartialOut = hc::am_alloc(sizeof(T) * reduce_num_blocks, accl, 0);
- 
-  hc::extent<1> grdExt(reduce_num_blocks * BLOCK_SIZE);
-  hc::tiled_extent<1> t_ext = grdExt.tile(BLOCK_SIZE);
-  hc::parallel_for_each(accl_view, t_ext, [=] (hc::tiled_index<1>& tidx) 
-  {
-    tile_static T buf_tmp[BLOCK_SIZE];
-    int idx = tidx.global[0];
+#define BLOCK_SIZE 256
+template <typename BinaryFunction>
+__global__ void reduce_kernel_pass1(hipLaunchParm lp, THCState* state, real *g_idata, real *devPartialOut, unsigned int n, unsigned int reduce_num_blocks, real val,  BinaryFunction f) { 
+    __shared__ real buf_tmp[BLOCK_SIZE];
+    int idx = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;
     int block_idx = idx / BLOCK_SIZE;
     int thread_in_block_idx = idx % BLOCK_SIZE;
     int eidx = idx;
-    T res = val;
+    real res = val;
 
     while(eidx < n)
     {
@@ -91,10 +79,10 @@ __global__ void reduce_kernel(hipLaunchParm lp, THCState* state, T *g_idata, T *
       eidx += reduce_num_blocks * BLOCK_SIZE;
     }
     buf_tmp[thread_in_block_idx] = res;
-    tidx.barrier.wait();
+    __syncthreads();
 
     // Seqential part
-    if (tidx.local[0] == 0)
+    if (hipThreadIdx_x == 0)
     {
       res = val;
       for (uint i = 0; i < BLOCK_SIZE; i++)
@@ -103,30 +91,32 @@ __global__ void reduce_kernel(hipLaunchParm lp, THCState* state, T *g_idata, T *
       }
       devPartialOut[block_idx] = res;
     }
-  }).wait();
+}
 
-  hc::extent<1> grdExt1(1);
-  hc::tiled_extent<1> t_ext1 = grdExt1.tile(1);
-  hc::parallel_for_each(accl_view, t_ext1, [=] (hc::tiled_index<1>& tidx) 
-  {
-    T res = val;
-    for (uint i = 0; i < reduce_num_blocks; i++)
+template <typename BinaryFunction>
+__global__ void reduce_kernel_pass2(hipLaunchParm lp, real *devPartialOut, real *g_odata, unsigned int residualSize, real val,  BinaryFunction f) {
+    real res = val;
+    for (uint i = 0; i < residualSize; i++)
     {
       res = f(res, devPartialOut[i]);
     }
     g_odata[0] = res;
-  }).wait(); 
+}
 
-  hc::am_free(devPartialOut); 
-}*/
-
-template<class T, typename BinaryFunction>
-T reduce(THCState* state, THCTensor* input, T init, BinaryFunction f) {
-  T hRes, *dRes = NULL;
+template<typename BinaryFunction>
+real reduce(THCState* state, THCTensor* input, real init, BinaryFunction f) {
+  real hRes, *dRes = NULL;
   real* dv_input_data = THCTensor_(data)(state, input);
-  THCudaCheck(THCudaMalloc(state, (void**)&dRes, 1 * sizeof(T)));
-  //reduce_kernel<T, BinaryFunction>(state, dv_input_data + input->storageOffset, dRes, THCTensor_(nElement)(state, input), init, f);
-  //hc::am_copy(&hRes, dRes, 1*sizeof(T));
+  THCudaCheck(THCudaMalloc(state, (void**)&dRes, 1 * sizeof(real)));
+  long n = THCTensor_(nElement)(state, input);
+  long reduce_num_blocks = (n + (BLOCK_SIZE - 1) & ~(BLOCK_SIZE - 1))/BLOCK_SIZE;
+  dim3 grid(reduce_num_blocks, 1, 1);
+  dim3 block(BLOCK_SIZE, 1, 1);
+  real* devPartialOut = NULL;
+  THCudaCheck(THCudaMalloc(state, (void**)devPartialOut, sizeof(real) * reduce_num_blocks));
+  reduce_kernel_pass1<BinaryFunction>(state, dv_input_data + input->storageOffset, dRes, n, reduce_num_blocks, init, f);
+  reduce_kernel_pass2<BinaryFunction>(dRes, reduce_num_blocks, init, f);
+  THCudaCheck(hipMemcpy(&dRes[0], &hRes, 1*sizeof(real), hipMemcpyDeviceToHost));
   THCudaFree(state, dRes);
   return hRes;
 }
@@ -139,7 +129,7 @@ T inner_product(THCState* state, THCTensor* first1, THCTensor* first2, T init, B
   // Create temp contiguous array to store intermediate transform results  
   THCTensor* temp = THCTensor_(newContiguous)(state, first1);
   transform(state, first1, first2, temp, op2);
-  return reduce<T>(state, temp, init, op1);
+  return reduce(state, temp, init, op1);
 }
 
 
