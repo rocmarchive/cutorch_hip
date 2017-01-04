@@ -136,6 +136,7 @@ SET(src-cuda
   THCTensor.cu
   THCTensorCopy.cu
   THCTensorMath.cu
+  THCThrustAlternate.cu
   THCTensorMath2.cu
   THCTensorMathBlas.cu
   THCTensorMathMagma.cu
@@ -273,6 +274,7 @@ INSTALL(FILES
           generic/THCTensorMasked.cu
           generic/THCTensorMath.h
           generic/THCTensorMath.cu
+          generic/THCThrustAlternate.cu
           generic/THCTensorMathBlas.cu
           generic/THCTensorMathBlas.h
           generic/THCTensorMathCompare.h
