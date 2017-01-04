@@ -177,12 +177,12 @@ float reduce(THCState* state, THCudaTensor* input, float init, BinaryFunction f)
   dim3 grid1(reduce_num_blocks, 1, 1);
   dim3 block1(BLOCK_SIZE, 1, 1);
   float* devPartialOut = NULL;
-  THCudaCheck(THCudaMalloc(state, devPartialOut, sizeof(float) * reduce_num_blocks));
+  THCudaCheck(THCudaMalloc(state, (void**)&devPartialOut, sizeof(float) * reduce_num_blocks));
   hipLaunchKernel(HIP_KERNEL_NAME(reduce_kernel_pass1), grid1, block1, 0, THCState_getCurrentStream(state), dv_input_data + input->storageOffset, devPartialOut, n, reduce_num_blocks, init, f);
   dim3 grid2(1, 1, 1);
   dim3 block2(1, 1, 1);
   hipLaunchKernel(HIP_KERNEL_NAME(reduce_kernel_pass2), grid2, block2, 0, THCState_getCurrentStream(state), devPartialOut, dRes, reduce_num_blocks, init, f);
-  THCudaCheck(hipMemcpy(&dRes[0], &hRes, 1*sizeof(float), hipMemcpyDeviceToHost));
+  THCudaCheck(hipMemcpy(&hRes, &dRes[0], 1*sizeof(float), hipMemcpyDeviceToHost));
   THCudaFree(state, dRes);
   return hRes;
 }
