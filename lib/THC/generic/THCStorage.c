@@ -67,7 +67,12 @@ THCStorage* THCStorage_(newWithAllocator)(THCState *state, ptrdiff_t size,
   {
     // update heap *before* attempting malloc, to free space for the malloc
     THCHeapUpdate(state, size * sizeof(real));
-    hipError_t err = hipMalloc((void **)&(storage->data), size * sizeof(real));
+    //hipError_t err = hipMalloc((void **)&(storage->data), size * sizeof(real));
+    hipError_t err =
+      (*allocator->malloc)(allocatorContext, (void**)&(storage->data),
+                           size * sizeof(real),
+                           THCState_getCurrentStream(state));
+
     if(err != hipSuccess){
       THCHeapUpdate(state, -size * sizeof(real));
       free(storage);
@@ -174,11 +179,13 @@ void THCStorage_(free)(THCState *state, THCStorage *self)
   if (THAtomicDecrementRef(&self->refcount))
   {
     if(self->flag & TH_STORAGE_FREEMEM) {
-      if(self->data) {
-        //THCudaCheck(hipFree(self->data));
-        self->data = NULL;
-      }
       THCHeapUpdate(state, -self->size * sizeof(real));
+      THCudaCheck(
+        (*self->allocator->free)(self->allocatorContext, self->data));
+      /*if(self->data) {
+        THCudaCheck(hipFree(self->data));
+        self->data = NULL;
+      }*/
     }
     THFree(self);
   }
