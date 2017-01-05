@@ -65,8 +65,8 @@ TensorInfo<T, IndexType>::TensorInfo(T* p,
   assert(dims > 0 && dims < MAX_CUTORCH_DIMS);
 
   // Allocate to accomodate device strides and sizes for the tensor
-  THCudaCheck(hipMalloc((void **)&dSizes, sizeof(IndexType) * dims));
-  THCudaCheck(hipMalloc((void **)&dStrides, sizeof(IndexType) * dims));
+  THCudaCheck(hipMalloc((void **)&dSizes, sizeof(IndexType) * MAX_CUTORCH_DIMS));
+  THCudaCheck(hipMalloc((void **)&dStrides, sizeof(IndexType) * MAX_CUTORCH_DIMS));
 
   for (int i = 0; i < dim; ++i) {
     sizes[i] = sz[i];
@@ -74,8 +74,8 @@ TensorInfo<T, IndexType>::TensorInfo(T* p,
   }
 
   // Copy the size and strides to the device pointer
-  THCudaCheck(hipMemcpy(dSizes, sizes, sizeof(IndexType) * dims, hipMemcpyHostToDevice));
-  THCudaCheck(hipMemcpy(dStrides, strides, sizeof(IndexType) * dims, hipMemcpyHostToDevice));
+  THCudaCheck(hipMemcpy(dSizes, sizes, sizeof(IndexType) * MAX_CUTORCH_DIMS, hipMemcpyHostToDevice));
+  THCudaCheck(hipMemcpy(dStrides, strides, sizeof(IndexType) * MAX_CUTORCH_DIMS, hipMemcpyHostToDevice));
 }
 
 
@@ -84,8 +84,8 @@ template <typename T, typename IndexType>
 TensorInfo<T, IndexType>::~TensorInfo(void) {
 
   // Free up allocated resource
-  // THCudaCheck(hipFree(dStrides));
-  // THCudaCheck(hipFree(dSizes));
+   //THCudaCheck(hipFree(dStrides));
+   //THCudaCheck(hipFree(dSizes));
 }
 
 template <typename T, typename IndexType>
@@ -240,6 +240,10 @@ TensorInfo<T, IndexType>::collapseDims(int excludeDim) {
     sizes[i] = newSizes[i];
     strides[i] = newStrides[i];
   }
+  // Update the deviceSizes and deviceStrides with new sizes and strides informations
+  THCudaCheck(hipMemcpy(dSizes, sizes, sizeof(IndexType) * MAX_CUTORCH_DIMS, hipMemcpyHostToDevice));
+  THCudaCheck(hipMemcpy(dStrides, strides, sizeof(IndexType) * MAX_CUTORCH_DIMS, hipMemcpyHostToDevice));
+  
 
   // After collapsing, the original `excludeDim` may have been
   // renumbered to this new `returnDim`, since some dimensions could
