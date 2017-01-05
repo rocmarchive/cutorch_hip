@@ -208,7 +208,7 @@ hipblasOperation_t convertTransToHipblasOperation(char trans) {
     return HIPBLAS_OP_T;
   }
 }
-cublasOperation_t convertTransToCublasOperation(char trans) {
+/*cublasOperation_t convertTransToCublasOperation(char trans) {
   if (trans == 't') return CUBLAS_OP_T;
   else if (trans == 'n') return CUBLAS_OP_N;
   else if (trans == 'c') return CUBLAS_OP_C;
@@ -216,7 +216,7 @@ cublasOperation_t convertTransToCublasOperation(char trans) {
     THError("trans must be one of: t, n, c");
     return CUBLAS_OP_T;
   }
-}
+}*/
 void adjustLd(char transa, char transb, long m, long n, long k, long *lda, long *ldb, long *ldc)
 {
   int transa_ = ((transa == 't') || (transa == 'T'));
