@@ -69,8 +69,8 @@ template<class _T1, class _T2>
 }
 
 template <typename UnaryFunction>
-__global__ void unary_transform_kernel(hipLaunchParm lp, float*& first, long firstOffset,
-                     float*& result, long resultOffset, long size, UnaryFunction f) {
+__global__ void unary_transform_kernel(hipLaunchParm lp, float* first, long firstOffset,
+                     float* result, long resultOffset, long size, UnaryFunction f) {
   if (size == 0) {
     return;
   }
@@ -83,9 +83,9 @@ __global__ void unary_transform_kernel(hipLaunchParm lp, float*& first, long fir
 }
 
 template <typename BinaryFunction>
-__global__ void binary_transform_kernel(hipLaunchParm lp, float*& first1, long first1Offset,
-                      float*& first2, long first2Offset,
-                      float*& result, long resultOffset, long size,  BinaryFunction f) {
+__global__ void binary_transform_kernel(hipLaunchParm lp, float* first1, long first1Offset,
+                      float* first2, long first2Offset,
+                      float* result, long resultOffset, long size,  BinaryFunction f) {
   if (size == 0) {
     return;
   }
