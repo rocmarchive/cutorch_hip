@@ -18,6 +18,9 @@ ENDIF()
 SET(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_CURRENT_SOURCE_DIR}/lib/THC/cmake ${CMAKE_MODULE_PATH} "${HIP_PATH}/cmake")
 EXECUTE_PROCESS(COMMAND ${HIP_PATH}/bin/hipconfig -P OUTPUT_VARIABLE PLATFORM)
 
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/external/bolt/include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/external/boost)
+
 include(HipTorchWrap)
 
 FIND_PACKAGE(Torch REQUIRED)
