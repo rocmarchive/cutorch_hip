@@ -78,6 +78,7 @@ template <typename T1, typename T2>
    */
   pair(void) restrict(cpu, amp);
 
+  ~pair(void) restrict(cpu, amp);
   /*! This constructor accepts two objects to copy into this \p pair.
    *
    *  \param x The object to copy into \p first.
