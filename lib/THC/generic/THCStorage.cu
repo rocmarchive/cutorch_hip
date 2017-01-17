@@ -6,9 +6,12 @@
 void THCStorage_(fill)(THCState *state, THCStorage *self, real value)
 {
 #ifdef THRUST_PATH
-//  thrust::device_ptr<real> self_data(self->data);
-//  thrust::fill(
-//    self_data, self_data+self->size, value);
+  thrust::device_ptr<real> self_data(self->data);
+  thrust::fill(
+    self_data, self_data+self->size, value);
+#else
+  Concurrency::array_view<real, 1> av_self_data(self->size, self->data);
+ // bolt::amp::device_vector<real>(av_self_data, self->size, false);
 #endif
 }
 
