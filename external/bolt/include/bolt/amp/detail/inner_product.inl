@@ -183,7 +183,6 @@ namespace amp{
         DVInputIterator last1,  DVInputIterator first2, OutputType init,
         BinaryFunction1 f1,  BinaryFunction2 f2, bolt::amp::device_vector_tag)
     {
-
         typedef typename std::iterator_traits<DVInputIterator>::value_type iType;
 
         const int distVec = static_cast< int >( std::distance( first1, last1 ) );
@@ -191,12 +190,11 @@ namespace amp{
         if( distVec == 0 )
             return init;
 
-        device_vector< iType> tempDV( distVec, iType(), false, ctl);
+        device_vector<iType> tempDV(distVec, iType(), false, ctl);
 
         detail::amp::binary_transform( ctl, first1, last1, first2, tempDV.begin() ,f2);
         return detail::reduce( ctl, tempDV.begin(), tempDV.end(), init, f1);
-
-    };
+    }
 
 	template<typename InputIterator, typename OutputType, typename BinaryFunction1,typename BinaryFunction2>
     static
@@ -217,7 +215,7 @@ namespace amp{
         device_vector< iType, concurrency::array_view> dvInput( first1, last1, false, ctl);
         device_vector< iType, concurrency::array_view> dvInput2( first2, sz, false, ctl);
 
-        return inner_product( ctl, dvInput.begin( ), dvInput.end( ), dvInput2.begin( ),
+        return inner_product(ctl, dvInput.begin( ), dvInput.end( ), dvInput2.begin( ),
                                                    init, f1, f2, bolt::amp::device_vector_tag() );
 
 	}
@@ -248,7 +246,7 @@ namespace amp{
                 InputIterator last1, InputIterator first2, OutputType init,
                 BinaryFunction1 f1, BinaryFunction2 f2 )
     {
-        typedef typename std::iterator_traits<InputIterator>::value_type iType;
+//        typedef typename std::iterator_traits<InputIterator>::value_type iType;
         int sz = static_cast<int>( std::distance( first1, last1 ) );
 
         if( sz == 0 )
@@ -278,7 +276,7 @@ namespace amp{
         else
         {
             return amp::inner_product( ctl, first1, last1, first2, init,
-				f1, f2, typename std::iterator_traits<InputIterator>::iterator_category() );
+				f1, f2, typename std::iterator_traits<InputIterator>::iterator_category{});
         }
     }
 
@@ -300,9 +298,6 @@ namespace amp{
                                            std::input_iterator_tag >::value ,
                              "Input vector cannot be of the type input_iterator_tag" );
     }
-
-
-
 }//End of detail namespace
 
 
@@ -313,7 +308,7 @@ namespace amp{
          OutputType inner_product(bolt::amp::control& ctl, InputIterator first1, InputIterator last1,
          InputIterator first2, OutputType init, BinaryFunction1 f1, BinaryFunction2 f2)
         {
-           return detail::inner_product( ctl, first1, last1, first2, init, f1, f2);
+           return detail::inner_product(ctl, first1, last1, first2, init, f1, f2);
         }
 
         // default control, two-input transform, std:: iterator
@@ -327,7 +322,7 @@ namespace amp{
         OutputType inner_product( InputIterator first1, InputIterator last1, InputIterator first2, OutputType init,
             BinaryFunction1 f1, BinaryFunction2 f2)
         {
-            return inner_product( control::getDefault(), first1, last1, first2, init, f1, f2 );
+            return inner_product(control::getDefault(), first1, last1, first2, init, f1, f2);
         }
 
         template<typename InputIterator,

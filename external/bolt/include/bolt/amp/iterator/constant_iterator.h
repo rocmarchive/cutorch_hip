@@ -243,6 +243,8 @@ namespace amp {
 
 
     template< typename Type >
+    static
+    inline
     constant_iterator< Type > make_constant_iterator( Type constValue )
     {
         constant_iterator< Type > tmp( constValue );

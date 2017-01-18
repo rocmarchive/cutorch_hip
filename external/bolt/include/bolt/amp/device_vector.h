@@ -223,29 +223,39 @@ public:
     *   container, or use iterator arithmetic instead, such as *(iter + 5) for reading from the iterator.
     */
     template< typename Container >
-    class iterator_base: public boost::iterator_facade< iterator_base< Container >,
-        value_type, device_vector_tag, typename device_vector::reference >
+    class iterator_base : public std::iterator<device_vector_tag, value_type, int, value_type*, typename device_vector::reference>//: public boost::iterator_facade< iterator_base< Container >,
+        //value_type, device_vector_tag, typename device_vector::reference >
     {
+        friend
+        inline
+        int operator-(const iterator_base& x, const iterator_base& y) restrict(cpu, amp)
+        {
+            return x.m_Index - y.m_Index;
+        }
     public:
-
+        inline
         iterator_base( ) restrict(cpu, amp)
-            : m_Container( create_empty_array< value_type >::getav( ) ), m_Index( 0 )
+            : m_Index( 0 ), m_Container( create_empty_array< value_type >::getav( ) )
         {}
 
         //  Basic constructor requires a reference to the container and a positional element
+        inline
         iterator_base( Container& rhs, size_type index ) restrict(cpu, amp)
-            : m_Container( rhs, false ), m_Index( static_cast<int>(index) )
+            : m_Index( static_cast<int>(index) ), m_Container( rhs, false )
         {}
 
         //  This copy constructor allows an iterator to convert into a const_iterator, but not vica versa
         template< typename OtherContainer >
+        inline
         iterator_base( const iterator_base< OtherContainer >& rhs ) restrict(cpu, amp)
-            : m_Container( rhs.m_Container, false ), m_Index( rhs.m_Index )
+            : m_Index( rhs.m_Index ), m_Container( rhs.m_Container, false )
         {}
+        inline
         iterator_base( const iterator_base& rhs ) restrict(cpu, amp)
-            : m_Container( rhs.m_Container, false ), m_Index( rhs.m_Index )
+            :  m_Index( rhs.m_Index ), m_Container( rhs.m_Container, false )
         {}
         //  This copy constructor allows an iterator to convert into a const_iterator, but not vica versa
+        inline
         iterator_base< Container >& operator= ( const iterator_base< Container >& rhs ) restrict(cpu, amp)
         {
             m_Container = rhs.m_Container;
@@ -253,12 +263,14 @@ public:
             return *this;
         }
 
+        inline
         iterator_base< Container >& operator+= ( const difference_type & n ) restrict(cpu, amp)
         {
             advance( n );
             return *this;
         }
 
+        inline
         const iterator_base< Container > operator+ ( const difference_type & n ) const restrict(cpu, amp)
         {
             iterator_base< Container > result(*this);
@@ -266,17 +278,20 @@ public:
             return result;
         }
 
+        inline
         Container getContainer( ) const restrict(cpu, amp)
         {
           return m_Container;
         }
 
+        inline
         size_type getIndex() const restrict(cpu, amp)
         {
             return m_Index;
         }
 
 
+        inline
         difference_type distance_to( const iterator_base< Container >& rhs ) const restrict(cpu, amp)
         {
             return ( rhs.m_Index - m_Index );
@@ -284,7 +299,7 @@ public:
         int m_Index;
 
         //  Implementation detail of boost.iterator
-        friend class boost::iterator_core_access;
+        //friend class boost::iterator_core_access;
 
         //  Handy for the device_vector erase methods
         friend class device_vector< value_type >;
@@ -292,16 +307,19 @@ public:
         //  Used for templatized copy constructor and the templatized equal operator
         template < typename > friend class iterator_base;
 
+        inline
         void advance( difference_type n ) restrict(cpu, amp)
         {
             m_Index += static_cast<int>(n);
         }
 
+        inline
         void increment( ) restrict(cpu, amp)
         {
             advance( 1 );
         }
 
+        inline
         void decrement( ) restrict(cpu, amp)
         {
             advance( -1 );
@@ -309,6 +327,7 @@ public:
 
 
         template< typename OtherContainer >
+        inline
         bool equal( const iterator_base< OtherContainer >& rhs ) const restrict(cpu, amp)
         {
             bool sameIndex = rhs.m_Index == m_Index;
@@ -316,11 +335,13 @@ public:
             return ( sameIndex && sameContainer );
         }
 
+        inline
         value_type& operator[](int x) const restrict(cpu,amp)
         {
             return m_Container[m_Index + x];
         }
 
+        inline
         value_type& operator*() const restrict(cpu,amp)
         {
             return m_Container[m_Index];
@@ -328,7 +349,6 @@ public:
 
 private:
         Container m_Container;
-
     };
 
 
@@ -338,8 +358,8 @@ private:
     *   \sa http://www.sgi.com/tech/stl/RandomAccessIterator.html
     */
     template< typename Container >
-    class reverse_iterator_base: public boost::iterator_facade< reverse_iterator_base< Container >,
-        value_type, std::random_access_iterator_tag, typename device_vector::reference >
+    class reverse_iterator_base//: public boost::iterator_facade< reverse_iterator_base< Container >,
+    //    value_type, std::random_access_iterator_tag, typename device_vector::reference >
     {
     public:
 
@@ -450,7 +470,7 @@ private:
 
     /*! \brief Typedef to create the non-constant iterator
     */
-    typedef iterator_base< device_vector< value_type, CONT > > iterator;
+    typedef iterator_base<device_vector<value_type, CONT>> iterator;
 
     /*! \brief Typedef to create the constant iterator
     */
@@ -490,16 +510,14 @@ private:
     {
         if( m_Size > 0 )
         {
-			concurrency::array<value_type> tmp = array_type( static_cast< int >( m_Size ), ctl.getAccelerator().get_default_view() );
-            m_devMemory = tmp.view_as(tmp.get_extent());
+			//concurrency::array<value_type> tmp = array_type(static_cast< int >( m_Size ), ctl.getAccelerator().get_default_view());
+            m_devMemory = arrayview_type(m_Size);//tmp.view_as(tmp.get_extent());
             if( init )
             {
-                arrayview_type m_devMemoryAV( m_devMemory );
-                Concurrency::parallel_for_each( m_devMemoryAV.get_extent(), [=](Concurrency::index<1> idx) restrict(amp)
-                {
-                    m_devMemoryAV[idx] = initValue;
-                }
-                );
+                //arrayview_type m_devMemoryAV( m_devMemory );
+                Concurrency::parallel_for_each(m_devMemory.get_extent(), [=](Concurrency::index<1> idx) restrict(amp) {
+                    m_devMemory[idx] = initValue;
+                });
             }
         }
     }

@@ -303,7 +303,7 @@ unsigned int k0_stepNum, k1_stepNum, k2_stepNum;
      * Type Names - used in KernelTemplateSpecializer
      *********************************************************************************/
     typedef typename std::iterator_traits< DVInputIterator >::value_type iType;
-    typedef typename std::iterator_traits< DVOutputIterator >::value_type oType;
+//    typedef typename std::iterator_traits< DVOutputIterator >::value_type oType;
 
     int exclusive = inclusive ? 0 : 1;
 
@@ -470,7 +470,7 @@ aProfiler.set(AsyncProfiler::memory, 4*sizeScanBuff*sizeof(oType));
 
         // do offset of zero manually
         int offset;
-        iType workSum;
+        iType workSum = iType{};
         if (mapId < numWorkGroupsK0)
         {
             // accumulate zeroth value manually
@@ -737,8 +737,8 @@ aProfiler.setDataSize(numElements*sizeof(oType));
     const bool& inclusive,
     const BinaryFunction& binary_op)
 	{
-	    typedef typename std::iterator_traits< InputIterator >::value_type iType;
-        typedef typename std::iterator_traits< OutputIterator >::value_type oType;
+//	    typedef typename std::iterator_traits< InputIterator >::value_type iType;
+//        typedef typename std::iterator_traits< OutputIterator >::value_type oType;
 
         unsigned int numElements = static_cast< unsigned int >( std::distance( first, last ) );
         if( numElements == 0 )

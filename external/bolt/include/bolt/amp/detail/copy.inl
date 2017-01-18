@@ -53,8 +53,8 @@ template< typename DVInputIterator, typename Size, typename DVOutputIterator >
 
 	  concurrency::accelerator_view av = ctrl.getAccelerator().get_default_view();
 
-      typedef typename std::iterator_traits<DVInputIterator>::value_type iType;
-      typedef typename std::iterator_traits<DVOutputIterator>::value_type oType;
+//      typedef typename std::iterator_traits<DVInputIterator>::value_type iType;
+//      typedef typename std::iterator_traits<DVOutputIterator>::value_type oType;
 
       const int szElements = static_cast< int >( n );
       const unsigned int leng =  szElements + COPY_WAVEFRONT_SIZE - (szElements % COPY_WAVEFRONT_SIZE);
@@ -97,8 +97,8 @@ void copy_pick_iterator( bolt::amp::control &ctrl,  const InputIterator& first, 
                          const OutputIterator& result, std::random_access_iterator_tag, std::random_access_iterator_tag )
 {
 
-    typedef typename std::iterator_traits<InputIterator>::value_type iType;
-    typedef typename std::iterator_traits<OutputIterator>::value_type oType;
+//    typedef typename std::iterator_traits<InputIterator>::value_type iType;
+//    typedef typename std::iterator_traits<OutputIterator>::value_type oType;
 
 
      bolt::amp::control::e_RunMode runMode = ctrl.getForceRunMode( );
@@ -192,7 +192,7 @@ inline
 void copy_pick_iterator( bolt::amp::control &ctrl,  const DVInputIterator& first, const Size& n,
                          const DVOutputIterator& result, bolt::amp::fancy_iterator_tag, bolt::amp::device_vector_tag )
 {
-    typedef typename std::iterator_traits<DVInputIterator>::value_type iType;
+//    typedef typename std::iterator_traits<DVInputIterator>::value_type iType;
     typedef typename std::iterator_traits<DVOutputIterator>::value_type oType;
      bolt::amp::control::e_RunMode runMode = ctrl.getForceRunMode( );
      if (runMode == bolt::amp::control::Automatic)
@@ -292,7 +292,7 @@ void copy_pick_iterator(bolt::amp::control &ctrl,  const DVInputIterator& first,
                         const DVOutputIterator& result, bolt::amp::device_vector_tag, std::random_access_iterator_tag)
 {
 
-    typedef typename std::iterator_traits<DVInputIterator>::value_type iType;
+//    typedef typename std::iterator_traits<DVInputIterator>::value_type iType;
     typedef typename std::iterator_traits<DVOutputIterator>::value_type oType;
 
     bolt::amp::control::e_RunMode runMode = ctrl.getForceRunMode( );
@@ -339,7 +339,7 @@ void copy_pick_iterator(bolt::amp::control &ctrl,  const DVInputIterator& first,
                         const DVOutputIterator& result, bolt::amp::fancy_iterator_tag, std::random_access_iterator_tag)
 {
 
-    typedef typename std::iterator_traits<DVInputIterator>::value_type iType;
+//    typedef typename std::iterator_traits<DVInputIterator>::value_type iType;
     typedef typename std::iterator_traits<DVOutputIterator>::value_type oType;
 
     bolt::amp::control::e_RunMode runMode = ctrl.getForceRunMode( );
@@ -521,7 +521,7 @@ namespace serial{
              InputIterator2 stencil, OutputIterator result, Predicate predicate)
     {
 
-        int n = static_cast<int>(std::distance(first,last));
+        //int n = static_cast<int>(std::distance(first,last));
         auto mapped_first_itr = create_mapped_iterator(typename std::iterator_traits<InputIterator1>::iterator_category(),
                                                            ctl, first);
         auto mapped_stencil_itr = create_mapped_iterator(typename std::iterator_traits<InputIterator2>::iterator_category(),
@@ -585,7 +585,7 @@ namespace amp{
     {
       Predicate pred;
 
-      explicit	
+      explicit
       bool_to_int(const Predicate& _pred) restrict(cpu, amp) : pred(_pred) {}
 
       template <typename T>
@@ -746,7 +746,7 @@ namespace amp{
     // default control
     template<typename InputIterator, typename OutputIterator, typename Predicate>
     static
-    inline		
+    inline
     OutputIterator copy_if( InputIterator first, InputIterator last, OutputIterator result,
                             Predicate pred)
     {

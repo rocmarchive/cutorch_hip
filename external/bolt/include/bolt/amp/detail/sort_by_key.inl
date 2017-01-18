@@ -67,7 +67,6 @@
 #define USE_2LEVEL_REDUCE
 #define max(a,b)    (((a) > (b)) ? (a) : (b))
 #define min(a,b)    (((a) < (b)) ? (a) : (b))
-#define make_uint4 (uint_4)
 #define SET_HISTOGRAM(setIdx, key) ldsSortData[(setIdx)*NUM_BUCKET+key]
 
 namespace bolt {
@@ -75,9 +74,13 @@ namespace amp {
 
 namespace detail {
 
-	static inline uint_4 SELECT_UINT4_FOR_KEY(const uint_4 &a, const uint_4 &b, const uint_4& condition )  restrict(amp)
+	static
+	inline
+	concurrency::graphics::uint_4 SELECT_UINT4_FOR_KEY(const concurrency::graphics::uint_4 &a,
+													   const concurrency::graphics::uint_4 &b,
+													   const concurrency::graphics::uint_4& condition)  restrict(amp)
 	{
-		uint_4 res;
+		concurrency::graphics::uint_4 res;
 		res.x = (condition.x )? b.x : a.x;
 		res.y = (condition.y )? b.y : a.y;
 		res.z = (condition.z )? b.z : a.z;
@@ -167,8 +170,8 @@ namespace detail {
 		return lmem[l_id-exclusive];
 	}
 	static
-        inline
-        unsigned int prefixScanVectorEx_for_key( uint_4* data ) restrict(amp)
+    inline
+    unsigned int prefixScanVectorEx_for_key(concurrency::graphics::uint_4* data) restrict(amp)
 	{
 		unsigned int sum = 0;
 		unsigned int tmp = data[0].x;
@@ -186,24 +189,42 @@ namespace detail {
 		return sum;
 	}
 	static
-        inline
-        uint_4 localPrefixSum256V_for_key( uint_4 pData, unsigned int lIdx, unsigned int* totalSum, unsigned int* sorterSharedMemory, concurrency::tiled_index< WG_SIZE > t_idx ) restrict(amp)
+    inline
+    concurrency::graphics::uint_4 localPrefixSum256V_for_key(concurrency::graphics::uint_4 pData,
+															 unsigned int lIdx,
+															 unsigned int* totalSum,
+															 unsigned int* sorterSharedMemory,
+															 const concurrency::tiled_index<WG_SIZE>& t_idx) restrict(amp)
 	{
-		unsigned int s4 = prefixScanVectorEx_for_key( &pData );
-		unsigned int rank = scanLocalMemAndTotal_for_key( s4, sorterSharedMemory, totalSum,  1, t_idx);
-		return pData + make_uint4( rank, rank, rank, rank );
+		unsigned int s4 = prefixScanVectorEx_for_key(&pData);
+		unsigned int rank = scanLocalMemAndTotal_for_key(s4,
+														 sorterSharedMemory,
+	                                                     totalSum,
+	                                                     1,
+	                                                     t_idx);
+		return pData + concurrency::graphics::uint_4{rank, rank, rank, rank};
 	}
 	template<typename Values>
 	static
     inline
-    void sort4BitsKeyValueAscending_for_key(unsigned int sortData[4],  Values sortVal[4], const int startBit, int lIdx,  unsigned int* ldsSortData,  Values *ldsSortVal, bool Asc_sort, concurrency::tiled_index< WG_SIZE > t_idx) restrict(amp)
+    void sort4BitsKeyValueAscending_for_key(unsigned int (&sortData)[4],
+											Values (&sortVal)[4],
+											int startBit,
+											int lIdx,
+											unsigned int* ldsSortData,
+											Values* ldsSortVal,
+											bool Asc_sort,
+											const concurrency::tiled_index<WG_SIZE>& t_idx) restrict(amp)
 	{
 		for(int bitIdx=0; bitIdx<BITS_PER_PASS; bitIdx++)
 		{
 			unsigned int mask = (1<<bitIdx);
-			uint_4 prefixSum;
-			uint_4 cmpResult( (sortData[0]>>startBit) & mask, (sortData[1]>>startBit) & mask, (sortData[2]>>startBit) & mask, (sortData[3]>>startBit) & mask );
-			uint_4 temp;
+			concurrency::graphics::uint_4 prefixSum;
+			concurrency::graphics::uint_4 cmpResult((sortData[0]>>startBit) & mask,
+													(sortData[1]>>startBit) & mask,
+													(sortData[2]>>startBit) & mask,
+													(sortData[3]>>startBit) & mask);
+			concurrency::graphics::uint_4 temp;
 
 			if(!Asc_sort)
 			{
@@ -219,13 +240,15 @@ namespace detail {
 				temp.z = (cmpResult.z != 0);
 				temp.w = (cmpResult.w != 0);
 			}
-			prefixSum = SELECT_UINT4_FOR_KEY( make_uint4(1,1,1,1), make_uint4(0,0,0,0), temp );//(cmpResult != make_uint4(mask,mask,mask,mask)));
+			prefixSum = SELECT_UINT4_FOR_KEY(concurrency::graphics::uint_4{1,1,1,1},
+											 concurrency::graphics::uint_4{0,0,0,0},
+											 temp);//(cmpResult != make_uint4(mask,mask,mask,mask)));
 
 			unsigned int total = 0;
 			prefixSum = localPrefixSum256V_for_key( prefixSum, lIdx, &total, ldsSortData, t_idx);
 			{
-				uint_4 localAddr(lIdx*4+0,lIdx*4+1,lIdx*4+2,lIdx*4+3);
-				uint_4 dstAddr = localAddr - prefixSum + make_uint4( total, total, total, total );
+				concurrency::graphics::uint_4 localAddr(lIdx*4+0,lIdx*4+1,lIdx*4+2,lIdx*4+3);
+				concurrency::graphics::uint_4 dstAddr = localAddr - prefixSum + concurrency::graphics::uint_4{total, total, total, total};
 				if(!Asc_sort)
 				{
 					temp.x = (cmpResult.x != mask);
@@ -272,8 +295,15 @@ namespace detail {
 	}
 	template<typename Values>
 	static
-        inline
-        void sort4BitsSignedKeyValueAscending_for_key(unsigned int sortData[4],  Values sortVal[4], const int startBit, int lIdx,  unsigned int* ldsSortData,  Values *ldsSortVal, bool Asc_sort, concurrency::tiled_index< WG_SIZE > t_idx) restrict(amp)
+    inline
+    void sort4BitsSignedKeyValueAscending_for_key(unsigned int (&sortData)[4],
+												  Values (&sortVal)[4],
+												  int startBit,
+												  int lIdx,
+												  unsigned int* ldsSortData,
+												  Values *ldsSortVal,
+												  bool Asc_sort,
+												  const concurrency::tiled_index<WG_SIZE>& t_idx) restrict(amp)
 	{
 		unsigned int signedints[4];
 	    signedints[0] = ( ( ( (sortData[0] >> startBit) & 0x7 ) ^ 0x7 ) & 0x7 ) | ((sortData[0] >> startBit) & (1<<3));
@@ -281,14 +311,12 @@ namespace detail {
 	    signedints[2] = ( ( ( (sortData[2] >> startBit) & 0x7 ) ^ 0x7 ) & 0x7 ) | ((sortData[2] >> startBit) & (1<<3));
 	    signedints[3] = ( ( ( (sortData[3] >> startBit) & 0x7 ) ^ 0x7 ) & 0x7 ) | ((sortData[3] >> startBit) & (1<<3));
 
-
-
 		for(int bitIdx=0; bitIdx<BITS_PER_PASS; bitIdx++)
 		{
 			unsigned int mask = (1<<bitIdx);
-			uint_4 prefixSum;
-			uint_4 cmpResult( signedints[0] & mask, signedints[1] & mask, signedints[2] & mask, signedints[3] & mask );
-			uint_4 temp;
+			concurrency::graphics::uint_4 prefixSum;
+			concurrency::graphics::uint_4 cmpResult( signedints[0] & mask, signedints[1] & mask, signedints[2] & mask, signedints[3] & mask );
+			concurrency::graphics::uint_4 temp;
 
 			if(!Asc_sort)
 			{
@@ -304,13 +332,15 @@ namespace detail {
 				temp.z = (cmpResult.z != mask);
 				temp.w = (cmpResult.w != mask);
 			}
-			prefixSum = SELECT_UINT4_FOR_KEY( make_uint4(1,1,1,1), make_uint4(0,0,0,0), temp );//(cmpResult != make_uint4(mask,mask,mask,mask)));
+			prefixSum = SELECT_UINT4_FOR_KEY(concurrency::graphics::uint_4{1,1,1,1},
+											 concurrency::graphics::uint_4{0,0,0,0},
+											 temp);//(cmpResult != make_uint4(mask,mask,mask,mask)));
 
 			unsigned int total = 0;
 			prefixSum = localPrefixSum256V_for_key( prefixSum, lIdx, &total, ldsSortData, t_idx);
 			{
-				uint_4 localAddr(lIdx*4+0,lIdx*4+1,lIdx*4+2,lIdx*4+3);
-				uint_4 dstAddr = localAddr - prefixSum + make_uint4( total, total, total, total );
+				concurrency::graphics::uint_4 localAddr(lIdx*4+0,lIdx*4+1,lIdx*4+2,lIdx*4+3);
+				concurrency::graphics::uint_4 dstAddr = localAddr - prefixSum + concurrency::graphics::uint_4{total, total, total, total};
 				if(!Asc_sort)
 				{
 					temp.x = (cmpResult.x != 0);
@@ -370,9 +400,11 @@ namespace detail {
 
 
 	static
-        inline
-        unsigned int scanlMemPrivData_for_key( unsigned int val,  unsigned int* lmem, int exclusive,
-	                            concurrency::tiled_index< WG_SIZE > t_idx) restrict (amp)
+    inline
+    unsigned int scanlMemPrivData_for_key(unsigned int val,
+										  unsigned int* lmem,
+										  int exclusive,
+	                            		  const concurrency::tiled_index<WG_SIZE>& t_idx) restrict (amp)
 	{
 		// Set first half of local memory to zero to make room for scanning
 		unsigned int lIdx = t_idx.local[ 0 ];
@@ -470,7 +502,7 @@ void sort_by_key_enqueue_int_uint( control &ctl,
 				] ( concurrency::tiled_index< localSize > t_idx ) restrict(amp)
 		  {
 			tile_static unsigned int lmem[WG_SIZE*RADICES];
-			unsigned int gIdx = t_idx.global[ 0 ];
+			//unsigned int gIdx = t_idx.global[ 0 ];
 			unsigned int lIdx = t_idx.local[ 0 ];
 			unsigned int wgIdx = t_idx.tile[ 0 ];
 			unsigned int localSize = tileK0.tile_dim0;
@@ -480,7 +512,7 @@ void sort_by_key_enqueue_int_uint( control &ctl,
 			const int dataAlignment = 1024;
 			const int n = cdata.m_n;
 			const int w_n = n + dataAlignment-(n%dataAlignment);
-			const int nWGs = cdata.m_nWGs;
+			//const int nWGs = cdata.m_nWGs;
 			const int nBlocksPerWG = cdata.m_nBlocksPerWG;
 
 			for(int i=0; i<RADICES; i++)
@@ -548,8 +580,8 @@ void sort_by_key_enqueue_int_uint( control &ctl,
 		  {
 
 			unsigned int lIdx = t_idx.local[ 0 ];
-			unsigned int llIdx = lIdx;
-			unsigned int wgSize = tileK1.tile_dim0;
+			//unsigned int llIdx = lIdx;
+			//unsigned int wgSize = tileK1.tile_dim0;
 
 			tile_static unsigned int lmem[WG_SIZE*8];
 			tile_static int s_seed;
@@ -601,10 +633,10 @@ void sort_by_key_enqueue_int_uint( control &ctl,
 			tile_static unsigned int localHistogramToCarry[NUM_BUCKET];
 			tile_static unsigned int localHistogram[NUM_BUCKET*2];
 
-			unsigned int gIdx = t_idx.global[ 0 ];
+			//unsigned int gIdx = t_idx.global[ 0 ];
 			unsigned int lIdx = t_idx.local[ 0 ];
 			unsigned int wgIdx = t_idx.tile[ 0 ];
-			unsigned int localSize = tileK0.tile_dim0;
+			//unsigned int localSize = tileK0.tile_dim0;
 
 			const int dataAlignment = 1024;
 			const int n = cdata.m_n;
@@ -795,10 +827,10 @@ void sort_by_key_enqueue_int_uint( control &ctl,
 			tile_static unsigned int localHistogramToCarry[NUM_BUCKET];
 			tile_static unsigned int localHistogram[NUM_BUCKET*2];
 
-			unsigned int gIdx = t_idx.global[ 0 ];
+			//unsigned int gIdx = t_idx.global[ 0 ];
 			unsigned int lIdx = t_idx.local[ 0 ];
 			unsigned int wgIdx = t_idx.tile[ 0 ];
-			unsigned int localSize = tileK0.tile_dim0;
+			//unsigned int localSize = tileK0.tile_dim0;
 
 			const int dataAlignment = 1024;
 			const int n = cdata.m_n;
@@ -1224,7 +1256,7 @@ void sort_by_key_enqueue_int_uint( control &ctl,
                          RandomAccessIterator2 values_first,
                          StrictWeakOrdering comp)
         {
-            typedef typename std::iterator_traits< RandomAccessIterator1 >::value_type keys_T;
+//            typedef typename std::iterator_traits< RandomAccessIterator1 >::value_type keys_T;
 
             detail::sort_by_key_detect_random_access( control::getDefault( ),
                                        keys_first, keys_last,
@@ -1278,7 +1310,7 @@ void sort_by_key_enqueue_int_uint( control &ctl,
                          RandomAccessIterator2 values_first,
                          StrictWeakOrdering comp)
         {
-            typedef typename std::iterator_traits< RandomAccessIterator1 >::value_type keys_T;
+//            typedef typename std::iterator_traits< RandomAccessIterator1 >::value_type keys_T;
 
             detail::sort_by_key_detect_random_access( ctl,
                                        keys_first, keys_last,

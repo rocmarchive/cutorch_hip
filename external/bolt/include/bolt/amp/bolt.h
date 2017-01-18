@@ -73,6 +73,8 @@ namespace bolt {
             *  \param[out] minor Minor functionality change
             *  \param[out] patch Bug fixes, documentation changes, no new features introduced
             */
+        static
+        inline
         void getVersion( unsigned int& major, unsigned int& minor, unsigned int& patch );
 
         /*! \brief Translates an integer OpenCL error code to a std::string at runtime

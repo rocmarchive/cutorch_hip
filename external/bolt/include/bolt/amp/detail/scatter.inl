@@ -303,10 +303,10 @@ namespace amp{
                              const Predicate& pred )
     {
 		concurrency::accelerator_view av = ctl.getAccelerator().get_default_view();
-		typedef typename std::iterator_traits< DVInputIterator1 >::value_type iType1;
+//		typedef typename std::iterator_traits< DVInputIterator1 >::value_type iType1;
 		typedef typename std::iterator_traits< DVInputIterator2 >::value_type iType2;
 		typedef typename std::iterator_traits< DVInputIterator3 >::value_type iType3;
-		typedef typename std::iterator_traits< DVOutputIterator >::value_type oType;
+//		typedef typename std::iterator_traits< DVOutputIterator >::value_type oType;
 
         const int szElements = static_cast< int >(  std::distance(first1,last1) );
 		const int leng =  szElements + SCATTER_WAVEFRNT_SIZE - (szElements % SCATTER_WAVEFRNT_SIZE);
@@ -351,9 +351,9 @@ namespace amp{
                           const DVOutputIterator& result )
     {
 		concurrency::accelerator_view av = ctl.getAccelerator().get_default_view();
-		typedef typename std::iterator_traits< DVInputIterator1 >::value_type iType1;
+//		typedef typename std::iterator_traits< DVInputIterator1 >::value_type iType1;
 		typedef typename std::iterator_traits< DVInputIterator2 >::value_type iType2;
-		typedef typename std::iterator_traits< DVOutputIterator >::value_type oType;
+//		typedef typename std::iterator_traits< DVOutputIterator >::value_type oType;
 
         const int szElements = static_cast< int >(  std::distance(first1,last1) );
 		const unsigned int leng =  szElements + SCATTER_WAVEFRNT_SIZE - (szElements % SCATTER_WAVEFRNT_SIZE);

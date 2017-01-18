@@ -253,6 +253,8 @@ namespace amp {
 
 
   template< typename valueType, typename keyType >
+  static
+  inline
   permutation_iterator< valueType, keyType > make_permutation_iterator( valueType value, keyType key )
   {
       permutation_iterator< valueType, keyType > tmp( value, key );

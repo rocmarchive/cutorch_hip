@@ -82,9 +82,9 @@ namespace amp {
 
 
             //  Basic constructor requires a reference to the container and a positional element
-	    explicit	
+	    explicit
             counting_iterator( value_type init, const control& ctl = control::getDefault( ) )
-                : m_initValue( init ), m_Index( 0 ) {}
+                : m_Index( 0 ), m_initValue( init )  {}
 
             //  This copy constructor allows an iterator to convert into a const_iterator, but not vica versa
            template< typename OtherType >
@@ -164,7 +164,7 @@ namespace amp {
             counting_iterator< value_type > operator++ ( ) restrict(cpu, amp)
             {
                 advance( 1 );
-                counting_iterator< value_type > result( *this );
+                //counting_iterator< value_type > result( *this );
                 return *this;
             }
 

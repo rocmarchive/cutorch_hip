@@ -370,25 +370,17 @@ namespace amp{
     {
         concurrency::accelerator_view av = ctl.getAccelerator().get_default_view();
 
-        typedef typename std::iterator_traits< DVInputIterator1 >::value_type iType1;
-        typedef typename std::iterator_traits< DVInputIterator2 >::value_type iType2;
-        typedef typename std::iterator_traits< DVOutputIterator >::value_type oType;
-
         const int szElements =  static_cast< int >( std::distance( first1, last1 ) );
 
         const unsigned int leng =  szElements + TRANSFORM_WAVEFRNT_SIZE - (szElements % TRANSFORM_WAVEFRNT_SIZE);
 
         concurrency::extent< 1 > inputExtent(leng);
 
+		auto dvInput1_itr = bolt::amp::create_mapped_iterator(typename bolt::amp::iterator_traits< DVInputIterator1 >::iterator_category( ), first1, szElements, false, ctl );
+        auto dvInput2_itr = bolt::amp::create_mapped_iterator(typename bolt::amp::iterator_traits< DVInputIterator2 >::iterator_category( ), first2, szElements, false, ctl);
 
-
-		auto dvInput1_itr  = bolt::amp::create_mapped_iterator(typename bolt::amp::iterator_traits< DVInputIterator1 >::iterator_category( ), first1, szElements, false, ctl );
-        auto dvInput2_itr  = bolt::amp::create_mapped_iterator(typename bolt::amp::iterator_traits< DVInputIterator2 >::iterator_category( ), first2, szElements, false, ctl);
-
-        try
-        {
-
-            concurrency::parallel_for_each(av,  inputExtent, [=](concurrency::index<1> idx) restrict(amp)
+        try {
+            concurrency::parallel_for_each(av, inputExtent, [=](Concurrency::index<1> idx) restrict(amp)
             {
                 int globalId = idx[ 0 ];
 
@@ -399,13 +391,10 @@ namespace amp{
 				result[globalId] = f(dvInput1_itr[globalId], dvInput2_itr[globalId]);
             });
         }
+		catch(std::exception &e) {
+            std::cout << "Exception while calling bolt::amp::transform parallel_for_each"<<e.what()<<std::endl;
 
-		catch(std::exception &e)
-        {
-
-              std::cout << "Exception while calling bolt::amp::transform parallel_for_each"<<e.what()<<std::endl;
-
-              return;
+            return;
         }
     }
 
@@ -460,8 +449,8 @@ namespace amp{
      DVOutputIterator result,  UnaryFunction f)
     {
 
-        typedef typename std::iterator_traits< DVInputIterator >::value_type iType;
-        typedef typename std::iterator_traits< DVOutputIterator >::value_type oType;
+//        typedef typename std::iterator_traits< DVInputIterator >::value_type iType;
+//        typedef typename std::iterator_traits< DVOutputIterator >::value_type oType;
 
 
         const int szElements =  static_cast< int >( std::distance( first, last ) );
@@ -515,7 +504,7 @@ namespace amp{
         int sz = static_cast<int>(last - first);
         if (sz == 0)
             return;
-        typedef typename std::iterator_traits<InputIterator>::value_type  iType;
+//        typedef typename std::iterator_traits<InputIterator>::value_type  iType;
         typedef typename std::iterator_traits<OutputIterator>::value_type oType;
 
 		auto dvInput_itr  = bolt::amp::create_mapped_iterator(typename bolt::amp::iterator_traits< InputIterator >::iterator_category( ), first, sz, false, ctl );
@@ -548,10 +537,10 @@ namespace amp{
 
 		concurrency::accelerator_view av = ctl.getAccelerator().get_default_view();
 
-        typedef typename std::iterator_traits< DVInputIterator1 >::value_type iType1;
-        typedef typename std::iterator_traits< DVInputIterator2 >::value_type iType2;
-		typedef typename std::iterator_traits< DVInputIterator3 >::value_type iType3;
-        typedef typename std::iterator_traits< DVOutputIterator >::value_type oType;
+//        typedef typename std::iterator_traits< DVInputIterator1 >::value_type iType1;
+//        typedef typename std::iterator_traits< DVInputIterator2 >::value_type iType2;
+//		typedef typename std::iterator_traits< DVInputIterator3 >::value_type iType3;
+//        typedef typename std::iterator_traits< DVOutputIterator >::value_type oType;
 
         const int szElements =  static_cast< int >( std::distance( first1, last1 ) );
 
