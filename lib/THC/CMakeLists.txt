@@ -134,12 +134,12 @@ ENDIF()
 
 SET(src
     THCCachingAllocator.cpp
-    THCGeneral.cpp
-    THCStorageCopy.cpp
-    THCStream.cpp
-    THCTensor.cpp
-    THCTensorCopy.cpp
-    THCThreadLocal.cpp
+    THCGeneral.cc
+    THCStorageCopy.cc
+    THCStream.cc
+    THCTensor.cc
+    THCTensorCopy.cc
+    THCThreadLocal.cc
     )
 
 SET(src-cuda
