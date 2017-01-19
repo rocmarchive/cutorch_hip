@@ -4,8 +4,8 @@
 
 static int cutorch_TensorOperator_(__add__)(lua_State *L)
 {
-  THCTensor *tensor1 = (THCTensor*)luaT_toudata(L, 1, torch_Tensor);
-  THCTensor *tensor2 = (THCTensor*)luaT_toudata(L, 2, torch_Tensor);
+  THCTensor *tensor1 = (THCTensor *)luaT_toudata(L, 1, torch_Tensor);
+  THCTensor *tensor2 = (THCTensor *)luaT_toudata(L, 2, torch_Tensor);
   THCTensor *r;
   THCState *state = cutorch_getstate(L);
   THAssert(THCTensor_(checkGPU)(state, 2, tensor1, tensor2));
@@ -63,8 +63,8 @@ static int cutorch_TensorOperator_(__add__)(lua_State *L)
 
 static int cutorch_TensorOperator_(__sub__)(lua_State *L)
 {
-  THCTensor *tensor1 = (THCTensor*)luaT_toudata(L, 1, torch_Tensor);
-  THCTensor *tensor2 = (THCTensor*)luaT_toudata(L, 2, torch_Tensor);
+  THCTensor *tensor1 = (THCTensor *)luaT_toudata(L, 1, torch_Tensor);
+  THCTensor *tensor2 = (THCTensor *)luaT_toudata(L, 2, torch_Tensor);
   THCTensor *r;
   THCState *state = cutorch_getstate(L);
   THAssert(THCTensor_(checkGPU)(state, 2, tensor1, tensor2));
@@ -122,7 +122,7 @@ static int cutorch_TensorOperator_(__sub__)(lua_State *L)
 
 static int cutorch_TensorOperator_(__unm__)(lua_State *L)
 {
-  THCTensor *tensor = (THCTensor*)luaT_checkudata(L, 1, torch_Tensor);
+  THCTensor *tensor = (THCTensor *)luaT_checkudata(L, 1, torch_Tensor);
   THCTensor *r;
   THCState *state = cutorch_getstate(L);
   THAssert(THCTensor_(checkGPU)(state, 1, tensor));
@@ -146,8 +146,8 @@ static int cutorch_TensorOperator_(__unm__)(lua_State *L)
 static int cutorch_TensorOperator_(__mul__)(lua_State *L)
 {
 #if defined(THC_REAL_IS_FLOAT) || defined(THC_REAL_IS_DOUBLE)
-  THCTensor *tensor1 = (THCTensor*)luaT_toudata(L, 1, torch_Tensor);
-  THCTensor *tensor2 = (THCTensor*)luaT_toudata(L, 2, torch_Tensor);
+  THCTensor *tensor1 = (THCTensor *)luaT_toudata(L, 1, torch_Tensor);
+  THCTensor *tensor2 = (THCTensor *)luaT_toudata(L, 2, torch_Tensor);
   THCTensor *r;
   THCState *state = cutorch_getstate(L);
   THAssert(THCTensor_(checkGPU)(state, 2, tensor1, tensor2));
@@ -218,7 +218,7 @@ static int cutorch_TensorOperator_(__mul__)(lua_State *L)
 
 static int cutorch_TensorOperator_(__div__)(lua_State *L)
 {
-  THCTensor *tensor = (THCTensor*)luaT_checkudata(L, 1, torch_Tensor);
+  THCTensor *tensor = (THCTensor *)luaT_checkudata(L, 1, torch_Tensor);
   THCTensor *r;
   THCState *state = cutorch_getstate(L);
   THAssert(THCTensor_(checkGPU)(state, 1, tensor));

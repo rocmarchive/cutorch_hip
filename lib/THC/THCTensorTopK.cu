@@ -7,6 +7,11 @@
 #include "THCScanUtils.cuh"
 #include "THCTensorTypeUtils.cuh"
 
+#ifdef CUDA_PATH
+    #if CUDA_VERSION >= 7000
+    #include <thrust/system/cuda/execution_policy.h>
+#endif
+
 #include <algorithm> // for std::min
 
 // Converts a float to an integer representation with the same
@@ -19,17 +24,21 @@ struct FloatToSortedInt {
   __host__ __device__
   FloatToSortedInt() {}
 
-  inline __device__ unsigned int convert(float v) const {
-    unsigned int x = (unsigned int)v;//__float_as_int(v);
+  __device__
+  unsigned int convert(float v) const
+  {
+    unsigned int x = __float_as_int(v);
     unsigned int mask = (x & 0x80000000) ? 0xffffffff : 0x80000000;
 
     return (x ^ mask);
   }
 
-  inline __device__ float deconvert(unsigned int v) const {
+  __device__
+  float deconvert(unsigned int v) const
+  {
     unsigned int mask = (v & 0x80000000) ? 0x80000000 : 0xffffffff;
 
-    return (float)(v ^ mask);//__int_as_float(v ^ mask);
+    return __int_as_float(v ^ mask);
   }
 };
 
@@ -104,7 +113,6 @@ __device__ void countRadixUsingMask(const RadixConverter& conv,
 // ((v & desired) == desiredMask) in our sorted int format
 template <typename DataType, typename IndexType, typename RadixConverter>
 __device__
-inline
 float findPattern(const RadixConverter& conv,
                   DataType* smem,
                   DataType* data,
@@ -122,7 +130,7 @@ float findPattern(const RadixConverter& conv,
   for (IndexType i = hipThreadIdx_x; i < numIterations; i += hipBlockDim_x) {
     bool inRange = (i < sliceSize);
     DataType v = inRange ? doLdg(&data[i * withinSliceStride]) : (DataType) 0;
-//
+
     if (inRange && ((conv.convert(v) & desiredMask) == desired)) {
       // There should not be conflicts if we are using findPattern,
       // since the result is unique
@@ -143,8 +151,8 @@ float findPattern(const RadixConverter& conv,
       return val;
     }
   }
-//
-//  // should not get here
+
+  // should not get here
   // TODO: this causes linkage failure, and is quite odd to begin with.
   //assert(false);
   return (DataType) 0;
@@ -159,7 +167,6 @@ template<typename BitDataType,
          typename DataType,
          typename IndexType>
 __device__
-inline
 void radixSelect(const RadixConverter& conv,
                  DataType* data,
                  IndexType k,
@@ -266,7 +273,6 @@ void radixSelect(const RadixConverter& conv,
 
 template <typename IndexType, int Dim, bool Order>
 __global__
-inline
 void gatherTopK(hipLaunchParm lp,
                 TensorInfo<float, IndexType> input,
                 IndexType inputSliceSize,
@@ -289,11 +295,11 @@ void gatherTopK(hipLaunchParm lp,
 
   // Find the start offset for our slice
   IndexType sliceStartIndex =
-    IndexToOffset<float, IndexType, Dim>::get(slice, input);
+    IndexToOffset<float, IndexType, Dim>::get(slice, input.dSizes, input.dStrides, input.dims);
   IndexType topKSliceStartIndex =
-    IndexToOffset<float, IndexType, Dim>::get(slice, topK);
+    IndexToOffset<float, IndexType, Dim>::get(slice, topK.dSizes, topK.dStrides, topK.dims);
   IndexType indicesSliceStartIndex =
-    IndexToOffset<long, IndexType, Dim>::get(slice, indices);
+    IndexToOffset<long, IndexType, Dim>::get(slice, indices.dSizes, indices.dStrides, indices.dims);
 
   float* inputSliceStart = &input.data[sliceStartIndex];
   float* topKSliceStart = &topK.data[topKSliceStartIndex];

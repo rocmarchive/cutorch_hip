@@ -1,10 +1,12 @@
 #ifndef THC_NUMERICS_INC
 #define THC_NUMERICS_INC
 
-#include "THCHalf.h"
-
-#include <hip/hip_runtime.h>
+#ifdef CUDA_PATH
+#include <cuda.h>
 #include <limits.h>
+#endif
+#include "hip/hip_runtime.h"
+#include "THCHalf.h"
 
 /// Class for numeric limits of the particular data type, which
 /// includes support for `half`.
@@ -49,7 +51,7 @@ struct THCNumerics<char> {
   static inline __host__ __device__  char mul(char a, char b) { return a * b; }
   static inline __host__ __device__  char sub(char a, char b) { return a - b; }
   static inline __host__ __device__  char div(char a, char b) { return a / b; }
-  static inline __host__ __device__  char abs(char a) { return fabs(a); }
+  static inline __host__ __device__  char abs(char a) { return abs(a); }
 };
 
 template <>
@@ -68,7 +70,7 @@ struct THCNumerics<short> {
   static inline __host__ __device__  short mul(short a, short b) { return a * b; }
   static inline __host__ __device__  short sub(short a, short b) { return a - b; }
   static inline __host__ __device__  short div(short a, short b) { return a / b; }
-  static inline __host__ __device__  short abs(short a) { return fabs(a); }
+  static inline __host__ __device__  short abs(short a) { return abs(a); }
 };
 
 template <>

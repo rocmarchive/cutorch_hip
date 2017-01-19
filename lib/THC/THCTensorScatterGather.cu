@@ -76,13 +76,13 @@ struct IndexToScatterGatherOffsets<IndexType, Real, -1> {
 
 template <typename IndexType, typename Real, int Dims>
 __global__
-inline
 void THCudaTensor_gatherKernel(hipLaunchParm lp,
                                TensorInfo<Real, IndexType> tensor,
                                TensorInfo<Real, IndexType> src,
                                TensorInfo<long, IndexType> index,
                                const int dim,
-                               const IndexType totalElements) {
+                               const IndexType totalElements)
+{
   for (IndexType linearId = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;
        linearId < totalElements;
        linearId += hipGridDim_x * hipBlockDim_x) {
@@ -104,13 +104,12 @@ void THCudaTensor_gatherKernel(hipLaunchParm lp,
 
 template <typename IndexType, typename Real, int Dims>
 __global__
-inline
 void THCudaTensor_scatterKernel(hipLaunchParm lp,
                                 TensorInfo<Real, IndexType> tensor,
                                 TensorInfo<Real, IndexType> src,
                                 TensorInfo<long, IndexType> index,
-                                const int dim,
-                                const IndexType totalElements)
+                                int dim,
+                                IndexType totalElements)
 {
   for (IndexType linearId = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;
        linearId < totalElements;
@@ -138,8 +137,8 @@ void THCudaTensor_scatterFillKernel(hipLaunchParm lp,
                                     TensorInfo<Real, IndexType> tensor,
                                     TensorInfo<long, IndexType> index,
                                     Real value,
-                                    const int dim,
-                                    const IndexType totalElements)
+                                    int dim,
+                                    IndexType totalElements)
 {
   for (IndexType linearId = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;
        linearId < totalElements;

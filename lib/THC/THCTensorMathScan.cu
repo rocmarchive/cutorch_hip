@@ -5,9 +5,13 @@
 #include "THCApply.cuh"
 #include "THCReduce.cuh"
 
-#include <hip/hip_runtime.h>
-#include <bolt/amp/functional.h>
+#if defined(THRUST_PATH)
+    #include <thrust/functional>
+#else
+    #include <bolt/amp/functional.h>
+#endif
 
+#include <hip/hip_runtime.h>
 /* Perform an inclusive scan along an outer dimension of a tensor.
  *
  * - num_orows is the size of the flattened outer dimensions;
@@ -21,7 +25,6 @@
  */
 template<class BinaryOp>
 __global__
-inline
 void THCudaTensor_kernel_scanOuterDim(hipLaunchParm lp,
                                       float *tgt_,
                                       float *src_,
@@ -49,8 +52,13 @@ void THCudaTensor_kernel_scanOuterDim(hipLaunchParm lp,
 }
 
 template<class BinaryOp>
-__host__ void THCudaTensor_scanOuterDim(THCState *state, THCudaTensor *tgt, THCudaTensor *src, long dimension,
-                                        float init, BinaryOp binary_op)
+__host__
+void THCudaTensor_scanOuterDim(THCState *state,
+                               THCudaTensor *tgt,
+                               THCudaTensor *src,
+                               long dimension,
+                               float init,
+                               BinaryOp binary_op)
 {
   unsigned ndim = THCudaTensor_nDimension(state, src);
   // Treat all outer dimensions (i.e. dim < dimension) as one.
@@ -100,7 +108,6 @@ __host__ void THCudaTensor_scanOuterDim(THCState *state, THCudaTensor *tgt, THCu
  */
 template<int num_threads_x, int num_threads_y, class BinaryFunction>
 __global__
-inline
 void THCudaTensor_kernel_scanInnermostDim(hipLaunchParm lp,
                                           float *tgt_,
                                           float *src_,
@@ -178,7 +185,8 @@ void THCudaTensor_kernel_scanInnermostDim(hipLaunchParm lp,
 }
 
 template<class BinaryFunction>
-__host__ void THCudaTensor_scanInnermostDim(THCState *state, THCudaTensor *tgt, THCudaTensor *src, float init, BinaryFunction binary_op)
+__host__
+void THCudaTensor_scanInnermostDim(THCState *state, THCudaTensor *tgt, THCudaTensor *src, float init, BinaryFunction binary_op)
 {
   unsigned ndim = THCudaTensor_nDimension(state, src);
   // Treat all outer dimensions as a single dimension.
@@ -229,11 +237,29 @@ void THCudaTensor_scanDim(THCState *state, THCudaTensor *self_, THCudaTensor *sr
 void THCudaTensor_cumsum(THCState *state, THCudaTensor *self, THCudaTensor *src, long dimension)
 {
   THAssert(THCudaTensor_checkGPU(state, 2, self, src));
-  return THCudaTensor_scanDim(state, self, src, dimension, 0.0f, bolt::amp::plus<float>());
+  return THCudaTensor_scanDim(state,
+                              self,
+                              src,
+                              dimension,
+                              0.0f,
+#if defined(THRUST_PATH)
+                              thrust::plus<float>());
+#else
+                              bolt::amp::plus<float>());
+#endif
 }
 
 void THCudaTensor_cumprod(THCState *state, THCudaTensor *self, THCudaTensor *src, long dimension)
 {
   THAssert(THCudaTensor_checkGPU(state, 2, self, src));
-  return THCudaTensor_scanDim(state, self, src, dimension, 1.0f, bolt::amp::multiplies<float>());
+  return THCudaTensor_scanDim(state,
+                              self,
+                              src,
+                              dimension,
+                              1.0f,
+#if defined(THRUST_PATH)
+                              thrust::multiplies<float>());
+#else
+                              bolt::amp::multiplies<float>());
+#endif
 }

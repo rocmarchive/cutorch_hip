@@ -8,8 +8,18 @@
 #include "THCTensorMathReduce.cuh"
 #include "THCTensorMathPointwise.cuh"
 
-#include <bolt/amp/functional.h>
-#include <bolt/amp/inner_product.h>
+#ifdef THRUST_PATH
+    #include <thrust/device_ptr.h>
+    #include <thrust/transform_reduce.h>
+    #include <thrust/functional.h>
+    #include <thrust/inner_product.h>
+    #if CUDA_VERSION >= 7000
+        #include <thrust/system/cuda/execution_policy.h>
+    #endif
+#else
+    #include <bolt/amp/functional.h>
+    #include <bolt/amp/inner_product.h>
+#endif
 
 
 struct TensorTPowOp {
@@ -17,13 +27,11 @@ struct TensorTPowOp {
   explicit
   TensorTPowOp(float v) : val{v} {}
 
-  __device__ __forceinline__ void operator()(float* out, float* in) const {
-    *out = powf(val, *in);
-  }
+  __device__ __forceinline__
+  void operator()(float* out, float* in) const { *out = powf(val, *in); }
 
-  __device__ __forceinline__ void operator()(float* v) const {
-    *v = powf(val, *v);
-  }
+  __device__ __forceinline__
+  void operator()(float* v) const { *v = powf(val, *v); }
 
   __host__ __device__
   ~TensorTPowOp() {}
@@ -31,7 +39,6 @@ struct TensorTPowOp {
   float val;
 };
 
-inline
 void THCudaTensor_tpow(THCState *state, THCudaTensor *self_, float value, THCudaTensor *src)
 {
   THAssert(THCudaTensor_checkGPU(state, 2, self_, src));
@@ -41,7 +48,6 @@ void THCudaTensor_tpow(THCState *state, THCudaTensor *self_, float value, THCuda
     }
   } else {
     THCudaTensor_resizeAs(state, self_, src);
-
     if (!THC_pointwiseApply2(state, self_, src, TensorTPowOp(value))) {
       THArgCheck(false, 2, CUTORCH_DIM_WARNING);
     }
@@ -52,7 +58,8 @@ void THCudaTensor_tpow(THCState *state, THCudaTensor *self_, float value, THCuda
 
 struct TensorATan2Op {
   __device__ __forceinline__
-  void operator()(float* out, float* a, float* b) const {
+  void operator()(float* out, float* a, float* b) const
+  {
     *out = atan2f(*a, *b);
   }
 };
@@ -77,16 +84,27 @@ float THCudaTensor_dist(THCState *state, THCudaTensor *self, THCudaTensor *src, 
   self = THCudaTensor_newContiguous(state, self);
   ptrdiff_t size = THCudaTensor_nElement(state, self);
   src = THCudaTensor_newContiguous(state, src);
+#ifdef THRUST_PATH
+  thrust::device_ptr<float> self_data(THCudaTensor_data(state, self));
+  thrust::device_ptr<float> src_data(THCudaTensor_data(state, src));
 
-  auto self_data = THCudaTensor_data(state, self);
-  auto src_data = THCudaTensor_data(state, src);
-
-  float result = 0.0; bolt::amp::inner_product( // TODO: add localised version.
-#if CUDA_VERSION >= 7000
-//    thrust::cuda::par.on(THCState_getCurrentStream(state)),
-#endif
+  float result = thrust::inner_product(
+    #if CUDA_VERSION >= 7000
+        thrust::cuda::par.on(THCState_getCurrentStream(state)),
+    #endif
     self_data, self_data+size, src_data, (float) 0,
-    bolt::amp::plus<float>(), TensorDistOp<float>(value));
+    thrust::plus<float>(), TensorDistOp<float>(value));
+#else
+    auto self_data = THCudaTensor_data(state, self);
+    auto src_data = THCudaTensor_data(state, src);
+
+    float result = bolt::amp::inner_product(self_data,
+                                            self_data + size,
+                                            src_data,
+                                            0.0f,
+                                            bolt::amp::plus<float>(),
+                                            TensorDistOp<float>(value));
+#endif
 
   THCudaTensor_free(state, src);
   THCudaTensor_free(state, self);

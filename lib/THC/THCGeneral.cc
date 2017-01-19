@@ -106,7 +106,7 @@ void THCudaInit(THCState* state)
   /* Restore to previous device */
   THCudaCheck(hipSetDevice(device));
 
-  /* There is no such thing as a default cublas handle.
+  /* There is no such thing as a default hipblas handle.
      To maintain consistency with streams API, handle 0 is always NULL and we
      start counting at 1. If currentPerDeviceBlasHandle is 0 (the default
      thread-local value), then we assume it means 1.
@@ -344,9 +344,13 @@ void THCState_reserveStreams(THCState* state, int numStreams, int nonBlocking)
     /* Allocate new stream resources */
     size_t scratchSpaceSize = THCState_getDeviceScratchSpaceSize(state, dev);
     // TODO: HIP Equivalent for below line of code hipStreamNonBlocking and hipStreamDefault
+#ifdef __HCC__
     unsigned int flags =
       nonBlocking ? hipStreamNonBlocking : hipStreamDefault;
-
+#else
+    unsigned int flags =
+      nonBlocking ? cudaStreamNonBlocking : cudaStreamDefault;
+#endif
     for (int stream = state->numUserStreams + 1; stream <= numStreams; ++stream) {
       newStreams[stream] = THCStream_new(flags);
       newScratchSpace[stream] = NULL;
@@ -646,10 +650,12 @@ void __THCublasCheck(hipblasStatus_t status, const char *file, const int line)
       case HIPBLAS_STATUS_INVALID_VALUE:
         errmsg = "an invalid numeric value was used as an argument";
         break;
-  // TODO: hipBlas does not support this.
-  //    case CUBLAS_STATUS_ARCH_MISMATCH:
-  //      errmsg = "an absent device architectural feature is required";
-  //      break;
+
+#ifdef HIPBLAS_TODO
+      case HIPBLAS_STATUS_ARCH_MISMATCH:
+        errmsg = "an absent device architectural feature is required";
+        break;
+#endif
 
       case HIPBLAS_STATUS_MAPPING_ERROR:
         errmsg = "an access to GPU memory space failed";
@@ -668,7 +674,7 @@ void __THCublasCheck(hipblasStatus_t status, const char *file, const int line)
         break;
     }
 
-    _THError(file, line, "cublas runtime error : %s", errmsg);
+    _THError(file, line, "hipblas runtime error : %s", errmsg);
   }
 }
 
@@ -687,21 +693,18 @@ void THCSetGCHandler(THCState *state, void (*cutorchGCFunction_)(void */*data*/)
 hipError_t THCudaMalloc(THCState *state, void** ptr, size_t size)
 {
   THCudaCheck(hipGetLastError());
-  hipStream_t stream = THCState_getCurrentStream(state);
-  THCDeviceAllocator* allocator = state->cudaDeviceAllocator;
-  hipError_t err = allocator->malloc(allocator->state, ptr, size, stream);
+  hipError_t err =  hipMalloc(ptr, size);
   if (state->cutorchGCFunction != NULL && err != hipSuccess) {
     hipGetLastError(); // reset OOM error
     (state->cutorchGCFunction)(state->cutorchGCData);
-    err = allocator->malloc(allocator->state, ptr, size, stream);
+    err = hipMalloc(ptr, size);
   }
   return err;
 }
 
 hipError_t THCudaFree(THCState *state, void *ptr)
 {
-  THCDeviceAllocator* allocator = state->cudaDeviceAllocator;
-  return allocator->free(allocator->state, ptr);
+  return hipFree(ptr);
 }
 
 static ptrdiff_t applyHeapDelta(THCState *state) {
@@ -742,5 +745,5 @@ void THCHeapUpdate(THCState *state, ptrdiff_t size) {
 
 #undef GLOBAL_SCRATCH_SPACE_PER_SM_STREAM
 
-//#include "THCStorage.c"
-//#include "THCAllocator.c"
+#include "THCStorage.cc"
+#include "THCAllocator.cc"

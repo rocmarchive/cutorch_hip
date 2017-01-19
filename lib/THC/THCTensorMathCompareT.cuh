@@ -63,11 +63,9 @@ void THC_logicalTensor(THCState *state,
   THArgCheck(TensorUtils<TensorType>::getNumElements(state, src1) ==
              TensorUtils<TensorType>::getNumElements(state, src2), 3,
              "sizes do not match");
-
   if (!THC_pointwiseApply3(state, self_, src1, src2, op)) {
     THArgCheck(false, 2, CUTORCH_DIM_WARNING);
   }
-
   THCudaCheck(hipGetLastError());
 }
 

@@ -11,7 +11,8 @@ inline int curGPU() {
 // Copy operator for the pointwise apply kernel
 template <typename TypeDst, typename TypeSrc>
 struct CopyOp {
-  __device__ __forceinline__ void operator()(TypeDst* dst, TypeSrc* src) const {
+  __device__ __forceinline__
+  void operator()(TypeDst* dst, TypeSrc* src) const {
 #if __CUDA_ARCH__ >= 350 //|| defined(__HIP_DEVICE_COMPILE__)
     *dst = ScalarConvert<TypeSrc, TypeDst>::to(__ldg(src));
 #else

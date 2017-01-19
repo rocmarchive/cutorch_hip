@@ -30,19 +30,21 @@ __launch_bounds__(32 * 16, 4)
 __global__
 inline
 void kernelPointwiseApply1(hipLaunchParm lp,
+                           Ta* Adata,
+                           IndexType* Asizes,
+                           IndexType* Astrides,
                            IndexType totalElements,
-                           Op op,
-                           TensorInfo<Ta, IndexType> a)
+                           Op op)
 {
-//  for (IndexType linearIndex = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;
-//       linearIndex < totalElements;
-//       linearIndex += hipGridDim_x * hipBlockDim_x) {
-//    // Convert `linearIndex` into an offset of `a`
-//    const IndexType aOffset =
-//      IndexToOffset<Ta, IndexType, ADims>::get(linearIndex, a);
-//
-//    op(&a.data[aOffset]);
-//  }
+  for (IndexType linearIndex = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;
+       linearIndex < totalElements;
+       linearIndex += hipGridDim_x * hipBlockDim_x) {
+    // Convert `linearIndex` into an offset of `a`
+    const IndexType aOffset =
+      IndexToOffset<Ta, IndexType, ADims>::get(linearIndex, Asizes, Astrides, ADims);
+
+    op(&Adata[aOffset]);
+  }
 }
 
 template <typename Op,
@@ -54,24 +56,28 @@ __launch_bounds__(32 * 16, 4)
 #endif
 __global__
 inline
-void
-kernelPointwiseApply2(hipLaunchParm lp,
-                      TensorInfo<Ta, IndexType> a,
-                      TensorInfo<Tb, IndexType> b,
-                      IndexType totalElements,
-                      Op op) {
+void kernelPointwiseApply2(hipLaunchParm lp,
+                           Ta* Adata,
+                           IndexType* Asizes,
+                           IndexType* Astrides,
+                           Tb* Bdata,
+                           IndexType* Bsizes,
+                           IndexType* Bstrides,
+                           IndexType totalElements,
+                           Op op)
+{
   for (IndexType linearIndex = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;
        linearIndex < totalElements;
        linearIndex += hipGridDim_x * hipBlockDim_x) {
     // Convert `linearIndex` into an offset of `a`
     const IndexType aOffset =
-      IndexToOffset<Ta, IndexType, ADims>::get(linearIndex, a);
+      IndexToOffset<Ta, IndexType, ADims>::get(linearIndex, Asizes, Astrides, ADims);
 
     // Convert `linearIndex` into an offset of `b`
     const IndexType bOffset =
-      IndexToOffset<Tb, IndexType, BDims>::get(linearIndex, b);
+      IndexToOffset<Tb, IndexType, BDims>::get(linearIndex, Bsizes, Bstrides, BDims);
 
-    op(&a.data[aOffset], &b.data[bOffset]);
+    op(&Adata[aOffset], &Bdata[bOffset]);
   }
 }
 
@@ -84,37 +90,46 @@ __launch_bounds__(32 * 16, 4)
 #endif
 __global__
 inline
-void
-kernelPointwiseApply3(hipLaunchParm lp,
-                      TensorInfo<Ta, IndexType> a,
-                      TensorInfo<Tb, IndexType> b,
-                      TensorInfo<Tc, IndexType> c,
-                      IndexType totalElements,
-                      Op op) {
+void kernelPointwiseApply3(hipLaunchParm lp,
+                           Ta* Adata,
+                           IndexType* Asizes,
+                           IndexType* Astrides,
+                           Tb* Bdata,
+                           IndexType* Bsizes,
+                           IndexType* Bstrides,
+                           Tc* Cdata,
+                           IndexType* Csizes,
+                           IndexType* Cstrides,
+                           IndexType totalElements,
+                           Op op)
+{
   for (IndexType linearIndex = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;
        linearIndex < totalElements;
        linearIndex += hipGridDim_x * hipBlockDim_x) {
     // Convert `linearIndex` into an offset of `a`
     const IndexType aOffset =
-      IndexToOffset<Ta, IndexType, ADims>::get(linearIndex, a);
+      IndexToOffset<Ta, IndexType, ADims>::get(linearIndex, Asizes, Astrides, ADims);
 
     // Convert `linearIndex` into an offset of `b`
     const IndexType bOffset =
-      IndexToOffset<Tb, IndexType, BDims>::get(linearIndex, b);
+      IndexToOffset<Tb, IndexType, BDims>::get(linearIndex, Bsizes, Bstrides, BDims);
 
     // Convert `linearIndex` into an offset of `c`
     const IndexType cOffset =
-      IndexToOffset<Tc, IndexType, CDims>::get(linearIndex, c);
+      IndexToOffset<Tc, IndexType, CDims>::get(linearIndex, Csizes, Cstrides, CDims);
 
-    op(&a.data[aOffset], &b.data[bOffset], &c.data[cOffset]);
+    op(&Adata[aOffset], &Bdata[bOffset], &Cdata[cOffset]);
   }
 }
 
-inline dim3 getApplyBlock() {
+inline
+dim3 getApplyBlock()
+{
   return dim3(THC_APPLY_THREADS_PER_BLOCK);
 }
 
-inline bool getApplyGrid(THCState* state, ptrdiff_t totalElements, dim3& grid) {
+inline
+bool getApplyGrid(THCState* state, ptrdiff_t totalElements, dim3& grid) {
   int curDevice = -1;
   hipGetDevice(&curDevice);
 
@@ -139,7 +154,7 @@ template <typename TensorTypeA,
 inline
 bool THC_pointwiseApply1(THCState* state,
                          TensorTypeA* a,
-                         Op op,
+                         const Op& op,
                          TensorArgType aType = ReadWrite) {
   if (TensorUtils<TensorTypeA>::getDims(state, a) > MAX_CUTORCH_DIMS) {
     return false;
@@ -185,18 +200,20 @@ bool THC_pointwiseApply1(THCState* state,
   // (or vice versa), the contiguous tensor can be collapsed to one
   // dimension, and the loop to translate the linear index to the array
   // index can be similarly collapsed. That is what this unrolling is for.
-#define HANDLE_CASE(TYPE, A)          //                                                                 \
-    hipLaunchKernel(HIP_KERNEL_NAME(kernelPointwiseApply1<Op,                                          \
-                                                          typename TensorUtils<TensorTypeA>::DataType, \
-                                                          TYPE,                                        \
-                                                          A>),                                         \
-                    dim3{grid},                                                                        \
-                    dim3{block},                                                                       \
-                    0,                                                                                 \
-                    THCState_getCurrentStream(state),                                                  \
-                    aInfo,                                                                             \
-                    (TYPE) totalElements,                                                              \
-                    op);
+#define HANDLE_CASE(TYPE, A)                                                                        \
+  hipLaunchKernel(HIP_KERNEL_NAME(kernelPointwiseApply1<Op,                                         \
+                                                        typename TensorUtils<TensorTypeA>::DataType,\
+                                                        TYPE,                                       \
+                                                        A>),                                        \
+                  grid,                                                                             \
+                  block,                                                                            \
+                  0,                                                                                \
+                  THCState_getCurrentStream(state),                                                 \
+                  aInfo.data,                                                                       \
+                  aInfo.dSizes,                                                                     \
+                  aInfo.dStrides,                                                                   \
+                  (TYPE) totalElements,                                                             \
+                  op);
 
 #define HANDLE_A_CASE(TYPE, A)                  \
   {                                             \
@@ -236,29 +253,33 @@ bool THC_pointwiseApply1(THCState* state,
     // version and the completely generic version, to reduce
     // compilation time.
     if (aInfo.isContiguous()) {
-//      hipLaunchKernel(HIP_KERNEL_NAME(kernelPointwiseApply1<Op,
-//                                                            typename TensorUtils<TensorTypeA>::DataType,
-//                                                            unsigned long,
-//                                                            -2>),
-//                      dim3{grid},
-//                      dim3{block},
-//                      0,
-//                      THCState_getCurrentStream(state),
-//                      aInfo,
-//                      (unsigned long) totalElements,
-//                      op);
+      hipLaunchKernel(HIP_KERNEL_NAME(kernelPointwiseApply1<Op,
+                                                            typename TensorUtils<TensorTypeA>::DataType,
+                                                            unsigned long,
+                                                            -2>),
+                      grid,
+                      block,
+                      0,
+                      THCState_getCurrentStream(state),
+                      aInfo.data,
+                      aInfo.dSizes,
+                      aInfo.dStrides,
+                      (unsigned long) totalElements,
+                      op);
     } else {
-//        hipLaunchKernel(HIP_KERNEL_NAME(kernelPointwiseApply1<Op,
-//                                                              typename TensorUtils<TensorTypeA>::DataType,
-//                                                              unsigned long,
-//                                                              -1>),
-//                        dim3{grid},
-//                        dim3{block},
-//                        0,
-//                        THCState_getCurrentStream(state),
-//                        aInfo,
-//                        (unsigned long) totalElements,
-//                        op);
+      hipLaunchKernel(HIP_KERNEL_NAME(kernelPointwiseApply1<Op,
+                                                            typename TensorUtils<TensorTypeA>::DataType,
+                                                            unsigned long,
+                                                            -1>),
+                      grid,
+                      block,
+                      0,
+                      THCState_getCurrentStream(state),
+                      aInfo.data,
+                      aInfo.dSizes,
+                      aInfo.dStrides,
+                      (unsigned long) totalElements,
+                      op);
     }
   }
 #undef HANDLE_CASE
@@ -342,21 +363,25 @@ bool THC_pointwiseApply2(THCState* state,
   // (or vice versa), the contiguous tensor can be collapsed to one
   // dimension, and the loop to translate the linear index to the array
   // index can be similarly collapsed. That is what this unrolling is for.
-#define HANDLE_CASE(TYPE, A, B)          //                                                                 \
-    hipLaunchKernel(HIP_KERNEL_NAME(kernelPointwiseApply2<Op,                                             \
-                                                          typename TensorUtils<TensorTypeA>::DataType,    \
-                                                          typename TensorUtils<TensorTypeB>::DataType,    \
-                                                          TYPE,                                           \
-                                                          A,                                              \
-                                                          B>),                                            \
-                    dim3{grid},                                                                           \
-                    dim3{block},                                                                          \
-                    0,                                                                                    \
-                    THCState_getCurrentStream(state),                                                     \
-                    aInfo,                                                                                \
-                    bInfo,                                                                                \
-                    (TYPE) totalElements,                                                                 \
-                    op);
+#define HANDLE_CASE(TYPE, A, B)                                                                     \
+  hipLaunchKernel(HIP_KERNEL_NAME(kernelPointwiseApply2<Op,                                         \
+                                                        typename TensorUtils<TensorTypeA>::DataType,\
+                                                        typename TensorUtils<TensorTypeB>::DataType,\
+                                                        TYPE,                                       \
+                                                        A,                                          \
+                                                        B>),                                        \
+                  grid,                                                                             \
+                  block,                                                                            \
+                  0,                                                                                \
+                  THCState_getCurrentStream(state),                                                 \
+                  aInfo.data,                                                                       \
+                  aInfo.dSizes,                                                                     \
+                  aInfo.dStrides,                                                                   \
+                  bInfo.data,                                                                       \
+                  bInfo.dSizes,                                                                     \
+                  bInfo.dStrides,                                                                   \
+                  (TYPE) totalElements,                                                             \
+                  op);
 
 #define HANDLE_B_CASE(TYPE, A, B)               \
   {                                             \
@@ -420,35 +445,43 @@ bool THC_pointwiseApply2(THCState* state,
     // version and the completely generic version, to reduce
     // compilation time.
     if (aInfo.isContiguous() && bInfo.isContiguous()) {
-//      hipLaunchKernel(HIP_KERNEL_NAME(kernelPointwiseApply2<Op,
-//                                                            typename TensorUtils<TensorTypeA>::DataType,
-//                                                            typename TensorUtils<TensorTypeB>::DataType,
-//                                                            unsigned long,
-//                                                            -2,
-//                                                            -2>),
-//                      dim3{grid},
-//                      dim3{block},
-//                      0,
-//                      THCState_getCurrentStream(state),
-//                      aInfo,
-//                      bInfo,
-//                      (unsigned long) totalElements,
-//                      op);
+      hipLaunchKernel(HIP_KERNEL_NAME(kernelPointwiseApply2<Op,
+                                                            typename TensorUtils<TensorTypeA>::DataType,
+                                                            typename TensorUtils<TensorTypeB>::DataType,
+                                                            unsigned long,
+                                                            -2,
+                                                            -2>),
+                      grid,
+                      block,
+                      0,
+                      THCState_getCurrentStream(state),
+                      aInfo.data,
+                      aInfo.dSizes,
+                      aInfo.dStrides,
+                      bInfo.data,
+                      bInfo.dSizes,
+                      bInfo.dStrides,
+                      (unsigned long) totalElements,
+                      op);
     } else {
-//        hipLaunchKernel(HIP_KERNEL_NAME(kernelPointwiseApply2<Op,
-//                                                              typename TensorUtils<TensorTypeA>::DataType,
-//                                                              typename TensorUtils<TensorTypeB>::DataType,
-//                                                              unsigned long,
-//                                                              -1,
-//                                                              -1>),
-//                        dim3{grid},
-//                        dim3{block},
-//                        0,
-//                        THCState_getCurrentStream(state),
-//                        aInfo,
-//                        bInfo,
-//                        (unsigned long) totalElements,
-//                        op);
+      hipLaunchKernel(HIP_KERNEL_NAME(kernelPointwiseApply2<Op,
+                                                            typename TensorUtils<TensorTypeA>::DataType,
+                                                            typename TensorUtils<TensorTypeB>::DataType,
+                                                            unsigned long,
+                                                            -1,
+                                                            -1>),
+                      grid,
+                      block,
+                      0,
+                      THCState_getCurrentStream(state),
+                      aInfo.data,
+                      aInfo.dSizes,
+                      aInfo.dStrides,
+                      bInfo.data,
+                      bInfo.dSizes,
+                      bInfo.dStrides,
+                      (unsigned long) totalElements,
+                      op);
     }
   }
 #undef HANDLE_CASE
@@ -546,24 +579,30 @@ bool THC_pointwiseApply3(THCState* state,
     c = TensorUtils<TensorTypeC>::newContiguous(state, c);
   }
 
-#define HANDLE_CASE(TYPE, A, B, C)        //                                                                \
-    hipLaunchKernel(HIP_KERNEL_NAME(kernelPointwiseApply3<Op,                                             \
-                                                          typename TensorUtils<TensorTypeA>::DataType,    \
-                                                          typename TensorUtils<TensorTypeB>::DataType,    \
-                                                          typename TensorUtils<TensorTypeC>::DataType,    \
-                                                          TYPE,                                           \
-                                                          A,                                              \
-                                                          B,                                              \
-                                                          C>),                                            \
-                    dim3{grid},                                                                           \
-                    dim3{block},                                                                          \
-                    0,                                                                                    \
-                    THCState_getCurrentStream(state),                                                     \
-                    aInfo,                                                                                \
-                    bInfo,                                                                                \
-                    cInfo,                                                                                \
-                    (TYPE) totalElements,                                                                 \
-                    op);
+#define HANDLE_CASE(TYPE, A, B, C)                                                                  \
+  hipLaunchKernel(HIP_KERNEL_NAME(kernelPointwiseApply3<Op,                                         \
+                                                        typename TensorUtils<TensorTypeA>::DataType,\
+                                                        typename TensorUtils<TensorTypeB>::DataType,\
+                                                        typename TensorUtils<TensorTypeC>::DataType,\
+                                                        TYPE,                                       \
+                                                        A,                                          \
+                                                        B,                                          \
+                                                        C>),                                        \
+                  grid,                                                                             \
+                  block,                                                                            \
+                  0,                                                                                \
+                  THCState_getCurrentStream(state),                                                 \
+                  aInfo.data,                                                                       \
+                  aInfo.dSizes,                                                                     \
+                  aInfo.dStrides,                                                                   \
+                  bInfo.data,                                                                       \
+                  bInfo.dSizes,                                                                     \
+                  bInfo.dStrides,                                                                   \
+                  cInfo.data,                                                                       \
+                  cInfo.dSizes,                                                                     \
+                  cInfo.dStrides,                                                                   \
+                  (TYPE) totalElements,                                                             \
+                  op);
 
 #define HANDLE_C_CASE(TYPE, A, B, C)            \
   {                                             \
@@ -655,41 +694,53 @@ bool THC_pointwiseApply3(THCState* state,
     // version and the completely generic version, to reduce
     // compilation time.
     if (aInfo.isContiguous() && bInfo.isContiguous() && cInfo.isContiguous()) {
-//      hipLaunchKernel(HIP_KERNEL_NAME(kernelPointwiseApply3<Op,
-//                                                            typename TensorUtils<TensorTypeA>::DataType,
-//                                                            typename TensorUtils<TensorTypeB>::DataType,
-//                                                            typename TensorUtils<TensorTypeC>::DataType,
-//                                                            unsigned long,
-//                                                            -2,
-//                                                            -2,
-//                                                            -2>),
-//                      dim3{grid},
-//                      dim3{block},
-//                      0,
-//                      THCState_getCurrentStream(state),
-//                      aInfo,
-//                      bInfo,
-//                      cInfo,
-//                      (unsigned long) totalElements,
-//                      op);
+      hipLaunchKernel(HIP_KERNEL_NAME(kernelPointwiseApply3<Op,
+                                                            typename TensorUtils<TensorTypeA>::DataType,
+                                                            typename TensorUtils<TensorTypeB>::DataType,
+                                                            typename TensorUtils<TensorTypeC>::DataType,
+                                                            unsigned long,
+                                                            -2,
+                                                            -2,
+                                                            -2>),
+                      grid,
+                      block,
+                      0,
+                      THCState_getCurrentStream(state),
+                      aInfo.data,
+                      aInfo.dSizes,
+                      aInfo.dStrides,
+                      bInfo.data,
+                      bInfo.dSizes,
+                      bInfo.dStrides,
+                      cInfo.data,
+                      cInfo.dSizes,
+                      cInfo.dStrides,
+                      (unsigned long) totalElements,
+                      op);
     } else {
-//      hipLaunchKernel(HIP_KERNEL_NAME(kernelPointwiseApply3<Op,
-//                                                            typename TensorUtils<TensorTypeA>::DataType,
-//                                                            typename TensorUtils<TensorTypeB>::DataType,
-//                                                            typename TensorUtils<TensorTypeC>::DataType,
-//                                                            unsigned long,
-//                                                            -1,
-//                                                            -1,
-//                                                            -1>),
-//                      dim3{grid},
-//                      dim3{block},
-//                      0,
-//                      THCState_getCurrentStream(state),
-//                      aInfo,
-//                      bInfo,
-//                      cInfo,
-//                      (unsigned long) totalElements,
-//                      op);
+      hipLaunchKernel(HIP_KERNEL_NAME(kernelPointwiseApply3<Op,
+                                                            typename TensorUtils<TensorTypeA>::DataType,
+                                                            typename TensorUtils<TensorTypeB>::DataType,
+                                                            typename TensorUtils<TensorTypeC>::DataType,
+                                                            unsigned long,
+                                                            -1,
+                                                            -1,
+                                                            -1>),
+                      grid,
+                      block,
+                      0,
+                      THCState_getCurrentStream(state),
+                      aInfo.data,
+                      aInfo.dSizes,
+                      aInfo.dStrides,
+                      bInfo.data,
+                      bInfo.dSizes,
+                      bInfo.dStrides,
+                      cInfo.data,
+                      cInfo.dSizes,
+                      cInfo.dStrides,
+                      (unsigned long) totalElements,
+                      op);
     }
   }
 #undef HANDLE_CASE

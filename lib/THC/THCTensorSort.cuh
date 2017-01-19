@@ -1,4 +1,3 @@
-#pragma once
 #ifndef THC_TENSORSORT_CUH
 #define THC_TENSORSORT_CUH
 
@@ -7,8 +6,17 @@
 #include "THCTensorCopy.h"
 #include "THCTensorTypeUtils.cuh"
 
+#ifdef THRUST_PATH
+    #include <thrust/device_ptr.h>
+    #include <thrust/sort.h>
+    #if CUDA_VERSION >= 7000
+        #include <thrust/system/cuda/execution_policy.h>
+    #endif
+#else
+    #include <bolt/amp/sort.h>
+#endif
+
 #include <hip/hip_runtime.h>
-#include <bolt/amp/sort.h>
 
 template <typename T>
 struct ThrustGTOp {
@@ -44,7 +52,7 @@ fillSliceWithIndex(hipLaunchParm lp,
   }
 
   const unsigned long offset =
-    IndexToOffset<long, IndexType, Dim>::get(slice, out);
+    IndexToOffset<long, IndexType, Dim>::get(slice, out.dSizes, out.dStrides, out.dims);
   long* base = &out.data[offset];
 
   for (long i = hipThreadIdx_x; i < sliceSize; i += hipBlockDim_x) {
@@ -60,7 +68,9 @@ struct SliceComp {
   __host__ __device__
   SliceComp(long size) : sliceSize{size} {}
 
-  __device__ bool operator()(const long& a, const long& b) const {
+  __device__
+  bool operator()(long a, long b) const
+  {
     // Since the slices are guaranteed to be innermost, the segment is
     // just via long division
     long segA = a / sliceSize;
@@ -77,9 +87,8 @@ struct GlobalIndexToPerSliceIndex {
   explicit
   GlobalIndexToPerSliceIndex(long size) : sliceSize{size} {}
 
-  __device__ inline void operator()(long& v) const {
-    v = v % sliceSize + TH_INDEX_BASE;
-  }
+  __device__
+  void operator()(long& v) const { v = v % sliceSize + TH_INDEX_BASE; }
 
   long sliceSize;
 };

@@ -37,7 +37,7 @@ static int torch_Storage_(new)(lua_State *L)
   }
   else if(lua_type(L, 1) == LUA_TUSERDATA)
   {
-    THCStorage *src = (THCStorage*)luaT_checkudata(L, 1, torch_Storage);
+    THCStorage *src = (THCStorage *)luaT_checkudata(L, 1, torch_Storage);
     real *ptr = src->data;
     ptrdiff_t offset = luaL_optinteger(L, 2, 1) - 1;
     if (offset < 0 || offset >= src->size) {
@@ -70,21 +70,21 @@ static int torch_Storage_(new)(lua_State *L)
 
 static int torch_Storage_(retain)(lua_State *L)
 {
-  THCStorage *storage = (THCStorage*)luaT_checkudata(L, 1, torch_Storage);
+  THCStorage *storage = (THCStorage *)luaT_checkudata(L, 1, torch_Storage);
   THCStorage_(retain)(cutorch_getstate(L), storage);
   return 0;
 }
 
 static int torch_Storage_(free)(lua_State *L)
 {
-  THCStorage *storage = (THCStorage*)luaT_checkudata(L, 1, torch_Storage);
+  THCStorage *storage = (THCStorage *)luaT_checkudata(L, 1, torch_Storage);
   THCStorage_(free)(cutorch_getstate(L), storage);
   return 0;
 }
 
 static int torch_Storage_(resize)(lua_State *L)
 {
-  THCStorage *storage = (THCStorage*)luaT_checkudata(L, 1, torch_Storage);
+  THCStorage *storage = (THCStorage *)luaT_checkudata(L, 1, torch_Storage);
   ptrdiff_t size = luaL_checkinteger(L, 2);
 /*  int keepContent = luaT_optboolean(L, 3, 0); */
   THCStorage_(resize)(cutorch_getstate(L), storage, size);/*, keepContent); */
@@ -95,24 +95,24 @@ static int torch_Storage_(resize)(lua_State *L)
 static int torch_Storage_(copy)(lua_State *L)
 {
   THCState *state = cutorch_getstate(L);
-  THCStorage *storage = (THCStorage*)luaT_checkudata(L, 1, torch_Storage);
+  THCStorage *storage = (THCStorage *)luaT_checkudata(L, 1, torch_Storage);
   void *src;
-  if( (src = luaT_toudata(L, 2, torch_Storage)) )
-    THCStorage_(copy)(state, storage, (THCStorage*)src);
-  else if( (src = luaT_toudata(L, 2, "torch.ByteStorage")) )
-    THCStorage_(copyByte)(state, storage, (THByteStorage*)src);
-  else if( (src = luaT_toudata(L, 2, "torch.CharStorage")) )
-    THCStorage_(copyChar)(state, storage, (THCharStorage*)src);
-  else if( (src = luaT_toudata(L, 2, "torch.ShortStorage")) )
-    THCStorage_(copyShort)(state, storage, (THShortStorage*)src);
-  else if( (src = luaT_toudata(L, 2, "torch.IntStorage")) )
-    THCStorage_(copyInt)(state, storage, (THIntStorage*)src);
-  else if( (src = luaT_toudata(L, 2, "torch.LongStorage")) )
-    THCStorage_(copyLong)(state, storage, (THLongStorage*)src);
-  else if( (src = luaT_toudata(L, 2, "torch.FloatStorage")) )
-    THCStorage_(copyFloat)(state, storage, (THFloatStorage*)src);
-  else if( (src = luaT_toudata(L, 2, "torch.DoubleStorage")) )
-    THCStorage_(copyDouble)(state, storage, (THDoubleStorage*)src);
+  if( (src = (THCStorage *)luaT_toudata(L, 2, torch_Storage)) )
+    THCStorage_(copy)(state, storage, (THCStorage *)src);
+  else if( (src = (THCStorage *)luaT_toudata(L, 2, "torch.ByteStorage")) )
+    THCStorage_(copyByte)(state, storage, (THByteStorage *)src);
+  else if( (src = (THCStorage *)luaT_toudata(L, 2, "torch.CharStorage")) )
+    THCStorage_(copyChar)(state, storage, (THCharStorage *)src);
+  else if( (src = (THCStorage *)luaT_toudata(L, 2, "torch.ShortStorage")) )
+    THCStorage_(copyShort)(state, storage, (THShortStorage *)src);
+  else if( (src = (THCStorage *)luaT_toudata(L, 2, "torch.IntStorage")) )
+    THCStorage_(copyInt)(state, storage, (THIntStorage *)src);
+  else if( (src = (THCStorage *)luaT_toudata(L, 2, "torch.LongStorage")) )
+    THCStorage_(copyLong)(state, storage, (THLongStorage *) src);
+  else if( (src = (THCStorage *)luaT_toudata(L, 2, "torch.FloatStorage")) )
+    THCStorage_(copyFloat)(state, storage, (THFloatStorage *)src);
+  else if( (src = (THCStorage *)luaT_toudata(L, 2, "torch.DoubleStorage")) )
+    THCStorage_(copyDouble)(state, storage, (THDoubleStorage *)src);
   else
     luaL_typerror(L, 2, "torch.*Storage");
   lua_settop(L, 1);
@@ -121,7 +121,7 @@ static int torch_Storage_(copy)(lua_State *L)
 
 static int torch_Storage_(fill)(lua_State *L)
 {
-  THCStorage *storage = (THCStorage*)luaT_checkudata(L, 1, torch_Storage);
+  THCStorage *storage = (THCStorage *)luaT_checkudata(L, 1, torch_Storage);
 #ifdef THC_REAL_IS_HALF
   half value = THC_float2half((float) luaL_checknumber(L, 2));
 #else
@@ -140,7 +140,7 @@ static int torch_Storage_(elementSize)(lua_State *L)
 
 static int torch_Storage_(__len__)(lua_State *L)
 {
-  THCStorage *storage = (THCStorage*)luaT_checkudata(L, 1, torch_Storage);
+  THCStorage *storage = (THCStorage *)luaT_checkudata(L, 1, torch_Storage);
   lua_pushinteger(L, storage->size);
   return 1;
 }
@@ -149,7 +149,7 @@ static int torch_Storage_(__newindex__)(lua_State *L)
 {
   if(lua_isnumber(L, 2))
   {
-    THCStorage *storage = (THCStorage*)luaT_checkudata(L, 1, torch_Storage);
+    THCStorage *storage = (THCStorage *)luaT_checkudata(L, 1, torch_Storage);
     ptrdiff_t index = luaL_checkinteger(L, 2) - 1;
     double number = luaL_checknumber(L, 3);
 
@@ -171,7 +171,7 @@ static int torch_Storage_(__index__)(lua_State *L)
 {
   if(lua_isnumber(L, 2))
   {
-    THCStorage *storage = (THCStorage*)luaT_checkudata(L, 1, torch_Storage);
+    THCStorage *storage = (THCStorage *)luaT_checkudata(L, 1, torch_Storage);
     ptrdiff_t index = luaL_checkinteger(L, 2) - 1;
     real v = THCStorage_(get)(cutorch_getstate(L), storage, index);
 
@@ -195,7 +195,7 @@ static int torch_Storage_(__index__)(lua_State *L)
 static int torch_Storage_(totable)(lua_State *L)
 {
   THCState *state = cutorch_getstate(L);
-  THCStorage *storage = (THCStorage*)luaT_checkudata(L, 1, torch_Storage);
+  THCStorage *storage = (THCStorage *)luaT_checkudata(L, 1, torch_Storage);
   ptrdiff_t i;
 
   /* Copy storage from device to host. */
@@ -232,7 +232,7 @@ static int torch_Storage_(factory)(lua_State *L)
 
 static int torch_Storage_(write)(lua_State *L)
 {
-  THCStorage *storage = (THCStorage*)luaT_checkudata(L, 1, torch_Storage);
+  THCStorage *storage = (THCStorage *)luaT_checkudata(L, 1, torch_Storage);
   THFile *file = (THFile*)luaT_checkudata(L, 2, "torch.File");
 
 #ifdef _MSC_VER
@@ -246,7 +246,7 @@ static int torch_Storage_(write)(lua_State *L)
 
 static int torch_Storage_(read)(lua_State *L)
 {
-  THCStorage *storage = (THCStorage*)luaT_checkudata(L, 1, torch_Storage);
+  THCStorage *storage = (THCStorage *)luaT_checkudata(L, 1, torch_Storage);
   THFile *file = (THFile*)luaT_checkudata(L, 2, "torch.File");
   long size = THFile_readLongScalar(file);
 

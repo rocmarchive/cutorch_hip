@@ -415,16 +415,16 @@ void THCudaTensor_getri(THCState *state, THCudaTensor *ra_, THCudaTensor *a)
   THCudaCheck(hipMemcpy(&info, info_gpu, sizeof(int), hipMemcpyDeviceToHost));
 
   if (info > 0)
-    THError("CUBLAS getrf : U(%d,%d) is 0, U is singular", info, info);
+    THError("HIPBLAS getrf : U(%d,%d) is 0, U is singular", info, info);
   else if (info < 0)
-    THError("CUBLAS getrf : Argument %d : illegal value", -info);
+    THError("HIPBLAS getrf : Argument %d : illegal value", -info);
 
   // Inverse
   THCudaBlas_Sgetri(state, n, d_matrices1_const, n, ipiv_gpu, d_matrices2, n, info_gpu, 1);
   if (info > 0)
-    THError("CUBLAS getri : U(%d,%d) is 0, U is singular", info, info);
+    THError("HIPBLAS getri : U(%d,%d) is 0, U is singular", info, info);
   else if (info < 0)
-    THError("CUBLAS getri : Argument %d : illegal value", -info);
+    THError("HIPBLAS getri : Argument %d : illegal value", -info);
 
   THCudaCheck(THCudaFree(state, ipiv_gpu));
   THCudaCheck(THCudaFree(state, info_gpu));

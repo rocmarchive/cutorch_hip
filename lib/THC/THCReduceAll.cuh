@@ -39,7 +39,7 @@ kernelReduceAll(hipLaunchParm lp, TensorInfo<InT, IndexType> in,
   // With a block-wide stride, have each thread perform its own reduction.
   AccT r = init;
   for (IndexType i = hipThreadIdx_x; i < totalElements; i += hipBlockDim_x) {
-    const IndexType inOffset = IndexToOffset<InT, IndexType, ADims>::get(i, in);
+    const IndexType inOffset = IndexToOffset<InT, IndexType, ADims>::get(i, in.dSizes, in.dStrides, in.dims);
     r = reduceOp(r, modifyOp(in.data[inOffset]));
   }
 
@@ -94,7 +94,7 @@ kernelReduceAllPass1(hipLaunchParm lp, TensorInfo<InT, IndexType> in,
   // With a block-wide stride, have each thread perform its own reduction.
   AccT r = init;
   for (IndexType i = startIndex + hipThreadIdx_x; i < endIndex; i += hipBlockDim_x) {
-    const IndexType inOffset = IndexToOffset<InT, IndexType, ADims>::get(i, in);
+    const IndexType inOffset = IndexToOffset<InT, IndexType, ADims>::get(i, in.dSizes, in.dStrides, in.dims);
     r = reduceOp(r, modifyOp(in.data[inOffset]));
   }
 
@@ -212,7 +212,7 @@ void callReduceAll(THCState* state,
     getPass1ReduceBlockGrid<InT, AccT>(state, totalElements, grid, block);
     size_t smemSize = block.x * sizeof(AccT);
 
-    /*hipLaunchKernel(HIP_KERNEL_NAME(kernelReduceAllPass1<ModifyOp,
+    hipLaunchKernel(HIP_KERNEL_NAME(kernelReduceAllPass1<ModifyOp,
                                                          ReduceOp,
                                                          ReduceAccOp,
                                                          InT,
@@ -229,13 +229,13 @@ void callReduceAll(THCState* state,
                     modifyOp,
                     reduceOp,
                     reduceAccOp,
-                    (AccT*) scratchSpace);*/
+                    (AccT*) scratchSpace);
 
     int numPass1Blocks = grid.x;
     getPass2ReduceBlockGrid<InT, AccT>(state, totalElements, grid, block);
     smemSize = block.x * sizeof(AccT);
 
-    /*hipLaunchKernel(HIP_KERNEL_NAME(kernelReduceAllPass2<ReduceAccOp, AccT, IndexType>),
+    hipLaunchKernel(HIP_KERNEL_NAME(kernelReduceAllPass2<ReduceAccOp, AccT, IndexType>),
                     dim3(grid),
                     dim3(block),
                     smemSize,
@@ -244,7 +244,7 @@ void callReduceAll(THCState* state,
                     init,
                     reduceAccOp,
                     (AccT*) scratchSpace,
-                    devOut);*/
+                    devOut);
 
     if (freeScratchSpace) {
       THCudaCheck(THCudaFree(state, scratchSpace));
@@ -253,7 +253,7 @@ void callReduceAll(THCState* state,
     getSinglePassReduceBlockGrid<InT, AccT>(totalElements, grid, block);
     size_t smemSize = block.x * sizeof(AccT);
 
-    /*hipLaunchKernel(HIP_KERNEL_NAME(kernelReduceAll<ModifyOp,
+    hipLaunchKernel(HIP_KERNEL_NAME(kernelReduceAll<ModifyOp,
                                                     ReduceOp,
                                                     ReduceAccOp,
                                                     InT,
@@ -270,7 +270,7 @@ void callReduceAll(THCState* state,
                     modifyOp,
                     reduceOp,
                     reduceAccOp,
-                    devOut);*/
+                    devOut);
   }
 }
 

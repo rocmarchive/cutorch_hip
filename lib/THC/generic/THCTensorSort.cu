@@ -1,10 +1,14 @@
 #ifndef THC_GENERIC_FILE
 #define THC_GENERIC_FILE "generic/THCTensorSort.cu"
 #else
-#include <bolt/amp/copy.h>
-#include <bolt/amp/for_each.h>
-#include <bolt/amp/stablesort_by_key.h>
-#include <bolt/amp/iterator/counting_iterator.h>
+#ifdef THRUST_PATH
+    // TODO: any includes needed here?
+#else
+    #include <bolt/amp/copy.h>
+    #include <bolt/amp/for_each.h>
+    #include <bolt/amp/stablesort_by_key.h>
+    #include <bolt/amp/iterator/counting_iterator.h>
+#endif
 
 // In alignment with default sort on a c++ map, this function
 // will permute key and value tensors identically, and
@@ -231,57 +235,97 @@ void sortViaThrust(THCState* state,
   THCTensor_(free)(state, trKeys);
   THCudaLongTensor_free(state, trIndices);
 
+#if defined(THRUST_PATH)
+  thrust::device_ptr<real> keyIter(THCTensor_(data)(state, trContigKey));
+#else
   auto keyIter = THCTensor_(data)(state, trContigKey);
+#endif
   // Since we are composing a global index across all segments rather
   // than a per-segment index, we treat the memory as int so we don't
   // have problems sorting slices < 2^24 but where the entire tensor
   // has more than 2^24 elements
+#if defined(THRUST_PATH)
+  thrust::device_ptr<long>
+    indexIter((long*) THCudaLongTensor_data(state, trContigIndices));
+#else
   auto indexIter = (long*) THCudaLongTensor_data(state, trContigIndices);
-
+#endif
   // Fill the indices with a global index across all slices
-  bolt::amp::counting_iterator<long> countIter{0};
+#if defined(THRUST_PATH)
+  thrust::counting_iterator<long> countIter(0);
 
-    bolt::amp::copy( // TODO: add localised version.
+  thrust::copy(
 #if CUDA_VERSION >= 7000
-//    thrust::cuda::par.on(THCState_getCurrentStream(state)),
+    thrust::cuda::par.on(THCState_getCurrentStream(state)),
 #endif
     countIter, countIter + totalElements, indexIter);
+#else
+  bolt::amp::counting_iterator<long> countIter{0};
+
+  bolt::amp::copy(countIter, countIter + totalElements, indexIter);
+#endif
 
   // First, we sort globally (across all slices) according to key
   // (the values we're sorting)
   if (dir) {
-//    bolt::amp::stable_sort_by_key( // TODO: add localised version.
-//#if CUDA_VERSION >= 7000
-////      thrust::cuda::par.on(THCState_getCurrentStream(state)),
-//#endif
-//      keyIter, keyIter + totalElements, indexIter, ThrustGTOp<real>());
+#if defined(THRUST_PATH)
+    thrust::stable_sort_by_key(
+    #if CUDA_VERSION >= 7000
+      thrust::cuda::par.on(THCState_getCurrentStream(state)),
+    #endif
+      keyIter, keyIter + totalElements, indexIter, ThrustGTOp<real>());
+#else
+    bolt::amp::stable_sort_by_key(keyIter,
+                                  keyIter + totalElements,
+                                  indexIter,
+                                  ThrustGTOp<real>());
+#endif
   } else {
-//  bolt::amp::stable_sort_by_key( // TODO: add localised version.
-//#if CUDA_VERSION >= 7000
-////      thrust::cuda::par.on(THCState_getCurrentStream(state)),
-//#endif
-//      keyIter, keyIter + totalElements, indexIter, ThrustLTOp<real>());
+#if defined(THRUST_PATH)
+    thrust::stable_sort_by_key(
+    #if CUDA_VERSION >= 7000
+      thrust::cuda::par.on(THCState_getCurrentStream(state)),
+    #endif
+      keyIter, keyIter + totalElements, indexIter, ThrustLTOp<real>());
+#else
+  bolt::amp::stable_sort_by_key(keyIter,
+                                keyIter + totalElements,
+                                indexIter,
+                                ThrustLTOp<real>());
   }
 
   // Then, re-sort according to slice that each index is
   // in. This completes the segment sort in Thrust, since we're
   // stably sorting here, preserving the relative order of values
   // per each slice
-//    bolt::amp::stable_sort_by_key( // TODO: add localised version.
-//#if CUDA_VERSION >= 7000
-////    thrust::cuda::par.on(THCState_getCurrentStream(state)),
-//#endif
-//    indexIter, indexIter + totalElements, keyIter,
-//    SliceComp{sliceSize});
+#if defined(THRUST_PATH)
+  thrust::stable_sort_by_key(
+  #if CUDA_VERSION >= 7000
+    thrust::cuda::par.on(THCState_getCurrentStream(state)),
+  #endif
+    indexIter, indexIter + totalElements, keyIter,
+    SliceComp(sliceSize));
+#else
+    bolt::amp::stable_sort_by_key(indexIter,
+                                  indexIter + totalElements,
+                                  keyIter,
+                                  SliceComp{sliceSize});
+#endif
 
   // Translate the global integer 0-based index to a per-slice real
   // Lua index
-    bolt::amp::for_each( // TODO: add localised version.
-#if CUDA_VERSION >= 7000
-//    thrust::cuda::par.on(THCState_getCurrentStream(state)),
-#endif
+#if defined(THRUST_PATH)
+  thrust::for_each(
+  #if CUDA_VERSION >= 7000
+    thrust::cuda::par.on(THCState_getCurrentStream(state)),
+  #endif
     indexIter, indexIter + totalElements,
-    GlobalIndexToPerSliceIndex{sliceSize});
+    GlobalIndexToPerSliceIndex(sliceSize));
+#else
+  bolt::amp::for_each(indexIter,
+                      indexIter + totalElements,
+                      GlobalIndexToPerSliceIndex{sliceSize});
+#endif
 
   // Reverse the transposition as needed
   if (dim != nDims - 1) {

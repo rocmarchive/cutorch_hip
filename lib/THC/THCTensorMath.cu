@@ -12,7 +12,8 @@ struct TensorFillOp {
   explicit
   TensorFillOp(T v) : val(v) {}
 
-  __device__ __forceinline__ void operator()(T* v) const { *v = val; }
+  __device__ __forceinline__
+  void operator()(T* v) const { *v = val; }
 
   __host__ __device__
   ~TensorFillOp() {}

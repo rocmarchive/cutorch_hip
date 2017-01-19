@@ -68,16 +68,28 @@ THCTensor_(maskedCopy)(THCState* state,
   THCudaLongTensor_resize(state, maskPrefixSum, maskSizes, NULL);
   THLongStorage_free(maskSizes);
 
-  auto maskData = THCudaLongTensor_data(state, maskLong);
-  auto maskPrefixSumData = THCudaLongTensor_data(state, maskPrefixSum);
+#ifdef THRUST_PATH
+  thrust::device_ptr<long>
+    maskData(THCudaLongTensor_data(state, maskLong));
+  thrust::device_ptr<long>
+    maskPrefixSumData(THCudaLongTensor_data(state, maskPrefixSum));
 
-    bolt::amp::exclusive_scan( // TODO: add localised version.
-#if CUDA_VERSION >= 7000
-//    thrust::cuda::par.on(THCState_getCurrentStream(state)),
-#endif
+  thrust::exclusive_scan(
+    #if CUDA_VERSION >= 7000
+        thrust::cuda::par.on(THCState_getCurrentStream(state)),
+    #endif
     maskData,
     maskData + THCudaLongTensor_nElement(state, maskLong),
     maskPrefixSumData);
+#else
+    auto maskData = THCudaLongTensor_data(state, maskLong);
+    auto maskPrefixSumData = THCudaLongTensor_data(state, maskPrefixSum);
+
+    bolt::amp::exclusive_scan(maskData,
+                              maskData + THCudaLongTensor_nElement(state, maskLong),
+                              maskPrefixSumData);
+#endif
+
 
   // We are getting elements from `src` based on an offset from
   // `maskPrefixSum`, so that should be made contiguous too
@@ -140,17 +152,27 @@ THCTensor_(maskedSelect)(THCState* state,
   THCudaLongTensor_resize(state, maskPrefixSum, maskSizes, NULL);
   THLongStorage_free(maskSizes);
 
-  auto maskData = THCudaLongTensor_data(state, maskLong);
-  auto maskPrefixSumData = THCudaLongTensor_data(state, maskPrefixSum);
+#ifdef THRUST_PATH
+  thrust::device_ptr<long>
+    maskData(THCudaLongTensor_data(state, maskLong));
+  thrust::device_ptr<long>
+    maskPrefixSumData(THCudaLongTensor_data(state, maskPrefixSum));
 
-    bolt::amp::exclusive_scan( // TODO: add localised version.
-#if CUDA_VERSION >= 7000
-//    thrust::cuda::par.on(THCState_getCurrentStream(state)),
-#endif
+  thrust::exclusive_scan(
+    #if CUDA_VERSION >= 7000
+        thrust::cuda::par.on(THCState_getCurrentStream(state)),
+    #endif
     maskData,
     maskData + THCudaLongTensor_nElement(state, maskLong),
     maskPrefixSumData);
+#else
+    auto maskData = THCudaLongTensor_data(state, maskLong);
+    auto maskPrefixSumData = THCudaLongTensor_data(state, maskPrefixSum);
 
+    bolt::amp::exclusive_scan(maskData,
+                              maskData + THCudaLongTensor_nElement(state, maskLong),
+                              maskPrefixSumData);
+#endif
   // Then copy over the masked elements at their desired output index
   bool status = THC_pointwiseApply3(
     state, mask, maskPrefixSum,
