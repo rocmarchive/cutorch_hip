@@ -41,7 +41,7 @@ __global__ void THCudaTensor_kernel_scanOuterDim(hipLaunchParm lp, float *tgt_, 
 }
 
 template<class BinaryOp>
-__host__ void THCudaTensor_scanOuterDim(THCState *state, THCudaTensor *tgt, THCudaTensor *src, long dimension,
+void THCudaTensor_scanOuterDim(THCState *state, THCudaTensor *tgt, THCudaTensor *src, long dimension,
                                         float init, BinaryOp binary_op)
 {
   unsigned ndim = THCudaTensor_nDimension(state, src);
@@ -154,7 +154,7 @@ __global__ void THCudaTensor_kernel_scanInnermostDim(hipLaunchParm lp, float *tg
 }
 
 template<class BinaryFunction>
-__host__ void THCudaTensor_scanInnermostDim(THCState *state, THCudaTensor *tgt, THCudaTensor *src, float init, BinaryFunction binary_op)
+void THCudaTensor_scanInnermostDim(THCState *state, THCudaTensor *tgt, THCudaTensor *src, float init, BinaryFunction binary_op)
 {
   unsigned ndim = THCudaTensor_nDimension(state, src);
   // Treat all outer dimensions as a single dimension.
