@@ -1142,7 +1142,7 @@ function test.allAndAny()
    end
 end
 
-function test.sum()
+--[[function test.sum()
    local minsize = 10
    local maxsize = 20
    local sz1 = chooseInt(minsize, maxsize)
@@ -1155,7 +1155,7 @@ function test.sum()
    test_tolerance = 1e-5
    checkMultiDevice(x, 'sum')
    checkMultiDevice(x, 'sum', 1)
-end
+end]]--
 
 function test.cumsum()
    local minsize = 10
