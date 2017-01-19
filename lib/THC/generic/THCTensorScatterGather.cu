@@ -2,7 +2,7 @@
 #define THC_GENERIC_FILE "generic/THCTensorScatterGather.cu"
 #else
 
-#define RUN(TYPE, DIMS, REAL)                                                  \
+#define RUN(TYPE, DIMS, REAL)                       //                           \
   hipLaunchKernel(HIP_KERNEL_NAME(THCudaTensor_gatherKernel<TYPE, REAL, DIMS>),\
                   dim3{grid},                                                  \
                   dim3{block},                                                 \
@@ -103,7 +103,7 @@ void THCTensor_(gather)(THCState* state, THCTensor *tensor,
 #undef RUN
 
 
-#define RUN(TYPE, DIMS, REAL)                                                   \
+#define RUN(TYPE, DIMS, REAL)           //                                        \
   hipLaunchKernel(HIP_KERNEL_NAME(THCudaTensor_scatterKernel<TYPE, REAL, DIMS>),\
                   dim3{grid},                                                   \
                   dim3{block},                                                  \
@@ -197,7 +197,7 @@ void THCTensor_(scatter)(THCState* state, THCTensor *tensor, int dim, THCudaLong
 
 #undef RUN
 
-#define RUN(TYPE, DIMS, REAL)                                                        \
+#define RUN(TYPE, DIMS, REAL)           //                                             \
   hipLaunchKernel(HIP_KERNEL_NAME(THCudaTensor_scatterFillKernel<TYPE, REAL, DIMS>), \
                   dim3{grid},                                                        \
                   dim3{block},                                                       \

@@ -99,18 +99,21 @@ static inline  __device__ void atomicAdd(half *address, half val) {
   unsigned int old = *address_as_ui;
   unsigned int assumed;
 
-  do {
+  do { // TODO: this should be refactored for HIP, since we have proper native
+       //       support for FP16 and can simplify significantly.
     assumed = old;
     half hsum;
     hsum.x = (size_t)address & 2 ? (old >> 16) : (old & 0xffff);
     hsum = THCNumerics<half>::add(hsum, val);
-    old = (size_t)address & 2 ? (old & 0xffff) | (hsum.x << 16) : (old & 0xffff0000) | hsum.x;
+    old = (size_t)address & 2 ? (old & 0xffff) |
+          ((unsigned short)hsum.x << 16) : (old & 0xffff0000) |
+          (unsigned short)hsum.x;
     old = atomicCAS(address_as_ui, assumed, old);
    } while (assumed != old);
 }
 #endif
 
-//#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ < 600
+#if (defined(__CUDA_ARCH__) && __CUDA_ARCH__ < 600) || defined(__HIP_DEVICE_COMPILE__)
 // from CUDA C Programmic Guide
 static inline  __device__  void atomicAdd(double *address, double val) {
   unsigned long long int* address_as_ull = (unsigned long long int*)address;
@@ -129,6 +132,6 @@ static inline  __device__  void atomicAdd(double *address, double val) {
     // Note: uses integer comparison to avoid hang in case of NaN (since NaN != NaN)
   } while (assumed != old);
 }
-//#endif
+#endif
 
 #endif // THC_ATOMICS_INC

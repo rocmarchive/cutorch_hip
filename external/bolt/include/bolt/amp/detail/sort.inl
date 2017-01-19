@@ -57,11 +57,11 @@ namespace amp {
 namespace detail {
 	static
 	inline
-	concurrency::graphics::uint_4 SELECT_UINT4(const concurrency::graphics::uint_4& a,
-									           const concurrency::graphics::uint_4& b,
-									           const concurrency::graphics::uint_4& condition)  restrict(amp)
+	uint_4 SELECT_UINT4(const uint_4& a,
+                        const uint_4& b,
+                        const uint_4& condition)  restrict(amp)
 	{
-		concurrency::graphics::uint_4 res;
+		uint_4 res;
 		res.x = (condition.x )? b.x : a.x;
 		res.y = (condition.y )? b.y : a.y;
 		res.z = (condition.z )? b.z : a.z;
@@ -95,7 +95,7 @@ namespace detail {
 	}
 	static
         inline
-        unsigned int prefixScanVectorEx(concurrency::graphics::uint_4* data ) restrict(amp)
+        unsigned int prefixScanVectorEx(uint_4* data ) restrict(amp)
 	{
 		unsigned int sum = 0;
 		unsigned int tmp = data[0].x;
@@ -114,7 +114,7 @@ namespace detail {
 	}
 	static
     inline
-    concurrency::graphics::uint_4 localPrefixSum256V(concurrency::graphics::uint_4 pData,
+    uint_4 localPrefixSum256V(uint_4 pData,
                                                      unsigned int,
                                                      unsigned int* totalSum,
                                                      unsigned int* sorterSharedMemory,
@@ -122,7 +122,7 @@ namespace detail {
 	{
 		unsigned int s4 = prefixScanVectorEx( &pData );
 		unsigned int rank = scanLocalMemAndTotal( s4, sorterSharedMemory, totalSum,  1, t_idx);
-		return pData + concurrency::graphics::uint_4{rank, rank, rank, rank};
+		return pData + uint_4{rank, rank, rank, rank};
 	}
 	static
     inline
@@ -136,12 +136,12 @@ namespace detail {
 		for(int bitIdx=0; bitIdx<BITS_PER_PASS; bitIdx++)
 		{
 			unsigned int mask = (1<<bitIdx);
-			concurrency::graphics::uint_4 prefixSum;
-			concurrency::graphics::uint_4 cmpResult((sortData[0]>>startBit) & mask,
+			uint_4 prefixSum;
+			uint_4 cmpResult((sortData[0]>>startBit) & mask,
                                                     (sortData[1]>>startBit) & mask,
                                                     (sortData[2]>>startBit) & mask,
                                                     (sortData[3]>>startBit) & mask);
-			concurrency::graphics::uint_4 temp;
+			uint_4 temp;
 
 			if(!Asc_sort)
 			{
@@ -157,15 +157,15 @@ namespace detail {
 				temp.z = (cmpResult.z != 0);
 				temp.w = (cmpResult.w != 0);
 			}
-			prefixSum = SELECT_UINT4(concurrency::graphics::uint_4{1,1,1,1},
-                                     concurrency::graphics::uint_4{0,0,0,0},
+			prefixSum = SELECT_UINT4(uint_4{1,1,1,1},
+                                     uint_4{0,0,0,0},
                                      temp);//(cmpResult != make_uint4(mask,mask,mask,mask)));
 
 			unsigned int total = 0;
 			prefixSum = localPrefixSum256V( prefixSum, lIdx, &total, ldsSortData, t_idx);
 			{
-				concurrency::graphics::uint_4 localAddr(lIdx*4+0,lIdx*4+1,lIdx*4+2,lIdx*4+3);
-				concurrency::graphics::uint_4 dstAddr = localAddr - prefixSum + concurrency::graphics::uint_4{total, total, total, total};
+				uint_4 localAddr(lIdx*4+0,lIdx*4+1,lIdx*4+2,lIdx*4+3);
+				uint_4 dstAddr = localAddr - prefixSum + uint_4{total, total, total, total};
 				if(!Asc_sort)
 				{
 					temp.x = (cmpResult.x != mask);
@@ -220,9 +220,9 @@ namespace detail {
 		for(int bitIdx=0; bitIdx<BITS_PER_PASS; bitIdx++)
 		{
 			unsigned int mask = (1<<bitIdx);
-			concurrency::graphics::uint_4 prefixSum;
-			concurrency::graphics::uint_4 cmpResult( signedints[0] & mask, signedints[1] & mask, signedints[2] & mask, signedints[3] & mask );
-			concurrency::graphics::uint_4 temp;
+			uint_4 prefixSum;
+			uint_4 cmpResult( signedints[0] & mask, signedints[1] & mask, signedints[2] & mask, signedints[3] & mask );
+			uint_4 temp;
 
 			if(!Asc_sort)
 			{
@@ -238,15 +238,15 @@ namespace detail {
 				temp.z = (cmpResult.z != mask);
 				temp.w = (cmpResult.w != mask);
 			}
-			prefixSum = SELECT_UINT4(concurrency::graphics::uint_4{1,1,1,1},
-                                     concurrency::graphics::uint_4{0,0,0,0},
+			prefixSum = SELECT_UINT4(uint_4{1,1,1,1},
+                                     uint_4{0,0,0,0},
                                      temp);//(cmpResult != make_uint4(mask,mask,mask,mask)));
 
 			unsigned int total = 0;
 			prefixSum = localPrefixSum256V(prefixSum, lIdx, &total, ldsSortData, t_idx);
 			{
-				concurrency::graphics::uint_4 localAddr(lIdx*4+0,lIdx*4+1,lIdx*4+2,lIdx*4+3);
-				concurrency::graphics::uint_4 dstAddr = localAddr - prefixSum + concurrency::graphics::uint_4{total, total, total, total};
+				uint_4 localAddr(lIdx*4+0,lIdx*4+1,lIdx*4+2,lIdx*4+3);
+				uint_4 dstAddr = localAddr - prefixSum + uint_4{total, total, total, total};
 				if(!Asc_sort)
 				{
 					temp.x = (cmpResult.x != 0);

@@ -58,7 +58,9 @@ __device__ void exclusivePrefixSum(T* smem, T in, T* out, T* carry) {
 // Inclusive prefix sum for binary vars using intra-warp voting +
 // shared memory
 template <typename T, bool KillWARDependency>
-__device__ void inclusiveBinaryPrefixSum(T* smem, bool in, T* out) {
+__device__
+inline
+void inclusiveBinaryPrefixSum(T* smem, bool in, T* out) {
   // Within-warp, we use warp voting.
   T vote = __ballot(in);
   T index = __popc(getLaneMaskLe() & vote);
@@ -101,7 +103,9 @@ __device__ void inclusiveBinaryPrefixSum(T* smem, bool in, T* out) {
 // Exclusive prefix sum for binary vars using intra-warp voting +
 // shared memory
 template <typename T, bool KillWARDependency>
-__device__ void exclusiveBinaryPrefixSum(T* smem, bool in, T* out, T* carry) {
+__device__
+inline
+void exclusiveBinaryPrefixSum(T* smem, bool in, T* out, T* carry) {
   inclusiveBinaryPrefixSum<T, false>(smem, in, out);
 
   // Inclusive to exclusive

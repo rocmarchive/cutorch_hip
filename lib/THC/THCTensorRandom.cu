@@ -198,8 +198,13 @@ __host__ void THCRandom_setRNGState(THCState* state, THByteTensor *rng_state)
 
   THCudaCheck(hipMemcpy(gen->gen_states, THByteTensor_data(rng_state),
                          states_size, hipMemcpyHostToDevice));
-  hipLaunchKernel(HIP_KERNEL_NAME(set_rngstate_kernel), dim3(1), dim3(MAX_NUM_BLOCKS), 0, THCState_getCurrentStream(state),
-      gen->gen_states, gen->kernel_params);
+/*  hipLaunchKernel(HIP_KERNEL_NAME(set_rngstate_kernel),
+                  dim3(1),
+                  dim3(MAX_NUM_BLOCKS),
+                  0,
+                  THCState_getCurrentStream(state),
+                  gen->gen_states,
+                  gen->kernel_params);*/
   memcpy(&gen->initial_seed, THByteTensor_data(rng_state) + states_size, seed_size);
 }
 
@@ -274,8 +279,16 @@ THC_API void THCudaTensor_uniform(THCState* state, THCudaTensor *self_, double a
   ptrdiff_t size = THCudaTensor_nElement(state, self);
   float *data = THCudaTensor_data(state, self);
 
-  hipLaunchKernel(HIP_KERNEL_NAME(generate_uniform), dim3(NUM_BLOCKS), dim3(BLOCK_SIZE), 0, THCState_getCurrentStream(state),
-      gen->gen_states, size, data, a, b);
+/*  hipLaunchKernel(HIP_KERNEL_NAME(generate_uniform),
+                  dim3(NUM_BLOCKS),
+                  dim3(BLOCK_SIZE),
+                  0,
+                  THCState_getCurrentStream(state),
+                  gen->gen_states,
+                  size,
+                  data,
+                  a,
+                  b);*/
 
   THCudaTensor_freeCopyTo(state, self, self_);
 };
@@ -288,8 +301,8 @@ THC_API void THCudaTensor_bernoulli(THCState* state, THCudaTensor *self_, double
   ptrdiff_t size = THCudaTensor_nElement(state, self);
   float *data = THCudaTensor_data(state, self);
 
-  hipLaunchKernel(HIP_KERNEL_NAME(generate_bernoulli), dim3(NUM_BLOCKS), dim3(BLOCK_SIZE), 0, THCState_getCurrentStream(state),
-      gen->gen_states, size, data, p);
+//  hipLaunchKernel(HIP_KERNEL_NAME(generate_bernoulli), dim3(NUM_BLOCKS), dim3(BLOCK_SIZE), 0, THCState_getCurrentStream(state),
+//      gen->gen_states, size, data, p);
 
   THCudaTensor_freeCopyTo(state, self, self_);
 };
@@ -302,8 +315,8 @@ THC_API void THCudaTensor_normal(THCState* state, THCudaTensor *self_, double me
   ptrdiff_t size = THCudaTensor_nElement(state, self);
   float *data = THCudaTensor_data(state, self);
 
-  hipLaunchKernel(HIP_KERNEL_NAME(generate_normal), dim3(NUM_BLOCKS), dim3(BLOCK_SIZE), 0, THCState_getCurrentStream(state),
-      gen->gen_states, size, data, mean, stdv);
+//  hipLaunchKernel(HIP_KERNEL_NAME(generate_normal), dim3(NUM_BLOCKS), dim3(BLOCK_SIZE), 0, THCState_getCurrentStream(state),
+//      gen->gen_states, size, data, mean, stdv);
 
   THCudaTensor_freeCopyTo(state, self, self_);
 };
@@ -317,8 +330,8 @@ THC_API void THCudaTensor_logNormal(THCState* state, THCudaTensor *self_, double
   ptrdiff_t size = THCudaTensor_nElement(state, self);
   float *data = THCudaTensor_data(state, self);
 
-  hipLaunchKernel(HIP_KERNEL_NAME(generate_log_normal), dim3(NUM_BLOCKS), dim3(BLOCK_SIZE), 0, THCState_getCurrentStream(state),
-      gen->gen_states, size, data, mean, stdv);
+//  hipLaunchKernel(HIP_KERNEL_NAME(generate_log_normal), dim3(NUM_BLOCKS), dim3(BLOCK_SIZE), 0, THCState_getCurrentStream(state),
+//      gen->gen_states, size, data, mean, stdv);
 
   THCudaTensor_freeCopyTo(state, self, self_);
 };
@@ -332,8 +345,8 @@ THC_API void THCudaTensor_geometric(THCState* state, THCudaTensor *self_, double
   ptrdiff_t size = THCudaTensor_nElement(state, self);
   float *data = THCudaTensor_data(state, self);
 
-  hipLaunchKernel(HIP_KERNEL_NAME(generate_geometric), dim3(NUM_BLOCKS), dim3(BLOCK_SIZE), 0, THCState_getCurrentStream(state),
-      gen->gen_states, size, data, p);
+//  hipLaunchKernel(HIP_KERNEL_NAME(generate_geometric), dim3(NUM_BLOCKS), dim3(BLOCK_SIZE), 0, THCState_getCurrentStream(state),
+//      gen->gen_states, size, data, p);
 
   THCudaTensor_freeCopyTo(state, self, self_);
 };
@@ -347,8 +360,8 @@ THC_API void THCudaTensor_exponential(THCState* state, THCudaTensor *self_, doub
   ptrdiff_t size = THCudaTensor_nElement(state, self);
   float *data = THCudaTensor_data(state, self);
 
-  hipLaunchKernel(HIP_KERNEL_NAME(generate_exponential), dim3(NUM_BLOCKS), dim3(BLOCK_SIZE), 0, THCState_getCurrentStream(state),
-      gen->gen_states, size, data, lambda);
+//  hipLaunchKernel(HIP_KERNEL_NAME(generate_exponential), dim3(NUM_BLOCKS), dim3(BLOCK_SIZE), 0, THCState_getCurrentStream(state),
+//      gen->gen_states, size, data, lambda);
 
   THCudaTensor_freeCopyTo(state, self, self_);
 };
@@ -362,8 +375,8 @@ THC_API void THCudaTensor_cauchy(THCState* state, THCudaTensor *self_, double me
   ptrdiff_t size = THCudaTensor_nElement(state, self);
   float *data = THCudaTensor_data(state, self);
 
-  hipLaunchKernel(HIP_KERNEL_NAME(generate_cauchy), dim3(NUM_BLOCKS), dim3(BLOCK_SIZE), 0, THCState_getCurrentStream(state),
-      gen->gen_states, size, data, median, sigma);
+//  hipLaunchKernel(HIP_KERNEL_NAME(generate_cauchy), dim3(NUM_BLOCKS), dim3(BLOCK_SIZE), 0, THCState_getCurrentStream(state),
+//      gen->gen_states, size, data, median, sigma);
 
   THCudaTensor_freeCopyTo(state, self, self_);
 };
@@ -406,7 +419,7 @@ void renormRowsL1(hipLaunchParm lp, float* dist, long rows, long cols) {
       sum += dist[row * cols + col];
     }
 
-    sum = reduceBlock((float*)smem, hipBlockDim_x, sum, bolt::amp::plus<float>(), 0.0f);
+    sum = reduceBlock(reinterpret_cast<float*>(smem), hipBlockDim_x, sum, bolt::amp::plus<float>(), 0.0f);
     if (hipThreadIdx_x == 0) {
       smem[0] = sum;
     }
@@ -436,8 +449,14 @@ void THCudaTensor_renormRows(struct THCState* state,
   dim3 grid(rows < numSM * 4 ? rows : numSM * 4);
   dim3 block(cols < maxThreads ? cols : maxThreads);
 
-  hipLaunchKernel(HIP_KERNEL_NAME(renormRowsL1), dim3(grid), dim3(block), block.x * sizeof(float), THCState_getCurrentStream(state), THCudaTensor_data(state, t),
-                                        rows, cols);
+/*  hipLaunchKernel(HIP_KERNEL_NAME(renormRowsL1),
+                  dim3(grid),
+                  dim3(block),
+                  block.x * sizeof(float),
+                  THCState_getCurrentStream(state),
+                  THCudaTensor_data(state, t),
+                  rows,
+                  cols);*/
 }
 
 __global__
@@ -461,7 +480,7 @@ sampleMultinomialOnce(hipLaunchParm lp,
     }
 
     // hipThreadIdx_x == 0 has the sum value from this
-    sum = reduceBlock((float*)smem, hipBlockDim_x, sum, bolt::amp::plus<float>(), 0.0f);
+    sum = reduceBlock(reinterpret_cast<float*>(smem), hipBlockDim_x, sum, bolt::amp::plus<float>(), 0.0f);
 
     // Broadcast sum and sample value
     if (hipThreadIdx_x == 0) {
@@ -682,15 +701,15 @@ THC_API void THCudaTensor_multinomial(struct THCState *state,
     dim3 block(numCategories < maxThreads ? numCategories : maxThreads);
     dim3 grid(numDist < numSM * 4 ? numDist : numSM * 4);
 
-    hipLaunchKernel(HIP_KERNEL_NAME(sampleMultinomialOnce),
+/*    hipLaunchKernel(HIP_KERNEL_NAME(sampleMultinomialOnce),
                     dim3(grid),
                     dim3(block),
                     block.x * sizeof(float),
                     THCState_getCurrentStream(state),
-      THCudaTensor_data(state, self),
-      numDist,
-      numCategories,
-      THCudaTensor_data(state, probDistContig));
+                    THCudaTensor_data(state, self),
+                    numDist,
+                    numCategories,
+                    THCudaTensor_data(state, probDistContig));*/
   } else {
     // Generic, slow implementation with memory allocations
 
@@ -724,12 +743,17 @@ THC_API void THCudaTensor_multinomial(struct THCState *state,
       // distribution concurrently.
       dim3 grid(numDist < MAX_NUM_BLOCKS ? numDist : MAX_NUM_BLOCKS);
 
-      hipLaunchKernel(HIP_KERNEL_NAME(sampleMultinomialWithReplacement), dim3(grid), dim3(block), 0, THCState_getCurrentStream(state),
-          gen->gen_states,
-          n_sample,
-          THCudaTensor_data(state, self),
-          numDist, numCategories,
-          THCudaTensor_data(state, prefixSum));
+    /*  hipLaunchKernel(HIP_KERNEL_NAME(sampleMultinomialWithReplacement),
+                      dim3(grid),
+                      dim3(block),
+                      0,
+                      THCState_getCurrentStream(state),
+                      gen->gen_states,
+                      n_sample,
+                      THCudaTensor_data(state, self),
+                      numDist,
+                      numCategories,
+                      THCudaTensor_data(state, prefixSum));*/
     } else {
       // Sample without replacement
 
@@ -756,14 +780,19 @@ THC_API void THCudaTensor_multinomial(struct THCState *state,
 
         // The kernel can only draw one sample before we have to
         // recalculate our distribution
-        hipLaunchKernel(HIP_KERNEL_NAME(sampleMultinomialWithoutReplacement), dim3(grid), dim3(block), 0, THCState_getCurrentStream(state),
-            gen->gen_states,
-            n_sample,
-            sample,
-            THCudaTensor_data(state, self),
-            numDist, numCategories,
-            THCudaTensor_data(state, origDist),
-            THCudaTensor_data(state, prefixSum));
+        /*hipLaunchKernel(HIP_KERNEL_NAME(sampleMultinomialWithoutReplacement),
+                        dim3(grid),
+                        dim3(block),
+                        0,
+                        THCState_getCurrentStream(state),
+                        gen->gen_states,
+                        n_sample,
+                        sample,
+                        THCudaTensor_data(state, self),
+                        numDist,
+                        numCategories,
+                        THCudaTensor_data(state, origDist),
+                        THCudaTensor_data(state, prefixSum));*/
       }
     }
 

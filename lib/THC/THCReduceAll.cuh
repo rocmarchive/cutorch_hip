@@ -45,7 +45,7 @@ kernelReduceAll(hipLaunchParm lp, TensorInfo<InT, IndexType> in,
 
   // Reduce within the block
   HIP_DYNAMIC_SHARED( char, smemChar)
-  AccT* smem = (AccT*) smemChar;
+  auto smem = reinterpret_cast<AccT*>(smemChar);
   r = reduceBlock(smem, hipBlockDim_x, r, reduceAccOp, init);
 
   if (hipThreadIdx_x == 0) {
@@ -55,13 +55,17 @@ kernelReduceAll(hipLaunchParm lp, TensorInfo<InT, IndexType> in,
 }
 
 template <typename IndexType>
-__device__ __forceinline__ IndexType getStartIndex(IndexType totalSize) {
+__device__ __forceinline__
+static
+IndexType getStartIndex(IndexType totalSize) {
   IndexType sizePerBlock = THCCeilDiv(totalSize, (IndexType) hipGridDim_x);
   return hipBlockIdx_x * sizePerBlock;
 }
 
 template <typename IndexType>
-__device__ __forceinline__ IndexType getEndIndex(IndexType totalSize) {
+__device__ __forceinline__
+static
+IndexType getEndIndex(IndexType totalSize) {
   IndexType sizePerBlock = THCCeilDiv(totalSize, (IndexType) hipGridDim_x);
   return min((IndexType) ((hipBlockIdx_x + 1) * sizePerBlock), totalSize);
 }
@@ -96,7 +100,7 @@ kernelReduceAllPass1(hipLaunchParm lp, TensorInfo<InT, IndexType> in,
 
   // Reduce within the block
   HIP_DYNAMIC_SHARED( char, smemChar)
-  AccT* smem = (AccT*) smemChar;
+  auto smem = reinterpret_cast<AccT*>(smemChar);
   r = reduceBlock(smem, hipBlockDim_x, r, reduceAccOp, init);
 
   if (hipThreadIdx_x == 0) {
@@ -109,7 +113,8 @@ template <typename ReduceOp, typename T, typename IndexType>
 __global__
 inline
 void
-kernelReduceAllPass2(hipLaunchParm lp, int numPass1Blocks,
+kernelReduceAllPass2(hipLaunchParm lp,
+                     int numPass1Blocks,
                      T init,
                      ReduceOp reduceOp,
                      T* scratchSpace,
@@ -120,8 +125,9 @@ kernelReduceAllPass2(hipLaunchParm lp, int numPass1Blocks,
   }
 
   // Reduce within the block
-  HIP_DYNAMIC_SHARED( char, smemChar)
-  T* smem = (T*) smemChar;
+  HIP_DYNAMIC_SHARED(char, smemChar)
+  auto smem = reinterpret_cast<T*>(smemChar);
+
   r = reduceBlock(smem, numPass1Blocks, r, reduceOp, init);
 
   if (hipThreadIdx_x == 0) {
@@ -206,17 +212,39 @@ void callReduceAll(THCState* state,
     getPass1ReduceBlockGrid<InT, AccT>(state, totalElements, grid, block);
     size_t smemSize = block.x * sizeof(AccT);
 
-    hipLaunchKernel(HIP_KERNEL_NAME(kernelReduceAllPass1<ModifyOp, ReduceOp, ReduceAccOp, InT, AccT, IndexType, ADims>), dim3(grid), dim3(block), smemSize, THCState_getCurrentStream(state),
-        in, (IndexType) totalElements, init, modifyOp, reduceOp, reduceAccOp,
-        (AccT*) scratchSpace);
+    /*hipLaunchKernel(HIP_KERNEL_NAME(kernelReduceAllPass1<ModifyOp,
+                                                         ReduceOp,
+                                                         ReduceAccOp,
+                                                         InT,
+                                                         AccT,
+                                                         IndexType,
+                                                         ADims>),
+                    dim3(grid),
+                    dim3(block),
+                    smemSize,
+                    THCState_getCurrentStream(state),
+                    in,
+                    (IndexType) totalElements,
+                    init,
+                    modifyOp,
+                    reduceOp,
+                    reduceAccOp,
+                    (AccT*) scratchSpace);*/
 
     int numPass1Blocks = grid.x;
     getPass2ReduceBlockGrid<InT, AccT>(state, totalElements, grid, block);
     smemSize = block.x * sizeof(AccT);
 
-    hipLaunchKernel(HIP_KERNEL_NAME(kernelReduceAllPass2<ReduceAccOp, AccT, IndexType>), dim3(grid), dim3(block), smemSize, THCState_getCurrentStream(state),
-        numPass1Blocks, init, reduceAccOp,
-        (AccT*) scratchSpace, devOut);
+    /*hipLaunchKernel(HIP_KERNEL_NAME(kernelReduceAllPass2<ReduceAccOp, AccT, IndexType>),
+                    dim3(grid),
+                    dim3(block),
+                    smemSize,
+                    THCState_getCurrentStream(state),
+                    numPass1Blocks,
+                    init,
+                    reduceAccOp,
+                    (AccT*) scratchSpace,
+                    devOut);*/
 
     if (freeScratchSpace) {
       THCudaCheck(THCudaFree(state, scratchSpace));
@@ -225,8 +253,24 @@ void callReduceAll(THCState* state,
     getSinglePassReduceBlockGrid<InT, AccT>(totalElements, grid, block);
     size_t smemSize = block.x * sizeof(AccT);
 
-    hipLaunchKernel(HIP_KERNEL_NAME(kernelReduceAll<ModifyOp, ReduceOp, ReduceAccOp, InT, AccT, IndexType, ADims>), dim3(grid), dim3(block), smemSize, THCState_getCurrentStream(state),
-        in, (IndexType) totalElements, init, modifyOp, reduceOp, reduceAccOp, devOut);
+    /*hipLaunchKernel(HIP_KERNEL_NAME(kernelReduceAll<ModifyOp,
+                                                    ReduceOp,
+                                                    ReduceAccOp,
+                                                    InT,
+                                                    AccT,
+                                                    IndexType,
+                                                    ADims>),
+                    dim3(grid),
+                    dim3(block),
+                    smemSize,
+                    THCState_getCurrentStream(state),
+                    in,
+                    (IndexType) totalElements,
+                    init,
+                    modifyOp,
+                    reduceOp,
+                    reduceAccOp,
+                    devOut);*/
   }
 }
 

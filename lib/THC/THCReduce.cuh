@@ -16,7 +16,9 @@
 #define THC_NONCONTIG_REDUCE_BLOCK_SIZE 32 * 16
 
 template <typename IndexType>
-__device__ __forceinline__ IndexType getReduceNoncontigDimSliceIndex() {
+__device__ __forceinline__
+static
+IndexType getReduceNoncontigDimSliceIndex() {
   // Each thread handles one slice
   return getLinearBlockId<IndexType>() * THC_NONCONTIG_REDUCE_BLOCK_SIZE + hipThreadIdx_x;
 }
@@ -27,7 +29,7 @@ template <typename ModifyOp,
           typename T,
           typename IndexType,
           int ADims, int BDims>
-#if __CUDA_ARCH__ >= 350
+#if __CUDA_ARCH__ >= 350 || defined(__HIP_DEVICE_COMPILE__)
 __launch_bounds__(32 * 16, 4)
 #endif
 __global__
@@ -70,7 +72,9 @@ kernelReduceNoncontigDim(hipLaunchParm lp,
 }
 
 template <typename IndexType>
-__device__ __forceinline__ IndexType getReduceContigDimSliceIndex() {
+__device__ __forceinline__
+static
+IndexType getReduceContigDimSliceIndex() {
   // Each block handles one slice
   return getLinearBlockId<IndexType>();
 }
@@ -119,7 +123,7 @@ kernelReduceContigDim(hipLaunchParm lp,
   // Reduce within the block
   // FIXME: extern name
   HIP_DYNAMIC_SHARED(char, smemChar)
-  T* smem = (T*) smemChar;
+  auto smem = reinterpret_cast<T*>(smemChar);
   r = reduceBlock(smem, hipBlockDim_x, r, reduceOp, init);
 
   if (hipThreadIdx_x == 0) {
@@ -233,9 +237,12 @@ bool THC_reduceDim(THCState* state,
   // index can be similarly collapsed. That is what this unrolling is for.
 #define HANDLE_CASE(TYPE, OUT, IN)                                                                       \
   if (contigReduction) {                                                                                 \
-    hipLaunchKernel(HIP_KERNEL_NAME(kernelReduceContigDim<ModifyOp, ReduceOp,                            \
+    hipLaunchKernel(HIP_KERNEL_NAME(kernelReduceContigDim<ModifyOp,                                      \
+                                                          ReduceOp,                                      \
                                                           typename TensorUtils<TensorType>::DataType,    \
-                                                          TYPE, OUT, IN>),                               \
+                                                          TYPE,                                          \
+                                                          OUT,                                           \
+                                                          IN>),                                          \
                     dim3{grid},                                                                          \
                     dim3{block},                                                                         \
                     smemSize,                                                                            \

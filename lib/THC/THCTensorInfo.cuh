@@ -18,76 +18,73 @@
 // CUDA kernel argument that defines tensor layout
 template <typename T, typename IndexType>
 struct TensorInfo {
-  __host__ __device__
-  TensorInfo() : data{nullptr}, dims{0} {}
-  __host__ __device__
-  TensorInfo(const TensorInfo& x)
-    : data{x.data}, dims{x.dims}
-  {
-    for (auto i = 0; i != MAX_CUTORCH_DIMS; ++i) sizes[i] = x.sizes[i];
-    for (auto i = 0; i != MAX_CUTORCH_DIMS; ++i) strides[i] = x.strides[i];
-  }
-  __host__ __device__
-  TensorInfo(TensorInfo&&) = default;
+#if defined(__HCC__)
+  hc::array_view<T> data;
+  hc::array_view<IndexType> sizes;
+  hc::array_view<IndexType> strides;
 
   TensorInfo(T* p,
              int dim,
              const IndexType (&sz)[MAX_CUTORCH_DIMS],
-             const IndexType (&st)[MAX_CUTORCH_DIMS]);
+             const IndexType (&st)[MAX_CUTORCH_DIMS])
+    : data{1, p}, sizes{dim}, strides{dim}
+  {
+      int size = 0;
+      for (int i = 0; i != dim; ++i) {
+          sizes[i] = sz[i]; size += sz[i];
+          strides[i] = st[i];
+      }
+      data = hc::array_view<T>{size, p};
+  }
+#else
+  TensorInfo(T* p,
+             int dim,
+             const IndexType (&sz)[MAX_CUTORCH_DIMS],
+             const IndexType (&st)[MAX_CUTORCH_DIMS])
+    : data{1, p}, dims{dim}
+  {
+      assert(dims > 0 && dims < MAX_CUTORCH_DIMS);
 
-  // Set the size of the given dimension to 1, as if it were a
-  // reduction dim (allows you to calculate offsets of the reduction
-  // slice)
-  void reduceDim(int dim);
-
-  // Collapses all runs of successive dimensions if the size/strides
-  // match up within the run and there are no holes between the
-  // dimensions.
-  // If excludeDim is set (not -1), then excludeDim will not be
-  // collapsed with any other dimension.
-  // Function returns the new dimension index that excludeDim maps to,
-  // since the collapsed dimensions are <= the input dimensions.
-  int collapseDims(int excludeDim = -1);
-
-  // Contiguous tensors of more than one dimension are collapsed down
-  // to one tensor
-  __host__ __device__ inline bool isContiguous() const {
-    return (dims == 1 && strides[0] == 1);
+      for (int i = 0; i < dim; ++i) {
+          sizes[i] = sz[i];
+          strides[i] = st[i];
+      }
   }
 
   T* data;
   IndexType sizes[MAX_CUTORCH_DIMS];
   IndexType strides[MAX_CUTORCH_DIMS];
+#endif
   int dims;
+
+
+    // Set the size of the given dimension to 1, as if it were a
+    // reduction dim (allows you to calculate offsets of the reduction
+    // slice)
+    void reduceDim(int dim)
+    {
+        //assert(dim < dims && dim >= 0);
+        sizes[dim] = 1;
+    }
+
+    // Collapses all runs of successive dimensions if the size/strides
+    // match up within the run and there are no holes between the
+    // dimensions.
+    // If excludeDim is set (not -1), then excludeDim will not be
+    // collapsed with any other dimension.
+    // Function returns the new dimension index that excludeDim maps to,
+    // since the collapsed dimensions are <= the input dimensions.
+    int collapseDims(int excludeDim = -1);
+
+    // Contiguous tensors of more than one dimension are collapsed down
+    // to one tensor
+    __host__ __device__
+    bool isContiguous() const { return (dims == 1 && strides[0] == 1); }
 };
 
 template <typename T, typename IndexType>
-inline
-TensorInfo<T, IndexType>::TensorInfo(T* p,
-                                     int dim,
-                                     const IndexType (&sz)[MAX_CUTORCH_DIMS],
-                                     const IndexType (&st)[MAX_CUTORCH_DIMS]) {
-  data = p;
-  dims = dim;
-  assert(dims > 0 && dims < MAX_CUTORCH_DIMS);
-
-  for (int i = 0; i < dim; ++i) {
-    sizes[i] = sz[i];
-    strides[i] = st[i];
-  }
-}
-
-template <typename T, typename IndexType>
-inline
-void
-TensorInfo<T, IndexType>::reduceDim(int dim) {
-  assert(dim < dims && dim >= 0);
-  sizes[dim] = 1;
-}
-
-template <typename T, typename IndexType>
-int
-TensorInfo<T, IndexType>::collapseDims(int excludeDim) {
+int TensorInfo<T, IndexType>::collapseDims(int excludeDim)
+{
   // Find the innermost dimension not of size 1, since dimensions of size 1 are
   // collapsible.
   int firstNonOneDim = -1;
@@ -241,9 +238,9 @@ TensorInfo<T, IndexType>::collapseDims(int excludeDim) {
 // specialized on `Dims` to reduce nvcc compilation time
 template <typename T, typename IndexType, int Dims>
 struct IndexToOffset {
-  static __host__ __device__ IndexType get(
-    IndexType linearId,
-    const TensorInfo<T, IndexType>& info) {
+  __host__ __device__
+    static
+    IndexType get(IndexType linearId, const TensorInfo<T, IndexType>& info) {
     IndexType offset = 0;
 
     // Use static dims
@@ -263,18 +260,22 @@ struct IndexToOffset {
 
 template <typename T, typename IndexType>
 struct IndexToOffset<T, IndexType, -2> {
-  static inline __host__ __device__ IndexType
-    get(IndexType linearId, const TensorInfo<T, IndexType>& info) {
+  __host__ __device__
+  static
+  inline
+  IndexType get(IndexType linearId, const TensorInfo<T, IndexType>& info)
+  {
     return linearId;
   }
 };
 
 template <typename T, typename IndexType>
 struct IndexToOffset<T, IndexType, -1> {
-  static inline __host__ __device__ IndexType get(
-    IndexType linearId,
-    const TensorInfo<T, IndexType>& info) {
-
+  __host__ __device__
+  static
+  inline
+  IndexType get(IndexType linearId, const TensorInfo<T, IndexType>& info)
+  {
     IndexType offset = 0;
 
     // Use dynamic dims

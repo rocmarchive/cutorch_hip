@@ -15,7 +15,9 @@
 enum TensorArgType { ReadWrite, ReadOnly };
 
 template <typename IndexType>
-__device__ __forceinline__ IndexType getLinearBlockId() {
+__device__ __forceinline__
+static
+IndexType getLinearBlockId() {
   return hipBlockIdx_z * hipGridDim_y * hipGridDim_x +
     hipBlockIdx_y * hipGridDim_x +
     hipBlockIdx_x;

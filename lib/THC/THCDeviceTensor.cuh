@@ -317,7 +317,7 @@ class THCDeviceSubTensor<TensorType, 0, PtrTraits> {
 
   /// Use the texture cache for reads
   __device__ __forceinline__ typename TensorType::DataType ldg() const {
-#if __CUDA_ARCH__ >= 350
+#if __CUDA_ARCH__ >= 350 || defined(__HIP_DEVICE_COMPILE__)
     return __ldg(data_);
 #else
     return *data_;
@@ -327,7 +327,7 @@ class THCDeviceSubTensor<TensorType, 0, PtrTraits> {
   /// Use the texture cache for reads; cast as a particular type
   template <typename T>
   __device__ __forceinline__ T ldgAs() const {
-#if __CUDA_ARCH__ >= 350
+#if __CUDA_ARCH__ >= 350 || defined(__HIP_DEVICE_COMPILE__)
     return __ldg(dataAs<T>());
 #else
     return as<T>();
@@ -433,7 +433,7 @@ class THCDeviceSubTensor {
 
   /// Use the texture cache for reads
   __device__ __forceinline__ typename TensorType::DataType ldg() const {
-#if __CUDA_ARCH__ >= 350
+#if __CUDA_ARCH__ >= 350 || defined(__HIP_DEVICE_COMPILE__)
     return __ldg(data_);
 #else
     return *data_;
@@ -443,7 +443,7 @@ class THCDeviceSubTensor {
   /// Use the texture cache for reads; cast as a particular type
   template <typename T>
   __device__ __forceinline__ T ldgAs() const {
-#if __CUDA_ARCH__ >= 350
+#if __CUDA_ARCH__ >= 350 || defined(__HIP_DEVICE_COMPILE__)
     return __ldg(dataAs<T>());
 #else
     return as<T>();

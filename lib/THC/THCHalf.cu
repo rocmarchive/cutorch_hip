@@ -30,6 +30,7 @@ void THCHalf2Float(THCState *state, float *out, half *in, ptrdiff_t len) {
     in, in + len, out, __half2floatOp());
 }
 
+inline
 float THC_half2float(half a)
 {
   unsigned int bits = a.x & 0x7fff;
@@ -120,7 +121,7 @@ half THC_float2half(float a)
   memcpy(&ret, &ir, sizeof(half));
   return ret;
 }
-
+// TODO: we have to assess these predicates and map them to AMD.
 THC_EXTERNC int THC_nativeHalfInstructions(THCState *state) {
   hipDeviceProp_t* prop =
     THCState_getCurrentDeviceProperties(state);

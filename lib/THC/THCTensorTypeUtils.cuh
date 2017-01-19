@@ -110,7 +110,7 @@ struct ScalarInv {
 template <>
 struct ScalarNegate<half> {
   static __host__ __device__ half to(const half v) {
-#ifdef __CUDA_ARCH__
+#if defined(__CUDA_ARCH__)  || defined(__HIP_DEVICE_COMPILE__)
 #ifdef CUDA_HALF_INSTRUCTIONS
     return __hneg(v);
 #else
@@ -127,7 +127,7 @@ struct ScalarNegate<half> {
 template <>
 struct ScalarInv<half> {
   static __host__ __device__ half to(const half v) {
-#ifdef __CUDA_ARCH__
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
     return __float2half(1.0f / __half2float(v));
 #else
     float fv = THC_half2float(v);
@@ -137,11 +137,15 @@ struct ScalarInv<half> {
   }
 };
 
-inline bool operator==(half a, half b) {
+static
+inline
+bool operator==(half a, half b) {
   return a.x == b.x;
 }
 
-inline bool operator!=(half a, half b) {
+static
+inline
+bool operator!=(half a, half b) {
   return a.x != b.x;
 }
 

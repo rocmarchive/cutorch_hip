@@ -25,6 +25,9 @@ struct TensorTPowOp {
     *v = powf(val, *v);
   }
 
+  __host__ __device__
+  ~TensorTPowOp() {}
+
   float val;
 };
 
@@ -78,7 +81,7 @@ float THCudaTensor_dist(THCState *state, THCudaTensor *self, THCudaTensor *src, 
   auto self_data = THCudaTensor_data(state, self);
   auto src_data = THCudaTensor_data(state, src);
 
-  float result = bolt::amp::inner_product( // TODO: add localised version.
+  float result = 0.0; bolt::amp::inner_product( // TODO: add localised version.
 #if CUDA_VERSION >= 7000
 //    thrust::cuda::par.on(THCState_getCurrentStream(state)),
 #endif

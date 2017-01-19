@@ -260,8 +260,8 @@ void THCudaBlas_Sgemm(THCState *state, char transa, char transb, long m, long n,
 void THCudaBlas_Hgemm(THCState *state, char transa, char transb, long m, long n, long k, half alpha, half *a, long lda, half *b, long ldb, half beta, half *c, long ldc)
 {
   adjustLd(transa, transb, m, n, k, &lda, &ldb, &ldc);
-  cublasOperation_t opa = convertTransToCublasOperation(transa);
-  cublasOperation_t opb = convertTransToCublasOperation(transb);
+  hipblasOperation_t opa = convertTransToCublasOperation(transa);
+  hipblasOperation_t opb = convertTransToCublasOperation(transb);
 
   if( (m <= INT_MAX) && (n <= INT_MAX) && (k <= INT_MAX) && (lda <= INT_MAX)  && (ldb <= INT_MAX) && (ldc <= INT_MAX) )
   {
@@ -272,24 +272,25 @@ void THCudaBlas_Hgemm(THCState *state, char transa, char transb, long m, long n,
     int i_ldb = (int)ldb;
     int i_ldc = (int)ldc;
 
-    cublasHandle_t handle = THCState_getCurrentBlasHandle(state);
-    cublasSetStream(handle, THCState_getCurrentStream(state));
+    hipblasHandle_t handle = THCState_getCurrentBlasHandle(state);
+    hipblasSetStream(handle, THCState_getCurrentStream(state));
 
+    // TODO: hipblasHgemm and hipblasSgemmEx not implemented!
     // Check for native Hgemm support
-    if (THC_fastHalfInstructions(state)) {
-      THCublasCheck(cublasHgemm(handle, opa, opb,
-				i_m, i_n, i_k, &alpha, a, i_lda, b, i_ldb,
-				&beta, c, i_ldc));
-    } else {
-      // Simulated Hgemm
-      float fAlpha = THC_half2float(alpha);
-      float fBeta = THC_half2float(beta);
-
-      THCublasCheck(cublasSgemmEx(handle, opa, opb,
-				  i_m, i_n, i_k, &fAlpha,
-                                  a, CUDA_R_16F, i_lda, b, CUDA_R_16F,
-				  i_ldb, &fBeta, c, CUDA_R_16F, i_ldc));
-    }
+//    if (THC_fastHalfInstructions(state)) {
+//      THCublasCheck(cublasHgemm(handle, opa, opb,
+//				i_m, i_n, i_k, &alpha, a, i_lda, b, i_ldb,
+//				&beta, c, i_ldc));
+//    } else {
+//      // Simulated Hgemm
+//      float fAlpha = THC_half2float(alpha);
+//      float fBeta = THC_half2float(beta);
+//
+//      THCublasCheck(hipblasSgemmEx(handle, opa, opb,
+//				  i_m, i_n, i_k, &fAlpha,
+//                                  a, CUDA_R_16F, i_lda, b, CUDA_R_16F,
+//				  i_ldb, &fBeta, c, CUDA_R_16F, i_ldc));
+//    }
 
     return;
   }

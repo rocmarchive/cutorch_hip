@@ -49,7 +49,7 @@ THC_API void THCTensor_(sortKeyValueInplace)(THCState* state,
     THError("Slice to sort is too large");
   }
 
-#define HANDLE_CASE(TYPE, A, SIZE)                                      \
+#define HANDLE_CASE(TYPE, A, SIZE)      //                                \
   do {                                                                  \
     int blockSize = SIZE / 2;                                           \
     if (blockSize < 1) {                                                \
@@ -78,7 +78,7 @@ THC_API void THCTensor_(sortKeyValueInplace)(THCState* state,
                       (TYPE) valueInfo.strides[collapseValueDim],       \
                       GTComp<real>());                                  \
     } else {                                                            \
-      hipLaunchKernel(HIP_KERNEL_NAME(bitonicSortKVInPlace<real,        \
+     hipLaunchKernel(HIP_KERNEL_NAME(bitonicSortKVInPlace<real,        \
                                                            long,        \
                                                            A,           \
                                                            -1,          \
@@ -184,7 +184,7 @@ void sortViaThrust(THCState* state,
 
   ptrdiff_t totalElements = THCTensor_(nElement)(state, input);
   long sliceSize = THCTensor_(size)(state, input, dim);
-  long sliceStride = THCTensor_(stride)(state, input, dim);
+  //long sliceStride = THCTensor_(stride)(state, input, dim);
 
   // We perform a vectorized segmented sort in Thrust.
   // Say we are sorting a (2, 3) tensor. We have in flattened form:
@@ -250,29 +250,29 @@ void sortViaThrust(THCState* state,
   // First, we sort globally (across all slices) according to key
   // (the values we're sorting)
   if (dir) {
-    bolt::amp::stable_sort_by_key( // TODO: add localised version.
-#if CUDA_VERSION >= 7000
-//      thrust::cuda::par.on(THCState_getCurrentStream(state)),
-#endif
-      keyIter, keyIter + totalElements, indexIter, ThrustGTOp<real>());
+//    bolt::amp::stable_sort_by_key( // TODO: add localised version.
+//#if CUDA_VERSION >= 7000
+////      thrust::cuda::par.on(THCState_getCurrentStream(state)),
+//#endif
+//      keyIter, keyIter + totalElements, indexIter, ThrustGTOp<real>());
   } else {
-  bolt::amp::stable_sort_by_key( // TODO: add localised version.
-#if CUDA_VERSION >= 7000
-//      thrust::cuda::par.on(THCState_getCurrentStream(state)),
-#endif
-      keyIter, keyIter + totalElements, indexIter, ThrustLTOp<real>());
+//  bolt::amp::stable_sort_by_key( // TODO: add localised version.
+//#if CUDA_VERSION >= 7000
+////      thrust::cuda::par.on(THCState_getCurrentStream(state)),
+//#endif
+//      keyIter, keyIter + totalElements, indexIter, ThrustLTOp<real>());
   }
 
   // Then, re-sort according to slice that each index is
   // in. This completes the segment sort in Thrust, since we're
   // stably sorting here, preserving the relative order of values
   // per each slice
-    bolt::amp::stable_sort_by_key( // TODO: add localised version.
-#if CUDA_VERSION >= 7000
-//    thrust::cuda::par.on(THCState_getCurrentStream(state)),
-#endif
-    indexIter, indexIter + totalElements, keyIter,
-    SliceComp{sliceSize});
+//    bolt::amp::stable_sort_by_key( // TODO: add localised version.
+//#if CUDA_VERSION >= 7000
+////    thrust::cuda::par.on(THCState_getCurrentStream(state)),
+//#endif
+//    indexIter, indexIter + totalElements, keyIter,
+//    SliceComp{sliceSize});
 
   // Translate the global integer 0-based index to a per-slice real
   // Lua index
