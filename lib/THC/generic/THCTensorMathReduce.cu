@@ -64,7 +64,7 @@ THCTensor_(renorm)(THCState *state, THCTensor* self, THCTensor* src, real value,
   dim3 grid(data->size[0]);
   dim3 threads(32);
 
-  /*hipLaunchKernel(HIP_KERNEL_NAME(THCTensor_kernel_renorm<real>),
+  hipLaunchKernel(HIP_KERNEL_NAME(THCTensor_kernel_renorm<real>),
                     dim3(grid),
                     dim3(threads),
                     0,
@@ -72,7 +72,7 @@ THCTensor_(renorm)(THCState *state, THCTensor* self, THCTensor* src, real value,
                     THCTensor_(data)(state, data),
                     value,
                     size,
-                    maxnorm);*/
+                    maxnorm);
 
   hipError_t errcode = hipGetLastError();
   if(errcode != hipSuccess)
@@ -332,9 +332,13 @@ void THCTensor_(max)(THCState *state,
   bolt::amp::pair<typename TensorUtils<THCTensor>::DataType, long>
     init{THCNumerics<typename TensorUtils<THCTensor>::DataType>::min(), 1};
 
-  return THC_reduceDimIndex(
-    state, values, indices, src, dimension, init,
-    MaxValuePair<typename TensorUtils<THCTensor>::DataType, long>());
+  THC_reduceDimIndex(state,
+                     values,
+                     indices,
+                     src,
+                     dimension,
+                     init,
+                     MaxValuePair<typename TensorUtils<THCTensor>::DataType, long>());
 }
 
 THC_API
@@ -349,9 +353,13 @@ void THCTensor_(min)(THCState *state,
   bolt::amp::pair<typename TensorUtils<THCTensor>::DataType, long>
     init{THCNumerics<typename TensorUtils<THCTensor>::DataType>::max(), 1};
 
-  return THC_reduceDimIndex(
-    state, values, indices, src, dimension, init,
-    MinValuePair<typename TensorUtils<THCTensor>::DataType, long>());
+  THC_reduceDimIndex(state,
+                     values,
+                     indices,
+                     src,
+                     dimension,
+                     init,
+                     MinValuePair<typename TensorUtils<THCTensor>::DataType, long>());
 }
 
 #endif

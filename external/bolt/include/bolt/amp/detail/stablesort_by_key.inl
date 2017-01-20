@@ -232,19 +232,19 @@ namespace detail
     !(std::is_same< typename std::iterator_traits<DVRandomAccessIterator1 >::value_type, unsigned int >::value ||
       std::is_same< typename std::iterator_traits<DVRandomAccessIterator1 >::value_type, int >::value  )
                        >::type
-    stablesort_by_key_enqueue( control& ctrl,
-                                    const DVRandomAccessIterator1 keys_first, const DVRandomAccessIterator1 keys_last,
-                                    const DVRandomAccessIterator2 values_first,
-                                    const StrictWeakOrdering& comp)
+    stablesort_by_key_enqueue(control& ctrl,
+                              const DVRandomAccessIterator1 keys_first,
+                              const DVRandomAccessIterator1 keys_last,
+                              const DVRandomAccessIterator2 values_first,
+                              const StrictWeakOrdering& comp)
     {
-
 		concurrency::accelerator_view av = ctrl.getAccelerator().get_default_view();
         int vecSize = static_cast< int >( std::distance( keys_first, keys_last ) );
 
         typedef typename std::iterator_traits< DVRandomAccessIterator1 >::value_type keyType;
         typedef typename std::iterator_traits< DVRandomAccessIterator2 >::value_type valueType;
 
-        const unsigned int localRange= STABLESORT_BY_KEY_BUFFER_SIZE;
+        constexpr unsigned int localRange= STABLESORT_BY_KEY_BUFFER_SIZE;
 
         //  Make sure that globalRange is a multiple of localRange
         unsigned int globalRange = vecSize;
@@ -259,8 +259,8 @@ namespace detail
           Kernel 0
         *********************************************************************************/
 
-		const unsigned int tile_limit = STABLESORTBYKEY_TILE_MAX;
-		const unsigned int max_ext = (tile_limit*localRange);
+		constexpr unsigned int tile_limit = STABLESORTBYKEY_TILE_MAX;
+		constexpr unsigned int max_ext = (tile_limit*localRange);
 
 		unsigned int	   tempBuffsize = globalRange;
 		unsigned int	   iteration = (globalRange-1)/max_ext;
@@ -272,22 +272,11 @@ namespace detail
 			concurrency::tiled_extent< localRange > tileK0 = inputExtent.tile< localRange >();
 			unsigned int index = i*(tile_limit*localRange);
 			unsigned int tile_index = i*tile_limit;
-
 				try
 				{
-
 				  concurrency::parallel_for_each( av, tileK0,
-				  [
-					values_first,
-					keys_first,
-					vecSize,
-					comp,
-					index,
-					tile_index,
-					localRange
-				  ] ( concurrency::tiled_index< localRange > t_idx ) restrict(amp)
+				  [=](const concurrency::tiled_index<localRange>& t_idx) restrict(amp)
 				  {
-
 					   int gloId = t_idx.global[ 0 ] + index;
 					   int groId = t_idx.tile[ 0 ] + tile_index;
 					   unsigned int locId = t_idx.local[ 0 ];

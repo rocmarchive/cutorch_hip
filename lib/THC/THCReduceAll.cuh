@@ -29,7 +29,11 @@ template <typename ModifyOp,
 __global__
 inline
 void
-kernelReduceAll(hipLaunchParm lp, TensorInfo<InT, IndexType> in,
+kernelReduceAll(hipLaunchParm lp,
+                InT* inData,
+                IndexType* inSizes,
+                IndexType* inStrides,
+                int inDims,
                 IndexType totalElements,
                 AccT init,
                 ModifyOp modifyOp,
@@ -39,12 +43,12 @@ kernelReduceAll(hipLaunchParm lp, TensorInfo<InT, IndexType> in,
   // With a block-wide stride, have each thread perform its own reduction.
   AccT r = init;
   for (IndexType i = hipThreadIdx_x; i < totalElements; i += hipBlockDim_x) {
-    const IndexType inOffset = IndexToOffset<InT, IndexType, ADims>::get(i, in.dSizes, in.dStrides, in.dims);
-    r = reduceOp(r, modifyOp(in.data[inOffset]));
+    const IndexType inOffset = IndexToOffset<InT, IndexType, ADims>::get(i, inSizes, inStrides, inDims);
+    r = reduceOp(r, modifyOp(inData[inOffset]));
   }
 
   // Reduce within the block
-  HIP_DYNAMIC_SHARED( char, smemChar)
+  HIP_DYNAMIC_SHARED(char, smemChar)
   auto smem = reinterpret_cast<AccT*>(smemChar);
   r = reduceBlock(smem, hipBlockDim_x, r, reduceAccOp, init);
 
@@ -81,7 +85,11 @@ template <typename ModifyOp,
 __global__
 inline
 void
-kernelReduceAllPass1(hipLaunchParm lp, TensorInfo<InT, IndexType> in,
+kernelReduceAllPass1(hipLaunchParm lp,
+                     InT* inData,
+                     IndexType* inSizes,
+                     IndexType* inStrides,
+                     int inDims,
                      IndexType totalElements,
                      AccT init,
                      ModifyOp modifyOp,
@@ -94,12 +102,12 @@ kernelReduceAllPass1(hipLaunchParm lp, TensorInfo<InT, IndexType> in,
   // With a block-wide stride, have each thread perform its own reduction.
   AccT r = init;
   for (IndexType i = startIndex + hipThreadIdx_x; i < endIndex; i += hipBlockDim_x) {
-    const IndexType inOffset = IndexToOffset<InT, IndexType, ADims>::get(i, in.dSizes, in.dStrides, in.dims);
-    r = reduceOp(r, modifyOp(in.data[inOffset]));
+    const IndexType inOffset = IndexToOffset<InT, IndexType, ADims>::get(i, inSizes, inStrides, inDims);
+    r = reduceOp(r, modifyOp(inData[inOffset]));
   }
 
   // Reduce within the block
-  HIP_DYNAMIC_SHARED( char, smemChar)
+  HIP_DYNAMIC_SHARED(char, smemChar)
   auto smem = reinterpret_cast<AccT*>(smemChar);
   r = reduceBlock(smem, hipBlockDim_x, r, reduceAccOp, init);
 
@@ -118,7 +126,8 @@ kernelReduceAllPass2(hipLaunchParm lp,
                      T init,
                      ReduceOp reduceOp,
                      T* scratchSpace,
-                     T* out) {
+                     T* out)
+{
   T r = init;
   if (hipThreadIdx_x < numPass1Blocks) {
     r = scratchSpace[hipThreadIdx_x];
@@ -223,7 +232,10 @@ void callReduceAll(THCState* state,
                     dim3(block),
                     smemSize,
                     THCState_getCurrentStream(state),
-                    in,
+                    in.data,
+                    in.dSizes,
+                    in.dStrides,
+                    in.dims,
                     (IndexType) totalElements,
                     init,
                     modifyOp,
@@ -264,7 +276,10 @@ void callReduceAll(THCState* state,
                     dim3(block),
                     smemSize,
                     THCState_getCurrentStream(state),
-                    in,
+                    in.data,
+                    in.dSizes,
+                    in.dStrides,
+                    in.dims,
                     (IndexType) totalElements,
                     init,
                     modifyOp,
@@ -288,7 +303,8 @@ bool THC_reduceAll(THCState* state,
                    const ReduceAccOp& reduceAccOp,
                    AccT init,
                    AccT* out,
-                   int outOnDevice) {
+                   int outOnDevice)
+{
   ptrdiff_t inElements = TensorUtils<TensorType>::getNumElements(state, in);
 
   if (TensorUtils<TensorType>::getDims(state, in) > MAX_CUTORCH_DIMS) {

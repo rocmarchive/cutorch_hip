@@ -42,8 +42,9 @@ void kernelPointwiseApply1(hipLaunchParm lp,
     // Convert `linearIndex` into an offset of `a`
     const IndexType aOffset =
       IndexToOffset<Ta, IndexType, ADims>::get(linearIndex, Asizes, Astrides, ADims);
-
-    op(&Adata[aOffset]);
+    // TODO: this is broken, applying op causes a Promote pass failure. Identify
+    //       which operations are troublesome.
+    //op(&Adata[aOffset]);
   }
 }
 
@@ -77,7 +78,7 @@ void kernelPointwiseApply2(hipLaunchParm lp,
     const IndexType bOffset =
       IndexToOffset<Tb, IndexType, BDims>::get(linearIndex, Bsizes, Bstrides, BDims);
 
-    op(&Adata[aOffset], &Bdata[bOffset]);
+    //op(&Adata[aOffset], &Bdata[bOffset]);
   }
 }
 
@@ -100,8 +101,8 @@ void kernelPointwiseApply3(hipLaunchParm lp,
                            Tc* Cdata,
                            IndexType* Csizes,
                            IndexType* Cstrides,
-                           IndexType totalElements,
-                           Op op)
+                           IndexType totalElements/*,
+                           Op op*/)
 {
   for (IndexType linearIndex = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;
        linearIndex < totalElements;
@@ -118,7 +119,7 @@ void kernelPointwiseApply3(hipLaunchParm lp,
     const IndexType cOffset =
       IndexToOffset<Tc, IndexType, CDims>::get(linearIndex, Csizes, Cstrides, CDims);
 
-    op(&Adata[aOffset], &Bdata[bOffset], &Cdata[cOffset]);
+//    op(&Adata[aOffset], &Bdata[bOffset], &Cdata[cOffset]);
   }
 }
 
@@ -154,7 +155,7 @@ template <typename TensorTypeA,
 inline
 bool THC_pointwiseApply1(THCState* state,
                          TensorTypeA* a,
-                         const Op& op,
+                         Op op,
                          TensorArgType aType = ReadWrite) {
   if (TensorUtils<TensorTypeA>::getDims(state, a) > MAX_CUTORCH_DIMS) {
     return false;
@@ -601,8 +602,8 @@ bool THC_pointwiseApply3(THCState* state,
                   cInfo.data,                                                                       \
                   cInfo.dSizes,                                                                     \
                   cInfo.dStrides,                                                                   \
-                  (TYPE) totalElements,                                                             \
-                  op);
+                  (TYPE) totalElements/*,*/                                                             \
+                  /*op*/);
 
 #define HANDLE_C_CASE(TYPE, A, B, C)            \
   {                                             \
@@ -715,8 +716,8 @@ bool THC_pointwiseApply3(THCState* state,
                       cInfo.data,
                       cInfo.dSizes,
                       cInfo.dStrides,
-                      (unsigned long) totalElements,
-                      op);
+                      (unsigned long) totalElements/*,
+                      op*/);
     } else {
       hipLaunchKernel(HIP_KERNEL_NAME(kernelPointwiseApply3<Op,
                                                             typename TensorUtils<TensorTypeA>::DataType,
@@ -739,8 +740,8 @@ bool THC_pointwiseApply3(THCState* state,
                       cInfo.data,
                       cInfo.dSizes,
                       cInfo.dStrides,
-                      (unsigned long) totalElements,
-                      op);
+                      (unsigned long) totalElements/*,
+                      op*/);
     }
   }
 #undef HANDLE_CASE

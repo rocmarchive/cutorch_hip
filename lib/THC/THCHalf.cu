@@ -1,6 +1,10 @@
 #include "THCHalf.h"
 
-#include <bolt/amp/transform.h>
+#ifdef THRUST_PATH
+  #include <thrust/transform.h>
+#else
+  #include <bolt/amp/transform.h>
+#endif
 
 struct __half2floatOp {
   __device__ float operator()(half v) const { return __half2float(v); }
@@ -10,27 +14,36 @@ struct __float2halfOp {
   __device__ half operator()(float v) const { return __float2half(v); }
 };
 
-void THCFloat2Half(THCState *state, half *out, float *in, ptrdiff_t len) {
-  bolt::amp::transform( // TODO: add the localised execution version.
-#if CUDA_VERSION >= 7000
-//    thrust::cuda::par.on(THCState_getCurrentStream(state)),
-#else
-    //thrust::device,
-#endif
+void THCFloat2Half(THCState *state, half *out, float *in, ptrdiff_t len)
+{
+#if defined(THRUST_PATH)
+  thrust::transform( // TODO: add the localised execution version.
+  #if CUDA_VERSION >= 7000
+  //    thrust::cuda::par.on(THCState_getCurrentStream(state)),
+  #else
+  //thrust::device,
+  #endif
     in, in + len, out, __float2halfOp());
-}
-
-void THCHalf2Float(THCState *state, float *out, half *in, ptrdiff_t len) {
-  bolt::amp::transform(
-#if CUDA_VERSION >= 7000
-//    thrust::cuda::par.on(THCState_getCurrentStream(state)),
 #else
-//    thrust::device,
+  bolt::amp::transform(in, in + len, out, __float2halfOp());
 #endif
-    in, in + len, out, __half2floatOp());
 }
 
-inline
+void THCHalf2Float(THCState *state, float *out, half *in, ptrdiff_t len)
+{
+#if defined(THRUST_PATH)
+  thrust::transform(
+  #if CUDA_VERSION >= 7000
+  //    thrust::cuda::par.on(THCState_getCurrentStream(state)),
+  #else
+  //    thrust::device,
+  #endif
+    in, in + len, out, __half2floatOp());
+#else
+  bolt::amp::transform(in, in + len, out, __half2floatOp());
+#endif
+}
+
 float THC_half2float(half a)
 {
   unsigned int bits = a.x & 0x7fff;
@@ -82,7 +95,6 @@ float THC_half2float(half a)
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-inline
 half THC_float2half(float a)
 {
   uint32_t ia;

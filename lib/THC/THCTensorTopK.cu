@@ -9,7 +9,8 @@
 
 #ifdef CUDA_PATH
     #if CUDA_VERSION >= 7000
-    #include <thrust/system/cuda/execution_policy.h>
+        #include <thrust/system/cuda/execution_policy.h>
+    #endif
 #endif
 
 #include <algorithm> // for std::min
@@ -27,7 +28,7 @@ struct FloatToSortedInt {
   __device__
   unsigned int convert(float v) const
   {
-    unsigned int x = __float_as_int(v);
+    unsigned int x = (unsigned int)v;//__float_as_int(v);
     unsigned int mask = (x & 0x80000000) ? 0xffffffff : 0x80000000;
 
     return (x ^ mask);
@@ -38,7 +39,7 @@ struct FloatToSortedInt {
   {
     unsigned int mask = (v & 0x80000000) ? 0x80000000 : 0xffffffff;
 
-    return __int_as_float(v ^ mask);
+    return (float)(v ^ mask);//__int_as_float(v ^ mask);
   }
 };
 
@@ -47,18 +48,24 @@ struct FloatToSortedInt {
 // those that pass the filter `((v & desiredMask) == desired)`.
 // This produces and broadcasts the seen counts for a single block only.
 // `smem` must have at least `RadixSize` elements.
-template <typename DataType, typename BitDataType,
-          typename IndexType, typename CountType,
-          typename RadixConverter, int RadixSize, int RadixBits>
-__device__ void countRadixUsingMask(const RadixConverter& conv,
-                                    CountType counts[RadixSize],
-                                    CountType* smem,
-                                    BitDataType desired,
-                                    BitDataType desiredMask,
-                                    int radixDigitPos,
-                                    IndexType sliceSize,
-                                    IndexType withinSliceStride,
-                                    DataType* data) {
+template <typename DataType,
+          typename BitDataType,
+          typename IndexType,
+          typename CountType,
+          typename RadixConverter,
+          int RadixSize,
+          int RadixBits>
+__device__
+void countRadixUsingMask(const RadixConverter& conv,
+                         CountType (&counts)[RadixSize],
+                         CountType* smem,
+                         BitDataType desired,
+                         BitDataType desiredMask,
+                         int radixDigitPos,
+                         IndexType sliceSize,
+                         IndexType withinSliceStride,
+                         DataType* data)
+{
   // Clear out per-thread counts from a previous round
 #pragma unroll
   for (int i = 0; i < RadixSize; ++i) {
@@ -76,7 +83,7 @@ __device__ void countRadixUsingMask(const RadixConverter& conv,
     BitDataType val = conv.convert(doLdg(&data[i * withinSliceStride]));
 
     bool hasVal = ((val & desiredMask) == desired);
-    unsigned int digitInRadix = getBitfield(val, radixDigitPos, RadixBits);
+    unsigned int digitInRadix = 0;//getBitfield(val, radixDigitPos, RadixBits);
 
 #pragma unroll
     for (unsigned int j = 0; j < RadixSize; ++j) {
@@ -86,7 +93,8 @@ __device__ void countRadixUsingMask(const RadixConverter& conv,
   }
 
   // Now, for each warp, sum values
-  if (getLaneId() == 0) {
+  // TODO: this is technically incorrect.
+  if (hipThreadIdx_x % warpSize == 0) {//getLaneId() == 0) {
 #pragma unroll
     for (unsigned int i = 0; i < RadixSize; ++i) {
       atomicAdd(&smem[i], counts[i]);
@@ -215,9 +223,8 @@ void radixSelect(const RadixConverter& conv,
     /* threads will return from the function. */                        \
     if (count == 1 && kToFind == 1) {                                   \
       /* There is a unique answer. */                                   \
-      desired = setBitfield(desired, i, digitPos, RADIX_BITS);          \
-      desiredMask =                                                     \
-        setBitfield(desiredMask, RADIX_MASK, digitPos, RADIX_BITS);     \
+      /*desired = setBitfield(desired, i, digitPos, RADIX_BITS);*/      \
+      /*desiredMask = setBitfield(desiredMask, RADIX_MASK, digitPos, RADIX_BITS);*/     \
                                                                         \
       /* The answer is now the unique element v such that: */           \
       /* (v & desiredMask) == desired */                                \
@@ -237,9 +244,8 @@ void radixSelect(const RadixConverter& conv,
     }                                                                   \
                                                                         \
     if (count >= kToFind) {                                             \
-      desired = setBitfield(desired, i, digitPos, RADIX_BITS);          \
-      desiredMask =                                                     \
-      setBitfield(desiredMask, RADIX_MASK, digitPos, RADIX_BITS);       \
+      /*desired = setBitfield(desired, i, digitPos, RADIX_BITS);*/          \
+      /*desiredMask = setBitfield(desiredMask, RADIX_MASK, digitPos, RADIX_BITS);*/       \
                                                                         \
       /* The top-Kth element v must now be one such that: */            \
       /* (v & desiredMask == desired) */                                \
@@ -428,7 +434,7 @@ THC_API void THCudaTensor_topk(THCState* state,
   THCudaLongTensor_resize(state, indices, topKSize, NULL);
   THLongStorage_free(topKSize);
 
-#define RUN_K(INDEX_T, DIM, DIR)     //                                          \
+#define RUN_K(INDEX_T, DIM, DIR)   //                                            \
   hipLaunchKernel(HIP_KERNEL_NAME(gatherTopK<INDEX_T, DIM, DIR>),              \
                   dim3{grid},                                                  \
                   dim3{block},                                                 \

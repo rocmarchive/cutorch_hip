@@ -60,9 +60,9 @@ struct TensorAddConstantOp<half> {
 #ifdef CUDA_HALF_INSTRUCTIONS
     *v = __hadd(*v, val);
 #else
-    float fv = __half2float(v);
+    float fv = __half2float(*v);
     fv += fval;
-    v = __float2half(fv);
+    *v = __float2half(fv);
 #endif
   }
 
@@ -107,13 +107,12 @@ struct TensorSubConstantOp<half> {
   TensorSubConstantOp(const TensorSubConstantOp&) = default;
   TensorSubConstantOp(TensorSubConstantOp&&) = default;
 
-//#ifdef CUDA_HALF_INSTRUCTIONS
-  __host__ __device__
   explicit
+#ifdef CUDA_HALF_INSTRUCTIONS
   TensorSubConstantOp(half v): val(__float2half(-(__half2float(v)))) {}
-//#else
-//  TensorSubConstantOp(half v): fval(-(THC_half2float(v))) {}
-//#endif
+#else
+  TensorSubConstantOp(half v): fval(-(THC_half2float(v))) {}
+#endif
 
   __device__ __forceinline__
   void operator()(half* out, half* in) const {
@@ -178,7 +177,6 @@ struct TensorMulConstantOp<half> {
   TensorMulConstantOp(const TensorMulConstantOp&) = default;
   TensorMulConstantOp(TensorMulConstantOp&&) = default;
 
-  __host__ __device__
   explicit
 #ifdef CUDA_HALF_INSTRUCTIONS
   TensorMulConstantOp(half v) : val(v) {}
@@ -298,7 +296,6 @@ struct TensorDivConstantOp<half> {
   TensorDivConstantOp(const TensorDivConstantOp&) = default;
   TensorDivConstantOp(TensorDivConstantOp&&) = default;
 
-  __host__ __device__
   explicit
 #ifdef CUDA_HALF_INSTRUCTIONS
   TensorDivConstantOp(half v) : val(ScalarInv<half>::to(v)) {}
@@ -490,7 +487,7 @@ void THCudaTensor_diag(THCState *state, THCudaTensor *self_, THCudaTensor *src_,
     const dim3 threads(min((long long)THCState_getCurrentDeviceProperties(state)->maxThreadsPerBlock, (long long)size));
     dim3 grid(min((long long)1024, (long long)THCCeilDiv(size, (long)threads.x)));
     long start = (k >= 0 ? k * stride1 : -k * stride0);
-    /*hipLaunchKernel(HIP_KERNEL_NAME(THCudaTensor_copyFromDiagonal),
+    hipLaunchKernel(HIP_KERNEL_NAME(THCudaTensor_copyFromDiagonal),
                     dim3(grid),
                     dim3(threads),
                     0,
@@ -500,7 +497,7 @@ void THCudaTensor_diag(THCState *state, THCudaTensor *self_, THCudaTensor *src_,
                     start,
                     size,
                     stride0 + stride1,
-                    strideSelf);*/
+                    strideSelf);
   } else {
     ptrdiff_t totalElements = THCudaTensor_nElement(state, src_);
     ptrdiff_t size = (k > 0) ? totalElements + k : totalElements - k;
@@ -512,7 +509,7 @@ void THCudaTensor_diag(THCState *state, THCudaTensor *self_, THCudaTensor *src_,
     const dim3 threads(min((long long)THCState_getCurrentDeviceProperties(state)->maxThreadsPerBlock, (long long)size));
     dim3 grid(min((long long)1024, (long long)THCCeilDiv(size, (ptrdiff_t)threads.x)));
     ptrdiff_t start = (k >= 0 ? k * stride1 : -k * stride0);
-    /*hipLaunchKernel(HIP_KERNEL_NAME(THCudaTensor_copyToDiagonal),
+    hipLaunchKernel(HIP_KERNEL_NAME(THCudaTensor_copyToDiagonal),
                     dim3(grid),
                     dim3(threads),
                     0,
@@ -522,7 +519,7 @@ void THCudaTensor_diag(THCState *state, THCudaTensor *self_, THCudaTensor *src_,
                     start,
                     totalElements,
                     stride0 + stride1,
-                    strideSrc);*/
+                    strideSrc);
   }
   THCudaCheck(hipGetLastError());
 }

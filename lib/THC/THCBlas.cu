@@ -381,10 +381,10 @@ void THCudaBlas_SgemmBatched(THCState *state, char transa, char transb, long m, 
 
   hipblasHandle_t handle = THCState_getCurrentBlasHandle(state);
   hipblasSetStream(handle, THCState_getCurrentStream(state));
-  THCublasCheck(hipblasSgemmBatched(handle,
-                                   opa, opb, (int)m, (int)n, (int)k,
-                                   &alpha, a, (int)lda, b, (int)ldb, &beta, c, (int)ldc,
-                                   (int)batchCount));
+//  THCublasCheck(hipblasSgemmBatched(handle,
+//                                   opa, opb, (int)m, (int)n, (int)k,
+//                                   &alpha, a, (int)lda, b, (int)ldb, &beta, c, (int)ldc,
+//                                   (int)batchCount));
 }
 
 void THCudaBlas_DgemmBatched(THCState *state, char transa, char transb, long m, long n, long k,
@@ -403,10 +403,10 @@ void THCudaBlas_DgemmBatched(THCState *state, char transa, char transb, long m, 
 
   hipblasHandle_t handle = THCState_getCurrentBlasHandle(state);
   hipblasSetStream(handle, THCState_getCurrentStream(state));
-  THCublasCheck(hipblasDgemmBatched(handle,
-                                   opa, opb, (int)m, (int)n, (int)k,
-                                   &alpha, a, (int)lda, b, (int)ldb, &beta, c, (int)ldc,
-                                   (int)batchCount));
+//  THCublasCheck(hipblasDgemmBatched(handle,
+//                                   opa, opb, (int)m, (int)n, (int)k,
+//                                   &alpha, a, (int)lda, b, (int)ldb, &beta, c, (int)ldc,
+//                                   (int)batchCount));
 }
 
 /* Inverse */

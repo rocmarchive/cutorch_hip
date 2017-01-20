@@ -6,11 +6,10 @@
 void THCStorage_(fill)(THCState *state, THCStorage *self, real value)
 {
 #ifdef THRUST_PATH
-//  thrust::device_ptr<real> self_data(self->data);
-//  thrust::fill(
-//    self_data, self_data+self->size, value);
+  thrust::device_ptr<real> self_data(self->data);
+  thrust::fill(self_data, self_data+self->size, value);
 #else
-    bolt::amp::fill(self_data, self_data+self->size, value);
+  bolt::amp::fill(self->data, self->data + self->size, value);
 #endif
 }
 

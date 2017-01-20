@@ -109,6 +109,8 @@ template <typename T1, typename T2>
   template <typename U1, typename U2>
   pair(const std::pair<U1,U2> &p) restrict(cpu, amp);
 
+  ~pair() restrict(amp, cpu) {};
+
 }; // end pair
 
 
@@ -123,7 +125,7 @@ template <typename T1, typename T2>
  */
 template <typename T1, typename T2>
     static
-    inline	
+    inline
     bool operator==(const pair<T1,T2> &x, const pair<T1,T2> &y) restrict(cpu, amp);
 
 

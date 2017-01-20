@@ -65,6 +65,8 @@ void inclusiveBinaryPrefixSum(T* smem, bool in, T* out) {
   T vote = __ballot(in);
 #ifdef CUDA_PATH
   T index = __popc(getLaneMaskLe() & vote);
+#else
+  T index = 0;
 #endif
   T carry = __popc(vote);
 

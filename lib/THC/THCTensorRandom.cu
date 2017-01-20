@@ -33,7 +33,6 @@ void initializeGenerator(THCState *state, Generator* gen)
 }
 
 /* Frees memory allocated during setup. */
-__host__
 void destroyGenerator(THCState *state, Generator* gen)
 {
   if (gen->gen_states)
@@ -49,7 +48,6 @@ void destroyGenerator(THCState *state, Generator* gen)
 }
 
 /* Creates a new generator state given the seed. */
-__host__
 void createGeneratorState(Generator* gen, unsigned long seed)
 {
 #ifdef CURAND_PATH
@@ -66,7 +64,6 @@ void createGeneratorState(Generator* gen, unsigned long seed)
 }
 
 /* Initialize generator array (must be called before any other function) */
-__host__
 void THCRandom_init(THCState* state, int devices, int current_device)
 {
   THCRNGState* rng_state = THCState_getRngState(state);
@@ -82,7 +79,6 @@ void THCRandom_init(THCState* state, int devices, int current_device)
 }
 
 /* Destroy generators and free memory */
-__host__
 void THCRandom_shutdown(THCState* state)
 {
   THCRNGState* rng_state = THCState_getRngState(state);
@@ -96,7 +92,6 @@ void THCRandom_shutdown(THCState* state)
 }
 
 /* Manually set the generator seed */
-__host__
 static void THCRandom_manualSeedGen(Generator* gen, unsigned long seed)
 {
   gen->initial_seed = seed;
@@ -105,7 +100,6 @@ static void THCRandom_manualSeedGen(Generator* gen, unsigned long seed)
 }
 
 /* Get the generator for the current device */
-__host__
 Generator* THCRandom_getGenerator(THCState* state)
 {
   THCRNGState* rng_state = THCState_getRngState(state);
@@ -130,7 +124,6 @@ struct curandStateMtgp32* THCRandom_generatorStates(struct THCState* state)
 }
 #endif
 /* Random seed */
-__host__
 unsigned long THCRandom_seed(THCState* state)
 {
   unsigned long s = (unsigned long)time(0);
@@ -138,7 +131,6 @@ unsigned long THCRandom_seed(THCState* state)
   return s;
 }
 
-__host__
 unsigned long THCRandom_seedAll(THCState* state)
 {
   unsigned long s = (unsigned long)time(0);
@@ -153,7 +145,6 @@ void THCRandom_manualSeed(THCState* state, unsigned long seed)
   THCRandom_manualSeedGen(gen, seed);
 }
 
-__host__
 void THCRandom_manualSeedAll(THCState* state, unsigned long seed)
 {
   THCRNGState* rng_state = THCState_getRngState(state);
@@ -169,13 +160,11 @@ void THCRandom_manualSeedAll(THCState* state, unsigned long seed)
 }
 
 /* Get the initial seed */
-__host__
 unsigned long THCRandom_initialSeed(THCState* state)
 {
   return THCRandom_getGenerator(state)->initial_seed;
 }
 
-__host__
 void THCRandom_getRNGState(THCState* state, THByteTensor *rng_state)
 {
   Generator* gen = THCRandom_getGenerator(state);
@@ -205,7 +194,6 @@ void set_rngstate_kernel(hipLaunchParm lp, curandStateMtgp32 *state, mtgp32_kern
 }
 #endif
 
-__host__
 void THCRandom_setRNGState(THCState* state, THByteTensor *rng_state)
 {
   Generator* gen = THCRandom_getGenerator(state);
@@ -306,16 +294,16 @@ THC_API void THCudaTensor_uniform(THCState* state, THCudaTensor *self_, double a
   ptrdiff_t size = THCudaTensor_nElement(state, self);
   float *data = THCudaTensor_data(state, self);
   #ifdef CURAND_PATH
-    /*  hipLaunchKernel(HIP_KERNEL_NAME(generate_uniform),
-                  dim3(NUM_BLOCKS),
-                  dim3(BLOCK_SIZE),
-                  0,
-                  THCState_getCurrentStream(state),
-                  gen->gen_states,
-                  size,
-                  data,
-                  a,
-                  b);*/
+      hipLaunchKernel(HIP_KERNEL_NAME(generate_uniform),
+                      dim3(NUM_BLOCKS),
+                      dim3(BLOCK_SIZE),
+                      0,
+                      THCState_getCurrentStream(state),
+                      gen->gen_states,
+                      size,
+                      data,
+                      a,
+                      b);
   #endif
 
   THCudaTensor_freeCopyTo(state, self, self_);
@@ -506,14 +494,14 @@ void THCudaTensor_renormRows(struct THCState* state,
   dim3 grid(rows < numSM * 4 ? rows : numSM * 4);
   dim3 block(cols < maxThreads ? cols : maxThreads);
 
-/*  hipLaunchKernel(HIP_KERNEL_NAME(renormRowsL1),
+  hipLaunchKernel(HIP_KERNEL_NAME(renormRowsL1),
                   dim3(grid),
                   dim3(block),
                   block.x * sizeof(float),
                   THCState_getCurrentStream(state),
                   THCudaTensor_data(state, t),
                   rows,
-                  cols);*/
+                  cols);
 }
 
 __global__
@@ -708,11 +696,12 @@ void sampleMultinomialWithoutReplacement(hipLaunchParm lp,
   }
 }
 
-THC_API void THCudaTensor_multinomial(struct THCState *state,
-                                      THCudaTensor *self,
-                                      THCudaTensor *prob_dist,
-                                      int n_sample,
-                                      int with_replacement)
+THC_API
+void THCudaTensor_multinomial(struct THCState *state,
+                              THCudaTensor *self,
+                              THCudaTensor *prob_dist,
+                              int n_sample,
+                              int with_replacement)
 {
   THAssert(THCudaTensor_checkGPU(state, 2, self, prob_dist));
   Generator* gen = THCRandom_getGenerator(state);
@@ -770,7 +759,7 @@ THC_API void THCudaTensor_multinomial(struct THCState *state,
     dim3 block(numCategories < maxThreads ? numCategories : maxThreads);
     dim3 grid(numDist < numSM * 4 ? numDist : numSM * 4);
 
-/*    hipLaunchKernel(HIP_KERNEL_NAME(sampleMultinomialOnce),
+    hipLaunchKernel(HIP_KERNEL_NAME(sampleMultinomialOnce),
                     dim3(grid),
                     dim3(block),
                     block.x * sizeof(float),
@@ -778,7 +767,7 @@ THC_API void THCudaTensor_multinomial(struct THCState *state,
                     THCudaTensor_data(state, self),
                     numDist,
                     numCategories,
-                    THCudaTensor_data(state, probDistContig));*/
+                    THCudaTensor_data(state, probDistContig));
   } else {
     // Generic, slow implementation with memory allocations
 
@@ -812,7 +801,7 @@ THC_API void THCudaTensor_multinomial(struct THCState *state,
       // distribution concurrently.
       dim3 grid(numDist < MAX_NUM_BLOCKS ? numDist : MAX_NUM_BLOCKS);
 
-    /*  hipLaunchKernel(HIP_KERNEL_NAME(sampleMultinomialWithReplacement),
+      hipLaunchKernel(HIP_KERNEL_NAME(sampleMultinomialWithReplacement),
                       dim3(grid),
                       dim3(block),
                       0,
@@ -822,7 +811,7 @@ THC_API void THCudaTensor_multinomial(struct THCState *state,
                       THCudaTensor_data(state, self),
                       numDist,
                       numCategories,
-                      THCudaTensor_data(state, prefixSum));*/
+                      THCudaTensor_data(state, prefixSum));
     } else {
       // Sample without replacement
 
@@ -849,7 +838,7 @@ THC_API void THCudaTensor_multinomial(struct THCState *state,
 
         // The kernel can only draw one sample before we have to
         // recalculate our distribution
-        /*hipLaunchKernel(HIP_KERNEL_NAME(sampleMultinomialWithoutReplacement),
+        hipLaunchKernel(HIP_KERNEL_NAME(sampleMultinomialWithoutReplacement),
                         dim3(grid),
                         dim3(block),
                         0,
@@ -861,7 +850,7 @@ THC_API void THCudaTensor_multinomial(struct THCState *state,
                         numDist,
                         numCategories,
                         THCudaTensor_data(state, origDist),
-                        THCudaTensor_data(state, prefixSum));*/
+                        THCudaTensor_data(state, prefixSum));
       }
     }
 

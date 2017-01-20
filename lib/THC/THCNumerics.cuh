@@ -597,13 +597,17 @@ struct THCNumerics<double> {
 /// tensor expects.
 template <typename In, typename Out>
 struct ScalarConvert {
-  static __host__ __device__ Out to(const In v) { return (Out) v; }
+  __device__
+  static
+  Out to(const In v) { return (Out) v; }
 };
 
 #ifdef CUDA_HALF_TENSOR
 template <typename Out>
 struct ScalarConvert<half, Out> {
-  static __host__ __device__ Out to(const half v) {
+  __device__
+  static
+  Out to(const half v) {
 #if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
     return (Out) __half2float(v);
 #else
@@ -614,7 +618,9 @@ struct ScalarConvert<half, Out> {
 
 template <typename In>
 struct ScalarConvert<In, half> {
-  static __host__ __device__ half to(const In v) {
+  __device__
+  static
+  half to(const In v) {
 #if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
     return __float2half((float) v);
 #else
@@ -625,9 +631,9 @@ struct ScalarConvert<In, half> {
 
 template <>
 struct ScalarConvert<half, half> {
-  static __host__ __device__ half to(const half v) {
-    return v;
-  }
+  __device__
+  static
+  half to(const half v) { return v; }
 };
 #endif
 

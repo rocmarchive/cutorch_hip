@@ -5,10 +5,10 @@
 #define IMPLEMENT_CUDA_TENSOR_BASIC_FUNC_(NAME, CFUNC, REAL)                       \
   struct Tensor_##NAME##_##REAL##_Op {                                             \
     __device__ __forceinline__                                                     \
-    void operator()(real* out, real* in) const { *out = CFUNC(*in); }              \                                                                \
+    void operator()(real* out, real* in) const { *out = CFUNC(*in); }              \
                                                                                    \
     __device__ __forceinline__                                                     \
-    void operator()(real* v) const { *v = CFUNC(*v); }                             \                                                  \
+    void operator()(real* v) const { *v = CFUNC(*v); }                             \
   };                                                                               \
                                                                                    \
   void THCTensor_(NAME)(THCState* state, THCTensor* self_, THCTensor* src)         \

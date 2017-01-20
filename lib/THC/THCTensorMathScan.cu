@@ -52,7 +52,6 @@ void THCudaTensor_kernel_scanOuterDim(hipLaunchParm lp,
 }
 
 template<class BinaryOp>
-__host__
 void THCudaTensor_scanOuterDim(THCState *state,
                                THCudaTensor *tgt,
                                THCudaTensor *src,
@@ -77,7 +76,7 @@ void THCudaTensor_scanOuterDim(THCState *state,
   unsigned maxGridDim = 1024;
   dim3 grid(min(maxGridDim, num_orows), min(maxGridDim, THCCeilDiv(num_irows, threads.x)));
 
-  /*hipLaunchKernel(HIP_KERNEL_NAME(THCudaTensor_kernel_scanOuterDim),
+  hipLaunchKernel(HIP_KERNEL_NAME(THCudaTensor_kernel_scanOuterDim),
                   dim3(grid),
                   dim3(threads),
                   0,
@@ -88,7 +87,7 @@ void THCudaTensor_scanOuterDim(THCState *state,
                   num_irows,
                   row_size,
                   init,
-                  binary_op);*/
+                  binary_op);
   hipError_t errcode = hipGetLastError();
   if (errcode != hipSuccess) {
     THError(hipGetErrorString(errcode));
@@ -185,7 +184,6 @@ void THCudaTensor_kernel_scanInnermostDim(hipLaunchParm lp,
 }
 
 template<class BinaryFunction>
-__host__
 void THCudaTensor_scanInnermostDim(THCState *state, THCudaTensor *tgt, THCudaTensor *src, float init, BinaryFunction binary_op)
 {
   unsigned ndim = THCudaTensor_nDimension(state, src);
@@ -199,7 +197,7 @@ void THCudaTensor_scanInnermostDim(THCState *state, THCudaTensor *tgt, THCudaTen
   dim3 threads(16, 32);
   dim3 grid(min(1024, THCCeilDiv(num_rows, threads.y)));
 
-  /*hipLaunchKernel(HIP_KERNEL_NAME(THCudaTensor_kernel_scanInnermostDim<16, 32>),
+  hipLaunchKernel(HIP_KERNEL_NAME(THCudaTensor_kernel_scanInnermostDim<16, 32>),
                   dim3(grid),
                   dim3(threads),
                   0,
@@ -209,7 +207,7 @@ void THCudaTensor_scanInnermostDim(THCState *state, THCudaTensor *tgt, THCudaTen
                   num_rows,
                   row_size,
                   init,
-                  binary_op);*/
+                  binary_op);
   hipError_t errcode = hipGetLastError();
   if (errcode != hipSuccess) {
     THError(hipGetErrorString(errcode));

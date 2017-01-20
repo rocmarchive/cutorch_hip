@@ -1,14 +1,14 @@
 #ifndef THC_GENERIC_FILE
-#define THC_GENERIC_FILE "generic/THCTensorSort.cu"
+    #define THC_GENERIC_FILE "generic/THCTensorSort.cu"
 #else
-#ifdef THRUST_PATH
-    // TODO: any includes needed here?
-#else
-    #include <bolt/amp/copy.h>
-    #include <bolt/amp/for_each.h>
-    #include <bolt/amp/stablesort_by_key.h>
-    #include <bolt/amp/iterator/counting_iterator.h>
-#endif
+    #ifdef THRUST_PATH
+        // TODO: any includes needed here?
+    #else
+        #include <bolt/amp/copy.h>
+        #include <bolt/amp/for_each.h>
+        #include <bolt/amp/stablesort_by_key.h>
+        #include <bolt/amp/iterator/counting_iterator.h>
+    #endif
 
 // In alignment with default sort on a c++ map, this function
 // will permute key and value tensors identically, and
@@ -53,7 +53,7 @@ THC_API void THCTensor_(sortKeyValueInplace)(THCState* state,
     THError("Slice to sort is too large");
   }
 
-#define HANDLE_CASE(TYPE, A, SIZE)      //                                \
+#define HANDLE_CASE(TYPE, A, SIZE)                                      \
   do {                                                                  \
     int blockSize = SIZE / 2;                                           \
     if (blockSize < 1) {                                                \
@@ -74,30 +74,42 @@ THC_API void THCTensor_(sortKeyValueInplace)(THCState* state,
                       dim3{block},                                      \
                       0,                                                \
                       THCState_getCurrentStream(state),                 \
-                      keyInfo,                                          \
+                      keyInfo.data,                                     \
+                      keyInfo.dSizes,                                   \
+                      keyInfo.dStrides,                                 \
+                      keyInfo.dims,                                     \
                       keySlices,                                        \
                       (TYPE) keySliceSize,                              \
                       (TYPE) keyInfo.strides[collapseKeyDim],           \
-                      valueInfo,                                        \
+                      valueInfo.data,                                   \
+                      valueInfo.dSizes,                                 \
+                      valueInfo.dStrides,                               \
+                      valueInfo.dims,                                   \
                       (TYPE) valueInfo.strides[collapseValueDim],       \
                       GTComp<real>());                                  \
     } else {                                                            \
-     hipLaunchKernel(HIP_KERNEL_NAME(bitonicSortKVInPlace<real,        \
-                                                           long,        \
-                                                           A,           \
-                                                           -1,          \
-                                                           LTComp<real>,\
-                                                           TYPE,        \
-                                                           SIZE>),      \
+     hipLaunchKernel(HIP_KERNEL_NAME(bitonicSortKVInPlace<real,         \
+                                                          long,         \
+                                                          A,            \
+                                                          -1,           \
+                                                          LTComp<real>, \
+                                                          TYPE,         \
+                                                          SIZE>),       \
                       dim3{grid},                                       \
                       dim3{block},                                      \
                       0,                                                \
                       THCState_getCurrentStream(state),                 \
-                      keyInfo,                                          \
+                      keyInfo.data,                                     \
+                      keyInfo.dSizes,                                   \
+                      keyInfo.dStrides,                                 \
+                      keyInfo.dims,                                     \
                       keySlices,                                        \
                       (TYPE) keySliceSize,                              \
                       (TYPE) keyInfo.strides[collapseKeyDim],           \
-                      valueInfo,                                        \
+                      valueInfo.data,                                   \
+                      valueInfo.dSizes,                                 \
+                      valueInfo.dStrides,                               \
+                      valueInfo.dims,                                   \
                       (TYPE) valueInfo.strides[collapseValueDim],       \
                       LTComp<real>());                                  \
     }                                                                   \
@@ -183,7 +195,8 @@ void sortViaThrust(THCState* state,
                    THCTensor* sorted,
                    THCudaLongTensor* indices,
                    THCTensor* input,
-                   int dim, bool dir) {
+                   int dim,
+                   bool dir) {
   long nDims = THCTensor_(nDimension)(state, input);
 
   ptrdiff_t totalElements = THCTensor_(nElement)(state, input);
@@ -255,9 +268,9 @@ void sortViaThrust(THCState* state,
   thrust::counting_iterator<long> countIter(0);
 
   thrust::copy(
-#if CUDA_VERSION >= 7000
+    #if CUDA_VERSION >= 7000
     thrust::cuda::par.on(THCState_getCurrentStream(state)),
-#endif
+    #endif
     countIter, countIter + totalElements, indexIter);
 #else
   bolt::amp::counting_iterator<long> countIter{0};
@@ -292,6 +305,7 @@ void sortViaThrust(THCState* state,
                                 keyIter + totalElements,
                                 indexIter,
                                 ThrustLTOp<real>());
+#endif
   }
 
   // Then, re-sort according to slice that each index is

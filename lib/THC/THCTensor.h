@@ -1,9 +1,9 @@
 #ifndef THC_TENSOR_INC
 #define THC_TENSOR_INC
 
-#if defined(__HCC__)
-    #include <hc.hpp>
-#endif
+//#if defined(__HCC__)
+//    #include <hc.hpp>
+//#endif
 
 #include "THTensor.h"
 #include "THCStorage.h"
