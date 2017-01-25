@@ -492,8 +492,6 @@ bool THC_pointwiseApply3(THCState* state,
     oldC = c;
     c = TensorUtils<TensorTypeC>::newContiguous(state, c);
   }
-
-/*
 #define HANDLE_CASE(TYPE, A, B, C)                                      \
   hipLaunchKernel(HIP_KERNEL_NAME(kernelPointwiseApply3<Op,                                             \
                         typename TensorUtils<TensorTypeA>::DataType,    \
@@ -617,7 +615,6 @@ bool THC_pointwiseApply3(THCState* state,
 #undef HANDLE_C_CASE
 #undef HANDLE_B_CASE
 #undef HANDLE_A_CASE
-*/
 
   if (oldA) {
     // Ignore overlaps when copying back; if we use THCTensor_copy
