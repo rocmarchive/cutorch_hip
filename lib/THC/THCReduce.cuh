@@ -208,7 +208,6 @@ bool THC_reduceDim(THCState* state,
     block = getNoncontigReduceBlock();
   }
 
-#ifdef CUDA_PATH
   // Resize out to correspond to the reduced size
   THLongStorage* sizes = TensorUtils<TensorType>::newSizeOf(state, in);
   THLongStorage_set(sizes, dim, 1);
@@ -278,11 +277,6 @@ bool THC_reduceDim(THCState* state,
     }                                                  \
   }
 
-#else
-    #define HANDLE_CASE(TYPE, OUT, IN)
-    #define HANDLE_IN_CASE(TYPE, OUT, IN)
-    #define HANDLE_OUT_CASE(TYPE, OUT, IN)
-#endif 
 
   if (TensorUtils<TensorType>::canUse32BitIndexMath(state, out) &&
       TensorUtils<TensorType>::canUse32BitIndexMath(state, in)) {
