@@ -93,7 +93,7 @@ kernelReduceContigDim(hipLaunchParm lp, T* outData, IndexType* outSizes, IndexTy
 
   // Get the offset in `out` for the reduction
   const IndexType outOffset =
-    IndexToOffset<T, IndexType, ADims>::get(sliceIndex, outData, outSizes, outStrides, outDims);
+    IndexToOffset<T, IndexType, ADims>::get(sliceIndex, outSizes, outStrides, outDims);
 
   // Get the base offset in `in` for this block's reduction
   const IndexType inBaseOffset =
