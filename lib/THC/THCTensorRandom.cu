@@ -168,6 +168,8 @@ void THCRandom_getRNGState(THCState* state, THByteTensor *rng_state)
 #endif
 #ifdef CURAND_PATH
   static const size_t states_size = MAX_NUM_BLOCKS * sizeof(curandStateMtgp32);
+#else
+  static const size_t states_size = 0;
 #endif
   static const size_t seed_size = sizeof(unsigned long);
   static const size_t total_size = states_size + seed_size;
@@ -195,6 +197,8 @@ void THCRandom_setRNGState(THCState* state, THByteTensor *rng_state)
 #endif
 #ifdef CURAND_PATH
   static const size_t states_size = MAX_NUM_BLOCKS * sizeof(curandStateMtgp32);
+#else
+  static const size_t states_size = 0;
 #endif
   static const size_t seed_size = sizeof(unsigned long);
   static const size_t total_size = states_size + seed_size;

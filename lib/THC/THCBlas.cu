@@ -278,7 +278,7 @@ void THCudaBlas_Sgemm(THCState *state, char transa, char transb, long m, long n,
 #if CUDA_VERSION < 8000
 #  define CUDA_R_16F CUBLAS_DATA_HALF
 #endif
-
+/*
 void THCudaBlas_Hgemm(THCState *state, char transa, char transb, long m, long n, long k, half alpha, half *a, long lda, half *b, long ldb, half beta, half *c, long ldc)
 {
   adjustLd(transa, transb, m, n, k, &lda, &ldb, &ldc);
@@ -339,8 +339,8 @@ void THCudaBlas_Hgemm(THCState *state, char transa, char transb, long m, long n,
           "with th bound [val] <= %d", INT_MAX);
 
 }
+*/
 #endif
-
 void THCudaBlas_Dgemm(THCState *state, char transa, char transb, long m, long n, long k, double alpha, double *a, long lda, double *b, long ldb, double beta, double *c, long ldc)
 {
   adjustLd(transa, transb, m, n, k, &lda, &ldb, &ldc);
