@@ -685,7 +685,7 @@ for k, Tensor_ in pairs(handledTypenames) do
             {name=Tensor},
             {name=Tensor}})
 
-    for _,name in ipairs({"min", "max"}) do
+--[[    for _,name in ipairs({"min", "max"}) do
        wrap(name,
             cname(name .. "all"),
             {{name=Tensor},
@@ -708,6 +708,7 @@ for k, Tensor_ in pairs(handledTypenames) do
              {name=Tensor, method={default=1}},
              {name=real}})
     end
+]]--
 
     if Tensor == 'CudaByteTensor' then
        for _,name in pairs({'all', 'any'}) do
@@ -738,7 +739,7 @@ for k, Tensor_ in pairs(handledTypenames) do
             {name=Tensor}})
    end
 
-    wrap("sum",
+    --[[wrap("sum",
          cname("sumall"),
          {{name=Tensor},
             {name=accreal, creturned=true}},
@@ -755,8 +756,8 @@ for k, Tensor_ in pairs(handledTypenames) do
          {{name=Tensor, default=true, returned=true},
             {name=Tensor},
             {name="index"}})
-
-    wrap("mean",
+   ]]--
+   --[[ wrap("mean",
          cname("meanall"),
          {{name=Tensor},
           {name=accreal, creturned=true}},
@@ -764,7 +765,7 @@ for k, Tensor_ in pairs(handledTypenames) do
          {{name=Tensor, default=true, returned=true},
             {name=Tensor},
             {name="index"}})
-
+]]--
     wrap("maskedFill",
          cname("maskedFill"),
          {{name=Tensor, returned=true, method={default='nil'}},
