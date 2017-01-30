@@ -23,7 +23,11 @@
 #include <type_traits>
 
 #include <amp.h>
-#include <amp_short_vectors.h>
+#if defined(__KALMAR_AMP__)
+    #include <amp_short_vectors.h>
+#else
+    #include <hc_short_vector.hpp>
+#endif
 
 #include "bolt/amp/bolt.h"
 #include "bolt/amp/functional.h"
@@ -52,6 +56,14 @@
 #define min(a,b)    (((a) < (b)) ? (a) : (b))
 #define SET_HISTOGRAM(setIdx, key) ldsSortData[(setIdx)*NUM_BUCKET+key]
 
+#if !defined(uint_4)
+    #if defined(__KALMAR_AMP__)
+        #define uint_4 concurrency::graphics::uint_4
+    #else
+        #define uint_4 hc::short_vector::uint_4
+    #endif
+#endif
+
 namespace bolt {
 namespace amp {
 namespace detail {
@@ -70,8 +82,12 @@ namespace detail {
 
 	}
 	static
-        inline
-        unsigned int scanLocalMemAndTotal(unsigned int val, unsigned int* lmem, unsigned int *totalSum, int exclusive, concurrency::tiled_index< WG_SIZE > t_idx) restrict(amp)
+    inline
+    unsigned int scanLocalMemAndTotal(unsigned int val,
+	   						          unsigned int* lmem,
+									  unsigned int* totalSum,
+									  int exclusive,
+									  const concurrency::tiled_index<WG_SIZE>& t_idx) restrict(amp)
 	{
 		// Set first half of local memory to zero to make room for scanning
 		int l_id = t_idx.local[ 0 ];
@@ -94,8 +110,8 @@ namespace detail {
 		return lmem[l_id-exclusive];
 	}
 	static
-        inline
-        unsigned int prefixScanVectorEx(uint_4* data ) restrict(amp)
+    inline
+    unsigned int prefixScanVectorEx(uint_4* data ) restrict(amp)
 	{
 		unsigned int sum = 0;
 		unsigned int tmp = data[0].x;
@@ -115,10 +131,10 @@ namespace detail {
 	static
     inline
     uint_4 localPrefixSum256V(uint_4 pData,
-                                                     unsigned int,
-                                                     unsigned int* totalSum,
-                                                     unsigned int* sorterSharedMemory,
-                                                     const concurrency::tiled_index<WG_SIZE>& t_idx) restrict(amp)
+                              unsigned int,
+                              unsigned int* totalSum,
+                              unsigned int* sorterSharedMemory,
+                              const concurrency::tiled_index<WG_SIZE>& t_idx) restrict(amp)
 	{
 		unsigned int s4 = prefixScanVectorEx( &pData );
 		unsigned int rank = scanLocalMemAndTotal( s4, sorterSharedMemory, totalSum,  1, t_idx);
@@ -298,9 +314,9 @@ namespace detail {
 	static
     inline
     unsigned int scanlMemPrivData(unsigned int val,
-                                 unsigned int* lmem,
-                                 int exclusive,
-	                             const concurrency::tiled_index<WG_SIZE>& t_idx) restrict(amp)
+                                  unsigned int* lmem,
+                                  int exclusive,
+	                              const concurrency::tiled_index<WG_SIZE>& t_idx) restrict(amp)
 	{
 		// Set first half of local memory to zero to make room for scanning
 		unsigned int lIdx = t_idx.local[ 0 ];
@@ -328,10 +344,10 @@ template<typename DVRandomAccessIterator, typename StrictWeakOrdering>
 static
 inline
 void sort_enqueue_int_uint(bolt::amp::control &ctl,
-             DVRandomAccessIterator &first, DVRandomAccessIterator &last,
-             StrictWeakOrdering comp,
-			 bool int_flag
-			 )
+                           DVRandomAccessIterator &first,
+						   DVRandomAccessIterator &last,
+                           StrictWeakOrdering comp,
+			               bool int_flag)
 {
 
 	typedef typename std::iterator_traits< DVRandomAccessIterator >::value_type Values;
@@ -860,9 +876,10 @@ void sort_enqueue_int_uint(bolt::amp::control &ctl,
                                            int
                                          >::value
                            >::type  /*If enabled then this typename will be evaluated to void*/
-    sort_enqueue( control &ctl,
-                         DVRandomAccessIterator first, DVRandomAccessIterator last,
-							 StrictWeakOrdering comp)
+    sort_enqueue(control &ctl,
+                 DVRandomAccessIterator first,
+				 DVRandomAccessIterator last,
+				 StrictWeakOrdering comp)
 	{
 		bool int_flag = 1;
 		sort_enqueue_int_uint(ctl, first, last, comp, int_flag);
@@ -936,8 +953,10 @@ void sort_enqueue_int_uint(bolt::amp::control &ctl,
 			!(std::is_same< typename std::iterator_traits<DVRandomAccessIterator >::value_type, unsigned int >::value ||
 					std::is_same< typename std::iterator_traits<DVRandomAccessIterator >::value_type,          int >::value)
 	>::type
-	sort_enqueue(bolt::amp::control &ctl, const DVRandomAccessIterator& first, const DVRandomAccessIterator& last,
-			const StrictWeakOrdering& comp)
+	sort_enqueue(bolt::amp::control &ctl,
+				 const DVRandomAccessIterator& first,
+				 const DVRandomAccessIterator& last,
+			     const StrictWeakOrdering& comp)
 	{
 
 		bolt::amp::detail::stablesort_enqueue(ctl,first,last,comp);
@@ -985,9 +1004,11 @@ void sort_pick_iterator( bolt::amp::control &ctl,
 
 
 template<typename DVRandomAccessIterator, typename StrictWeakOrdering>
-void sort_pick_iterator( control &ctl,
-                         const DVRandomAccessIterator& first, const DVRandomAccessIterator& last,
-                         const StrictWeakOrdering& comp, bolt::amp::fancy_iterator_tag )
+void sort_pick_iterator(control &ctl,
+                        const DVRandomAccessIterator& first,
+						const DVRandomAccessIterator& last,
+                        const StrictWeakOrdering& comp,
+						bolt::amp::fancy_iterator_tag)
 {
 //    static_assert( false, "It is not possible to sort fancy iterators. They are not mutable" );
 }
@@ -1000,9 +1021,11 @@ void sort_pick_iterator( control &ctl,
 template<typename RandomAccessIterator, typename StrictWeakOrdering>
 static
 inline
-void sort_pick_iterator( bolt::amp::control &ctl,
-                         const RandomAccessIterator& first, const RandomAccessIterator& last,
-                         const StrictWeakOrdering& comp, std::random_access_iterator_tag )
+void sort_pick_iterator(bolt::amp::control &ctl,
+                        const RandomAccessIterator& first,
+						const RandomAccessIterator& last,
+                        const StrictWeakOrdering& comp,
+						std::random_access_iterator_tag)
 {
     typedef typename std::iterator_traits<RandomAccessIterator>::value_type T;
     int szElements = static_cast< int >( std::distance( first, last ) );
@@ -1041,9 +1064,11 @@ void sort_pick_iterator( bolt::amp::control &ctl,
 template<typename RandomAccessIterator, typename StrictWeakOrdering>
 static
 inline
-void sort_detect_random_access( bolt::amp::control &ctl,
-                                const RandomAccessIterator& first, const RandomAccessIterator& last,
-                                const StrictWeakOrdering& comp, std::input_iterator_tag )
+void sort_detect_random_access(bolt::amp::control &ctl,
+                               const RandomAccessIterator& first,
+							   const RandomAccessIterator& last,
+                               const StrictWeakOrdering& comp,
+							   std::input_iterator_tag)
 {
     //  \TODO:  It should be possible to support non-random_access_iterator_tag iterators, if we copied the data
     //  to a temporary buffer.  Should we?
@@ -1051,9 +1076,11 @@ void sort_detect_random_access( bolt::amp::control &ctl,
 };
 
 template<typename RandomAccessIterator, typename StrictWeakOrdering>
-void sort_detect_random_access( bolt::amp::control &ctl,
-                                const RandomAccessIterator& first, const RandomAccessIterator& last,
-                                const StrictWeakOrdering& comp, std::random_access_iterator_tag )
+void sort_detect_random_access(bolt::amp::control &ctl,
+                               const RandomAccessIterator& first,
+							   const RandomAccessIterator& last,
+                               const StrictWeakOrdering& comp,
+							   std::random_access_iterator_tag)
 {
     return sort_pick_iterator(ctl, first, last, comp,
                               typename std::iterator_traits< RandomAccessIterator >::iterator_category{} );

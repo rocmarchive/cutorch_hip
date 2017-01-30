@@ -44,7 +44,12 @@
 #include <algorithm>
 #include <type_traits>
 #include <amp.h>
-#include <amp_short_vectors.h>
+#if defined(__KALMAR_AMP__)
+    #include <amp_short_vectors.h>
+#else
+    #include <hc_short_vector.hpp>
+#endif
+
 #include "bolt/amp/pair.h"
 #include "bolt/amp/device_vector.h"
 #include "bolt/amp/iterator/iterator_traits.h"
@@ -69,16 +74,23 @@
 #define min(a,b)    (((a) < (b)) ? (a) : (b))
 #define SET_HISTOGRAM(setIdx, key) ldsSortData[(setIdx)*NUM_BUCKET+key]
 
+#if !defined(uint_4)
+    #if defined(__KALMAR_AMP__)
+        #define uint_4 concurrency::graphics::uint_4
+    #else
+        #define uint_4 hc::short_vector::uint_4
+    #endif
+#endif
+
 namespace bolt {
 namespace amp {
 
 namespace detail {
-
 	static
 	inline
 	uint_4 SELECT_UINT4_FOR_KEY(const uint_4 &a,
-													   const uint_4 &b,
-													   const uint_4& condition)  restrict(amp)
+								const uint_4 &b,
+								const uint_4& condition)  restrict(amp)
 	{
 		uint_4 res;
 		res.x = (condition.x )? b.x : a.x;
