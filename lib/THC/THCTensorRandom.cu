@@ -145,9 +145,7 @@ void THCRandom_manualSeedAll(THCState* state, unsigned long seed)
   THCudaCheck(hipGetDevice(&currentDevice));
   for (int i = 0; i < rng_state->num_devices; ++i) {
     THCudaCheck(hipSetDevice(i));
-#ifdef CUDA_PATH
     THCRandom_manualSeed(state, seed);
-#endif
   }
   THCudaCheck(hipSetDevice(currentDevice));
 }
