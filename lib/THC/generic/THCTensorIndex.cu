@@ -54,7 +54,7 @@ void THCTensor_(indexCopy)(THCState *state, THCTensor *dst, int dim, THCudaLongT
     smallIndexGrid, smallIndexBlock, 0, stream,           \
       dstInfo.data, dstInfo.dSizes, dstInfo.dStrides, dstInfo.dims,\
       srcInfo.data, srcInfo.dSizes, srcInfo.dStrides, srcInfo.dims,\
-      indicesInfo.data, indicesInfo.dSizes, indicesInfo.dStrides, indicesInfo.dims\
+      indicesInfo.data, indicesInfo.dSizes, indicesInfo.dStrides, indicesInfo.dims,\
       dstCopyDim, srcCopyDim, sliceSize, dstCopyDimSize);
 
 #define LARGE_INDEX(TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM) \
@@ -62,7 +62,7 @@ void THCTensor_(indexCopy)(THCState *state, THCTensor *dst, int dim, THCudaLongT
       largeIndexGrid, largeIndexBlock, 0, stream,          \
       dstInfo.data, dstInfo.dSizes, dstInfo.dStrides, dstInfo.dims,\
       srcInfo.data, srcInfo.dSizes, srcInfo.dStrides, srcInfo.dims,\
-      indicesInfo.data, indicesInfo.dSizes, indicesInfo.dStrides, indicesInfo.dims\
+      indicesInfo.data, indicesInfo.dSizes, indicesInfo.dStrides, indicesInfo.dims,\
       dstCopyDim, srcCopyDim, sliceSize, dstCopyDimSize); 
 
 
@@ -187,7 +187,7 @@ void THCTensor_(indexAdd)(THCState *state, THCTensor *dst, int dim, THCudaLongTe
       smallIndexGrid, smallIndexBlock, 0, stream,   \
       dstInfo.data, dstInfo.dSizes, dstInfo.dStrides, dstInfo.dims,\
       srcInfo.data, srcInfo.dSizes, srcInfo.dStrides, srcInfo.dims,\
-      indicesInfo.data, indicesInfo.dSizes, indicesInfo.dStrides, indicesInfo.dims\
+      indicesInfo.data, indicesInfo.dSizes, indicesInfo.dStrides, indicesInfo.dims,\
       dstAddDim, srcAddDim, sliceSize, dstAddDimSize);
  
 #define LARGE_INDEX(TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM) \
@@ -195,7 +195,7 @@ void THCTensor_(indexAdd)(THCState *state, THCTensor *dst, int dim, THCudaLongTe
       largeIndexGrid, largeIndexBlock, 0, stream,   \
       dstInfo.data, dstInfo.dSizes, dstInfo.dStrides, dstInfo.dims,\
       srcInfo.data, srcInfo.dSizes, srcInfo.dStrides, srcInfo.dims,\
-      indicesInfo.data, indicesInfo.dSizes, indicesInfo.dStrides, indicesInfo.dims\
+      indicesInfo.data, indicesInfo.dSizes, indicesInfo.dStrides, indicesInfo.dims,\
       dstAddDim, srcAddDim, sliceSize, dstAddDimSize); 
 
 
@@ -314,14 +314,14 @@ void THCTensor_(indexFill)(THCState *state, THCTensor *dst, int dim, THCudaLongT
   hipLaunchKernel(HIP_KERNEL_NAME(indexFillSmallIndex<TENSOR_TYPE, TYPE, DST_DIM, IDX_DIM>), \
       smallIndexGrid, smallIndexBlock, 0, stream,   \
       dstInfo.data, dstInfo.dSizes, dstInfo.dStrides, dstInfo.dims,\
-      indicesInfo.data, indicesInfo.dSizes, indicesInfo.dStrides, indicesInfo.dims\
+      indicesInfo.data, indicesInfo.dSizes, indicesInfo.dStrides, indicesInfo.dims,\
       dstFillDim, sliceSize, dstFillDimSize, val);
  
 #define LARGE_INDEX(TENSOR_TYPE, TYPE, DST_DIM, IDX_DIM)  \
   hipLaunchKernel(HIP_KERNEL_NAME(indexFillLargeIndex<TENSOR_TYPE, TYPE, DST_DIM, IDX_DIM>), \
       largeIndexGrid, largeIndexBlock, 0, stream,   \
       dstInfo.data, dstInfo.dSizes, dstInfo.dStrides, dstInfo.dims,\
-      indicesInfo.data, indicesInfo.dSizes, indicesInfo.dStrides, indicesInfo.dims\
+      indicesInfo.data, indicesInfo.dSizes, indicesInfo.dStrides, indicesInfo.dims,\
       dstFillDim, sliceSize, dstFillDimSize, val); 
 
 
@@ -439,7 +439,7 @@ void THCTensor_(indexSelect)(THCState *state, THCTensor *dst, THCTensor *src, in
       smallIndexGrid, smallIndexBlock, 0, stream,          \
       dstInfo.data, dstInfo.dSizes, dstInfo.dStrides, dstInfo.dims,\
       srcInfo.data, srcInfo.dSizes, srcInfo.dStrides, srcInfo.dims,\
-      indicesInfo.data, indicesInfo.dSizes, indicesInfo.dStrides, indicesInfo.dims\
+      indicesInfo.data, indicesInfo.dSizes, indicesInfo.dStrides, indicesInfo.dims,\
       dstSelectDim, srcSelectDim, sliceSize, srcSelectDimSize);
 
 
@@ -448,7 +448,7 @@ void THCTensor_(indexSelect)(THCState *state, THCTensor *dst, THCTensor *src, in
       largeIndexGrid, largeIndexBlock, 0, stream,                  \
       dstInfo.data, dstInfo.dSizes, dstInfo.dStrides, dstInfo.dims,\
       srcInfo.data, srcInfo.dSizes, srcInfo.dStrides, srcInfo.dims,\
-      indicesInfo.data, indicesInfo.dSizes, indicesInfo.dStrides, indicesInfo.dims\
+      indicesInfo.data, indicesInfo.dSizes, indicesInfo.dStrides, indicesInfo.dims,\
       dstSelectDim, srcSelectDim, dstTotalSize, sliceSize, srcSelectDimSize);
  
 
