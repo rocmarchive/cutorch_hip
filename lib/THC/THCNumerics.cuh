@@ -331,12 +331,12 @@ struct THCNumerics<half> {
 
   static inline __host__ __device__ half neg(half a) {
 #if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
-#ifdef CUDA_HALF_INSTRUCTIONS
-    return __hneg(a);
-#else
-    float fa = __half2float(a);
-    return __float2half(-fa);
-#endif
+//#ifdef CUDA_HALF_INSTRUCTIONS
+    return __hneq(a);
+//#else
+//    float fa = __half2float(a);
+//    return __float2half(-fa);
+//#endif
 #else // __CUDA_ARCH__
     return THC_float2half(-(THC_half2float(a)));
 #endif
