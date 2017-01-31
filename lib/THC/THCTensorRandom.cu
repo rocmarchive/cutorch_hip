@@ -161,9 +161,6 @@ void THCRandom_getRNGState(THCState* state, THByteTensor *rng_state)
   Generator* gen = THCRandom_getGenerator(state);
 
   // The RNG state comprises the MTPG32 states and the seed.
-#ifdef __HCC__
-  static const size_t states_size = 0;
-#endif
 #ifdef CURAND_PATH
   static const size_t states_size = MAX_NUM_BLOCKS * sizeof(curandStateMtgp32);
 #else
@@ -190,9 +187,6 @@ void THCRandom_setRNGState(THCState* state, THByteTensor *rng_state)
 {
   Generator* gen = THCRandom_getGenerator(state);
 
-#ifdef __HCC__
-  static const size_t states_size = 0; 
-#endif
 #ifdef CURAND_PATH
   static const size_t states_size = MAX_NUM_BLOCKS * sizeof(curandStateMtgp32);
 #else
