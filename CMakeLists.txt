@@ -8,6 +8,13 @@ ELSE()
   SET(HIP_PATH $ENV{HIP_PATH})
 ENDIF()
 
+# HCC_PATH
+IF(NOT DEFINED $ENV{HCC_PATH})
+  SET(HCC_PATH /opt/rocm/hcc)
+ELSE()
+  SET(HCC_PATH $ENV{HCC_PATH})
+ENDIF()
+
 # HIPBLAS_PATH
 IF(NOT DEFINED $ENV{HIPBLAS_PATH})
   SET(HIPBLAS_PATH /opt/rocm/hcblas/)
@@ -45,13 +52,12 @@ IF(CUDA_HAS_FP16 OR NOT ${CUDA_VERSION} LESS 7.5)
 ENDIF()
 
 # TODO: temporary blunt implements.
-include_directories(/home/alexv/Programming/HCC/cmake-build-release/include)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/external/bolt/include)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/external/boost)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/external/hcblas/lib/include)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/external/hcrng/lib/include)
-#include_directories(${HIP_ROOT_DIR}/include)
-include_directories(/home/alexv/Programming/HIP_private_github/include)
+IF (${PLATFORM} MATCHES "hcc")
+  include_directories(${HCC_PATH}/include)
+  include_directories(${CMAKE_CURRENT_SOURCE_DIR}/external/bolt/include)
+  include_directories(${CMAKE_CURRENT_SOURCE_DIR}/external/boost)
+ENDIF()
+include_directories(${HIP_PATH}/include)
 
 INCLUDE_DIRECTORIES(${CUDA_INCLUDE_DIRS})
 
