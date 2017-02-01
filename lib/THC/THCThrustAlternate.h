@@ -69,7 +69,7 @@ template<class _T1, class _T2>
 }
 
 template <typename UnaryFunction>
-__global__ void unary_transform_kernel(hipLaunchParm lp, float* first, long firstOffset,
+inline __global__ void unary_transform_kernel(hipLaunchParm lp, float* first, long firstOffset,
                      float* result, long resultOffset, long size, UnaryFunction f) {
   if (size == 0) {
     return;
@@ -83,7 +83,7 @@ __global__ void unary_transform_kernel(hipLaunchParm lp, float* first, long firs
 }
 
 template <typename BinaryFunction>
-__global__ void binary_transform_kernel(hipLaunchParm lp, float* first1, long first1Offset,
+inline __global__ void binary_transform_kernel(hipLaunchParm lp, float* first1, long first1Offset,
                       float* first2, long first2Offset,
                       float* result, long resultOffset, long size,  BinaryFunction f) {
   if (size == 0) {
@@ -130,7 +130,7 @@ void transform(THCState* state, THCudaTensor* first1, THCudaTensor* first2, THCu
 // Reduce routines
 #define BLOCK_SIZE 256
 template <typename BinaryFunction>
-__global__ void reduce_kernel_pass1(hipLaunchParm lp, float *g_idata, float *devPartialOut, unsigned int n, unsigned int reduce_num_blocks, float val,  BinaryFunction f) { 
+inline __global__ void reduce_kernel_pass1(hipLaunchParm lp, float *g_idata, float *devPartialOut, unsigned int n, unsigned int reduce_num_blocks, float val,  BinaryFunction f) { 
     __shared__ float buf_tmp[BLOCK_SIZE];
     int idx = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;
     int block_idx = idx / BLOCK_SIZE;
@@ -159,7 +159,7 @@ __global__ void reduce_kernel_pass1(hipLaunchParm lp, float *g_idata, float *dev
 }
 
 template <typename BinaryFunction>
-__global__ void reduce_kernel_pass2(hipLaunchParm lp, float *devPartialOut, float *g_odata, unsigned int residualSize, float val,  BinaryFunction f) {
+inline __global__ void reduce_kernel_pass2(hipLaunchParm lp, float *devPartialOut, float *g_odata, unsigned int residualSize, float val,  BinaryFunction f) {
     float res = val;
     for (uint i = 0; i < residualSize; i++)
     {
