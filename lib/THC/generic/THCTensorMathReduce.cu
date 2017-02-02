@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 #ifndef THC_GENERIC_FILE
 #define THC_GENERIC_FILE "generic/THCTensorMathReduce.cu"
 #else
