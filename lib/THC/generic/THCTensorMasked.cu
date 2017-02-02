@@ -75,13 +75,21 @@ THCTensor_(maskedCopy)(THCState* state,
     maskPrefixSumData(THCudaLongTensor_data(state, maskPrefixSum));
 
   thrust::exclusive_scan(
-#if CUDA_VERSION >= 7000
-    thrust::cuda::par.on(THCState_getCurrentStream(state)),
-#endif
+    #if CUDA_VERSION >= 7000
+        thrust::cuda::par.on(THCState_getCurrentStream(state)),
+    #endif
     maskData,
     maskData + THCudaLongTensor_nElement(state, maskLong),
     maskPrefixSumData);
+#else
+    auto maskData = THCudaLongTensor_data(state, maskLong);
+    auto maskPrefixSumData = THCudaLongTensor_data(state, maskPrefixSum);
+
+    bolt::amp::exclusive_scan(maskData,
+                              maskData + THCudaLongTensor_nElement(state, maskLong),
+                              maskPrefixSumData);
 #endif
+
 
   // We are getting elements from `src` based on an offset from
   // `maskPrefixSum`, so that should be made contiguous too
@@ -91,6 +99,9 @@ THCTensor_(maskedCopy)(THCState* state,
   // maskPrefixSum
   bool status = false;
   /*status = THC_pointwiseApply3(
+=======
+  bool status = THC_pointwiseApply3(
+>>>>>>> duct_tape-ext
     state, tensor, mask, maskPrefixSum,
     TensorMaskedCopyOp<real, unsigned char, long>(
       THCTensor_(data)(state, contigSrc)));*/
@@ -152,16 +163,26 @@ THCTensor_(maskedSelect)(THCState* state,
     maskPrefixSumData(THCudaLongTensor_data(state, maskPrefixSum));
 
   thrust::exclusive_scan(
-#if CUDA_VERSION >= 7000
-    thrust::cuda::par.on(THCState_getCurrentStream(state)),
-#endif
+    #if CUDA_VERSION >= 7000
+        thrust::cuda::par.on(THCState_getCurrentStream(state)),
+    #endif
     maskData,
     maskData + THCudaLongTensor_nElement(state, maskLong),
     maskPrefixSumData);
+#else
+    auto maskData = THCudaLongTensor_data(state, maskLong);
+    auto maskPrefixSumData = THCudaLongTensor_data(state, maskPrefixSum);
+
+    bolt::amp::exclusive_scan(maskData,
+                              maskData + THCudaLongTensor_nElement(state, maskLong),
+                              maskPrefixSumData);
 #endif
- bool status = false;
+  bool status = false;
   // Then copy over the masked elements at their desired output index
   /*status = THC_pointwiseApply3(
+=======
+  bool status = THC_pointwiseApply3(
+>>>>>>> duct_tape-ext
     state, mask, maskPrefixSum,
     src, TensorMaskedSelectOp<real, unsigned char, long>(
       THCTensor_(data)(state, tensor)));*/

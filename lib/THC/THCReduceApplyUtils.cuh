@@ -1,21 +1,23 @@
-#include "hip/hip_runtime.h"
 #ifndef THC_REDUCE_APPLY_UTILS_INC
 #define THC_REDUCE_APPLY_UTILS_INC
 
-#include <cuda.h>
-#include "hip/hip_runtime.h"
-#include <assert.h>
 #include "THCGeneral.h"
 #include "THCTensor.h"
 #include "THCDeviceUtils.cuh"
 #include "THCTensorInfo.cuh"
+
+#include <hip/hip_runtime.h>
+
+#include <assert.h>
 
 // Enum that indicates whether tensor arguments are read/write or
 // read-only
 enum TensorArgType { ReadWrite, ReadOnly };
 
 template <typename IndexType>
-__device__ __forceinline__ IndexType getLinearBlockId() {
+__device__ __forceinline__
+static
+IndexType getLinearBlockId() {
   return hipBlockIdx_z * hipGridDim_y * hipGridDim_x +
     hipBlockIdx_y * hipGridDim_x +
     hipBlockIdx_x;
@@ -24,6 +26,8 @@ __device__ __forceinline__ IndexType getLinearBlockId() {
 // Block-wide reduction in shared memory helper; only hipThreadIdx_x == 0 will
 // return the reduced value
 template <typename T, typename ReduceOp>
+static
+inline
 __device__ T reduceBlock(T* smem,
                          int numVals,
                          T threadVal,

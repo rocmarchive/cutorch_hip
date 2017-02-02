@@ -1,34 +1,47 @@
-#include "hip/hip_runtime_api.h"
 #include "THCHalf.h"
-#include <thrust/transform.h>
-#include <thrust/execution_policy.h>
+
+#ifdef THRUST_PATH
+  #include <thrust/transform.h>
+#else
+  #include <bolt/amp/transform.h>
+#endif
 
 struct __half2floatOp {
-  __device__ float operator()(half v) { return __half2float(v); }
+  __device__ float operator()(half v) const { return __half2float(v); }
 };
 
 struct __float2halfOp {
-  __device__ half operator()(float v) { return __float2half(v); }
+  __device__ half operator()(float v) const { return __float2half(v); }
 };
 
-void THCFloat2Half(THCState *state, half *out, float *in, ptrdiff_t len) {
-  thrust::transform(
-#if CUDA_VERSION >= 7000
-    thrust::cuda::par.on(THCState_getCurrentStream(state)),
-#else
-    thrust::device,
-#endif
+void THCFloat2Half(THCState *state, half *out, float *in, ptrdiff_t len)
+{
+#if defined(THRUST_PATH)
+  thrust::transform( // TODO: add the localised execution version.
+  #if CUDA_VERSION >= 7000
+  //    thrust::cuda::par.on(THCState_getCurrentStream(state)),
+  #else
+  //thrust::device,
+  #endif
     in, in + len, out, __float2halfOp());
+#else
+  bolt::amp::transform(in, in + len, out, __float2halfOp());
+#endif
 }
 
-void THCHalf2Float(THCState *state, float *out, half *in, ptrdiff_t len) {
+void THCHalf2Float(THCState *state, float *out, half *in, ptrdiff_t len)
+{
+#if defined(THRUST_PATH)
   thrust::transform(
-#if CUDA_VERSION >= 7000
-    thrust::cuda::par.on(THCState_getCurrentStream(state)),
-#else
-    thrust::device,
-#endif
+  #if CUDA_VERSION >= 7000
+  //    thrust::cuda::par.on(THCState_getCurrentStream(state)),
+  #else
+  //    thrust::device,
+  #endif
     in, in + len, out, __half2floatOp());
+#else
+  bolt::amp::transform(in, in + len, out, __half2floatOp());
+#endif
 }
 
 float THC_half2float(half a)
@@ -120,7 +133,7 @@ half THC_float2half(float a)
   memcpy(&ret, &ir, sizeof(half));
   return ret;
 }
-
+// TODO: we have to assess these predicates and map them to AMD.
 THC_EXTERNC int THC_nativeHalfInstructions(THCState *state) {
   hipDeviceProp_t* prop =
     THCState_getCurrentDeviceProperties(state);

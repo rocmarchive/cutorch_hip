@@ -1,10 +1,11 @@
-#include "hip/hip_runtime_api.h"
 #include "utils.h"
 #include "luaT.h"
 #include "THCGeneral.h"
 #include "THCCachingAllocator.h"
 #include "THCTensorRandom.h"
 #include "THCHalf.h" // for CUDA_HALF_TENSOR
+
+#include <hip/hip_runtime_api.h>
 
 extern void cutorch_CudaByteStorage_init(lua_State* L);
 extern void cutorch_CudaCharStorage_init(lua_State* L);
@@ -912,11 +913,11 @@ static int cutorch_hasHalfInstructions(lua_State *L) {
 
 static int cutorch_hasFastHalfInstructions(lua_State *L) {
   THCState *state = cutorch_getstate(L);
-#ifdef CUDA_HALF_TENSOR  
+#ifdef CUDA_HALF_TENSOR
   lua_pushboolean(L, THC_fastHalfInstructions(state));
 #else
   lua_pushboolean(L, 0);
-#endif  
+#endif
   return 1;
 }
 

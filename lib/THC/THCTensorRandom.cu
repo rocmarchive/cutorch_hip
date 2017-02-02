@@ -1,17 +1,24 @@
-#include "hip/hip_runtime.h"
 #include "THCTensorRandom.h"
 #include "THCDeviceUtils.cuh"
 #include "THCGeneral.h"
 #include "THCTensorCopy.h"
 #include "THCTensorMath.h"
 #include "THCReduceApplyUtils.cuh"
-#include "THCThrustAlternate.h"
+
 #ifdef CURAND_PATH
-#include <curand.h>
-#include <curand_kernel.h>
-#include <curand_mtgp32_host.h>
-#include <curand_mtgp32dc_p_11213.h>
+    #include <curand.h>
+    #include <curand_kernel.h>
+    #include <curand_mtgp32_host.h>
+    #include <curand_mtgp32dc_p_11213.h>
 #endif
+
+#ifdef THRUST_PATH
+    #include <thrust/functional>
+#else
+    #include <bolt/amp/functional.h>
+#endif
+
+#include <hip/hip_runtime.h>
 
 #define MAX_NUM_BLOCKS 64
 #define BLOCK_SIZE 256
@@ -22,7 +29,7 @@ void initializeGenerator(THCState *state, Generator* gen)
 #ifdef CURAND_PATH
   THCudaCheck(THCudaMalloc(state, (void**)&gen->gen_states, MAX_NUM_BLOCKS * sizeof(curandStateMtgp32)));
   THCudaCheck(THCudaMalloc(state, (void**)&gen->kernel_params, sizeof(mtgp32_kernel_params)));
-#endif 
+#endif
 }
 
 /* Frees memory allocated during setup. */
@@ -177,7 +184,8 @@ void THCRandom_getRNGState(THCState* state, THByteTensor *rng_state)
 }
 
 #ifdef CURAND_PATH
-__global__ void set_rngstate_kernel(hipLaunchParm lp, curandStateMtgp32 *state, mtgp32_kernel_params *kernel)
+__global__
+void set_rngstate_kernel(hipLaunchParm lp, curandStateMtgp32 *state, mtgp32_kernel_params *kernel)
 {
   state[hipThreadIdx_x].k = kernel;
 }
@@ -187,10 +195,11 @@ void THCRandom_setRNGState(THCState* state, THByteTensor *rng_state)
 {
   Generator* gen = THCRandom_getGenerator(state);
 
+#ifdef __HCC__
+  static const size_t states_size = 0;
+#endif
 #ifdef CURAND_PATH
   static const size_t states_size = MAX_NUM_BLOCKS * sizeof(curandStateMtgp32);
-#else
-  static const size_t states_size = 0;
 #endif
   static const size_t seed_size = sizeof(unsigned long);
   static const size_t total_size = states_size + seed_size;
@@ -200,38 +209,45 @@ void THCRandom_setRNGState(THCState* state, THByteTensor *rng_state)
   THCudaCheck(hipMemcpy(gen->gen_states, THByteTensor_data(rng_state),
                          states_size, hipMemcpyHostToDevice));
 #ifdef CURAND_PATH
-  hipLaunchKernel(HIP_KERNEL_NAME(set_rngstate_kernel), dim3(1), dim3(MAX_NUM_BLOCKS), 0, THCState_getCurrentStream(state), 
-      gen->gen_states, gen->kernel_params);
+  hipLaunchKernel(HIP_KERNEL_NAME(set_rngstate_kernel),
+                  dim3(1),
+                  dim3(MAX_NUM_BLOCKS),
+                  0,
+                  THCState_getCurrentStream(state),
+                  gen->gen_states,
+                  gen->kernel_params);
 #endif
   memcpy(&gen->initial_seed, THByteTensor_data(rng_state) + states_size, seed_size);
 }
 
-#define GENERATE_KERNEL1(NAME, ARG1, CURAND_FUNC, TRANSFORM)                   \
-__global__ void NAME(hipLaunchParm  lp, curandStateMtgp32 *state, int size, float *result, ARG1)  \
-{                                                                              \
-  int idx = hipBlockIdx_x * BLOCK_SIZE + hipThreadIdx_x;                             \
-  int rounded_size = THCCeilDiv(size, BLOCK_SIZE) * BLOCK_SIZE;                     \
-  for (int i = idx; i < rounded_size; i += BLOCK_SIZE * MAX_NUM_BLOCKS) {      \
-    float x = CURAND_FUNC(&state[hipBlockIdx_x]);                                 \
-    if (i < size) {                                                            \
-      x = TRANSFORM;                                                           \
-      result[i] = x;                                                           \
-    }                                                                          \
-  }                                                                            \
-}
-
-#define GENERATE_KERNEL2(NAME, ARG1, ARG2, CURAND_FUNC, TRANSFORM)                   \
-__global__ void NAME(hipLaunchParm lp, curandStateMtgp32 *state, int size, float *result, ARG1, ARG2)  \
+#define GENERATE_KERNEL1(NAME, ARG1, CURAND_FUNC, TRANSFORM)                         \
+__global__                                                                           \
+void NAME(hipLaunchParm  lp, curandStateMtgp32 *state, int size, float *result, ARG1)\
 {                                                                                    \
-  int idx = hipBlockIdx_x * BLOCK_SIZE + hipThreadIdx_x;                                   \
-  int rounded_size = THCCeilDiv(size, BLOCK_SIZE) * BLOCK_SIZE;                           \
+  int idx = hipBlockIdx_x * BLOCK_SIZE + hipThreadIdx_x;                             \
+  int rounded_size = THCCeilDiv(size, BLOCK_SIZE) * BLOCK_SIZE;                      \
   for (int i = idx; i < rounded_size; i += BLOCK_SIZE * MAX_NUM_BLOCKS) {            \
-    float x = CURAND_FUNC(&state[hipBlockIdx_x]);                                       \
+    float x = CURAND_FUNC(&state[hipBlockIdx_x]);                                    \
     if (i < size) {                                                                  \
       x = TRANSFORM;                                                                 \
       result[i] = x;                                                                 \
     }                                                                                \
   }                                                                                  \
+}
+
+#define GENERATE_KERNEL2(NAME, ARG1, ARG2, CURAND_FUNC, TRANSFORM)                          \
+__global__                                                                                  \
+void NAME(hipLaunchParm lp, curandStateMtgp32 *state, int size, float *result, ARG1, ARG2)  \
+{                                                                                           \
+  int idx = hipBlockIdx_x * BLOCK_SIZE + hipThreadIdx_x;                                    \
+  int rounded_size = THCCeilDiv(size, BLOCK_SIZE) * BLOCK_SIZE;                             \
+  for (int i = idx; i < rounded_size; i += BLOCK_SIZE * MAX_NUM_BLOCKS) {                   \
+    float x = CURAND_FUNC(&state[hipBlockIdx_x]);                                           \
+    if (i < size) {                                                                         \
+      x = TRANSFORM;                                                                        \
+      result[i] = x;                                                                        \
+    }                                                                                       \
+  }                                                                                         \
 }
 #ifdef CURAND_PATH
 GENERATE_KERNEL2(generate_uniform, double a, double b, curand_uniform, x * (b-a) + a)
@@ -246,7 +262,13 @@ GENERATE_KERNEL2(generate_cauchy, double median, double sigma, curand_uniform, (
 #undef GENERATE_KERNEL2
 
 /* Separate kernel because curand_log_normal gets extra parameters. */
-__global__ void generate_log_normal(hipLaunchParm lp, curandStateMtgp32 *state, int size, float *result, float mean, float stddev)
+__global__
+void generate_log_normal(hipLaunchParm lp,
+                         curandStateMtgp32 *state,
+                         int size,
+                         float *result,
+                         float mean,
+                         float stddev)
 {
   int idx = hipBlockIdx_x * BLOCK_SIZE + hipThreadIdx_x;
   int rounded_size = THCCeilDiv(size, BLOCK_SIZE) * BLOCK_SIZE;
@@ -269,8 +291,16 @@ THC_API void THCudaTensor_uniform(THCState* state, THCudaTensor *self_, double a
   ptrdiff_t size = THCudaTensor_nElement(state, self);
   float *data = THCudaTensor_data(state, self);
   #ifdef CURAND_PATH
-  hipLaunchKernel(HIP_KERNEL_NAME(generate_uniform), dim3(NUM_BLOCKS), dim3(BLOCK_SIZE), 0, THCState_getCurrentStream(state), 
-      gen->gen_states, size, data, a, b);
+      hipLaunchKernel(HIP_KERNEL_NAME(generate_uniform),
+                      dim3(NUM_BLOCKS),
+                      dim3(BLOCK_SIZE),
+                      0,
+                      THCState_getCurrentStream(state),
+                      gen->gen_states,
+                      size,
+                      data,
+                      a,
+                      b);
   #endif
 
   THCudaTensor_freeCopyTo(state, self, self_);
@@ -284,9 +314,17 @@ THC_API void THCudaTensor_bernoulli(THCState* state, THCudaTensor *self_, double
   ptrdiff_t size = THCudaTensor_nElement(state, self);
   float *data = THCudaTensor_data(state, self);
   #ifdef CURAND_PATH
-  hipLaunchKernel(HIP_KERNEL_NAME(generate_bernoulli), dim3(NUM_BLOCKS), dim3(BLOCK_SIZE), 0, THCState_getCurrentStream(state), 
-      gen->gen_states, size, data, p);
+      hipLaunchKernel(HIP_KERNEL_NAME(generate_bernoulli),
+                      dim3(NUM_BLOCKS),
+                      dim3(BLOCK_SIZE),
+                      0,
+                      THCState_getCurrentStream(state),
+                      gen->gen_states,
+                      size,
+                      data,
+                      p);
   #endif
+
   THCudaTensor_freeCopyTo(state, self, self_);
 };
 
@@ -298,8 +336,16 @@ THC_API void THCudaTensor_normal(THCState* state, THCudaTensor *self_, double me
   ptrdiff_t size = THCudaTensor_nElement(state, self);
   float *data = THCudaTensor_data(state, self);
   #ifdef CURAND_PATH
-  hipLaunchKernel(HIP_KERNEL_NAME(generate_normal), dim3(NUM_BLOCKS), dim3(BLOCK_SIZE), 0, THCState_getCurrentStream(state), 
-      gen->gen_states, size, data, mean, stdv);
+      hipLaunchKernel(HIP_KERNEL_NAME(generate_normal),
+                      dim3(NUM_BLOCKS),
+                      dim3(BLOCK_SIZE),
+                      0,
+                      THCState_getCurrentStream(state),
+                      gen->gen_states,
+                      size,
+                      data,
+                      mean,
+                      stdv);
   #endif
 
   THCudaTensor_freeCopyTo(state, self, self_);
@@ -314,7 +360,7 @@ THC_API void THCudaTensor_logNormal(THCState* state, THCudaTensor *self_, double
   ptrdiff_t size = THCudaTensor_nElement(state, self);
   float *data = THCudaTensor_data(state, self);
   #ifdef CURAND_PATH
-  hipLaunchKernel(HIP_KERNEL_NAME(generate_log_normal), dim3(NUM_BLOCKS), dim3(BLOCK_SIZE), 0, THCState_getCurrentStream(state), 
+  hipLaunchKernel(HIP_KERNEL_NAME(generate_log_normal), dim3(NUM_BLOCKS), dim3(BLOCK_SIZE), 0, THCState_getCurrentStream(state),
       gen->gen_states, size, data, mean, stdv);
   #endif
   THCudaTensor_freeCopyTo(state, self, self_);
@@ -329,7 +375,7 @@ THC_API void THCudaTensor_geometric(THCState* state, THCudaTensor *self_, double
   ptrdiff_t size = THCudaTensor_nElement(state, self);
   float *data = THCudaTensor_data(state, self);
   #ifdef CURAND_PATH
-  hipLaunchKernel(HIP_KERNEL_NAME(generate_geometric), dim3(NUM_BLOCKS), dim3(BLOCK_SIZE), 0, THCState_getCurrentStream(state), 
+  hipLaunchKernel(HIP_KERNEL_NAME(generate_geometric), dim3(NUM_BLOCKS), dim3(BLOCK_SIZE), 0, THCState_getCurrentStream(state),
       gen->gen_states, size, data, p);
   #endif
 
@@ -345,7 +391,7 @@ THC_API void THCudaTensor_exponential(THCState* state, THCudaTensor *self_, doub
   ptrdiff_t size = THCudaTensor_nElement(state, self);
   float *data = THCudaTensor_data(state, self);
   #ifdef CURAND_PATH
-  hipLaunchKernel(HIP_KERNEL_NAME(generate_exponential), dim3(NUM_BLOCKS), dim3(BLOCK_SIZE), 0, THCState_getCurrentStream(state), 
+  hipLaunchKernel(HIP_KERNEL_NAME(generate_exponential), dim3(NUM_BLOCKS), dim3(BLOCK_SIZE), 0, THCState_getCurrentStream(state),
       gen->gen_states, size, data, lambda);
   #endif
 
@@ -361,7 +407,7 @@ THC_API void THCudaTensor_cauchy(THCState* state, THCudaTensor *self_, double me
   ptrdiff_t size = THCudaTensor_nElement(state, self);
   float *data = THCudaTensor_data(state, self);
   #ifdef CURAND_PATH
-  hipLaunchKernel(HIP_KERNEL_NAME(generate_cauchy), dim3(NUM_BLOCKS), dim3(BLOCK_SIZE), 0, THCState_getCurrentStream(state), 
+  hipLaunchKernel(HIP_KERNEL_NAME(generate_cauchy), dim3(NUM_BLOCKS), dim3(BLOCK_SIZE), 0, THCState_getCurrentStream(state),
       gen->gen_states, size, data, median, sigma);
   #endif
 
@@ -395,7 +441,9 @@ __device__ int binarySearchForMultinomial(float* dist,
 }
 
 // Normalizes the L1 norm of every row to 1; used by multinomial
-__global__ void renormRowsL1(hipLaunchParm lp, float* dist, long rows, long cols) {
+__global__
+void renormRowsL1(hipLaunchParm lp, float* dist, long rows, long cols)
+{
   HIP_DYNAMIC_SHARED( float, smem)
 
   for (long row = hipBlockIdx_x; row < rows; row += hipGridDim_x) {
@@ -403,7 +451,16 @@ __global__ void renormRowsL1(hipLaunchParm lp, float* dist, long rows, long cols
     for (long col = hipThreadIdx_x; col < cols; col += hipBlockDim_x) {
       sum += dist[row * cols + col];
     }
-    //sum = reduceBlock(smem, hipBlockDim_x, sum, thrust_alternate::sum<float>(), 0.0f);
+
+    sum = reduceBlock(reinterpret_cast<float*>(smem),
+                      hipBlockDim_x,
+                      sum,
+    #if defined(THRUST_PATH)
+                      thrust::plus<float>(),
+    #else
+                      bolt::amp::plus<float>(),
+    #endif
+                      0.0f);
     if (hipThreadIdx_x == 0) {
       smem[0] = sum;
     }
@@ -419,7 +476,8 @@ __global__ void renormRowsL1(hipLaunchParm lp, float* dist, long rows, long cols
 }
 
 void THCudaTensor_renormRows(struct THCState* state,
-                             THCudaTensor* t) {
+                             THCudaTensor* t)
+{
   THAssert(THCudaTensor_nDimension(state, t) == 2);
   long rows = THCudaTensor_size(state, t, 0);
   long cols = THCudaTensor_size(state, t, 1);
@@ -433,16 +491,24 @@ void THCudaTensor_renormRows(struct THCState* state,
   dim3 grid(rows < numSM * 4 ? rows : numSM * 4);
   dim3 block(cols < maxThreads ? cols : maxThreads);
 
-  hipLaunchKernel(HIP_KERNEL_NAME(renormRowsL1), dim3(grid), dim3(block), block.x * sizeof(float), THCState_getCurrentStream(state), THCudaTensor_data(state, t),
-                                        rows, cols);
+  hipLaunchKernel(HIP_KERNEL_NAME(renormRowsL1),
+                  dim3(grid),
+                  dim3(block),
+                  block.x * sizeof(float),
+                  THCState_getCurrentStream(state),
+                  THCudaTensor_data(state, t),
+                  rows,
+                  cols);
 }
 
-__global__ void
-sampleMultinomialOnce(hipLaunchParm lp, float* dest,
-                      long distributions,
-                      int categories,
-                      float* dist) {
-  HIP_DYNAMIC_SHARED( float, smem)
+__global__
+void sampleMultinomialOnce(hipLaunchParm lp,
+                           float* dest,
+                           long distributions,
+                           int categories,
+                           float* dist)
+{
+  HIP_DYNAMIC_SHARED(float, smem)
 
   for (long curDist = hipBlockIdx_x;
        curDist < distributions; curDist += hipGridDim_x) {
@@ -454,7 +520,15 @@ sampleMultinomialOnce(hipLaunchParm lp, float* dest,
     }
 
     // hipThreadIdx_x == 0 has the sum value from this
-    //sum = reduceBlock(smem, hipBlockDim_x, sum, thrust_alternate::sum<float>(), 0.0f);
+    sum = reduceBlock(reinterpret_cast<float*>(smem),
+                      hipBlockDim_x,
+                      sum,
+    #if defined(THRUST_PATH)
+                      thrust::plus<float>(),
+    #else
+                      bolt::amp::plus<float>(),
+    #endif
+                      0.0f);
 
     // Broadcast sum and sample value
     if (hipThreadIdx_x == 0) {
@@ -527,13 +601,15 @@ sampleMultinomialOnce(hipLaunchParm lp, float* dest,
   }
 }
 
-__global__ void
-sampleMultinomialWithReplacement(hipLaunchParm lp, curandStateMtgp32* state,
-                                 int totalSamples,
-                                 float* dest,
-                                 long distributions,
-                                 int categories,
-                                 float* normDistPrefixSum) {
+__global__
+void sampleMultinomialWithReplacement(hipLaunchParm lp,
+                                      curandStateMtgp32* state,
+                                      int totalSamples,
+                                      float* dest,
+                                      long distributions,
+                                      int categories,
+                                      float* normDistPrefixSum)
+{
   // At the moment, each warp computes one sample value in the binary
   // search due to divergence. It seems possible to compute multiple
   // values and limit divergence though later on. However, no matter
@@ -553,7 +629,7 @@ sampleMultinomialWithReplacement(hipLaunchParm lp, curandStateMtgp32* state,
       float r = 0.0f;
       #ifdef CURAND_PATH
       r = curand_uniform(&state[hipBlockIdx_x]);
-      #endif 
+      #endif
 
       if (hipThreadIdx_x == 0 && sample < totalSamples) {
         // Find the bucket that a uniform sample lies in
@@ -569,15 +645,17 @@ sampleMultinomialWithReplacement(hipLaunchParm lp, curandStateMtgp32* state,
   }
 }
 
-__global__ void
-sampleMultinomialWithoutReplacement(hipLaunchParm lp, curandStateMtgp32* state,
-                                    int totalSamples,
-                                    int sample,
-                                    float* dest,
-                                    long distributions,
-                                    int categories,
-                                    float* origDist,
-                                    float* normDistPrefixSum) {
+__global__
+void sampleMultinomialWithoutReplacement(hipLaunchParm lp,
+                                         curandStateMtgp32* state,
+                                         int totalSamples,
+                                         int sample,
+                                         float* dest,
+                                         long distributions,
+                                         int categories,
+                                         float* origDist,
+                                         float* normDistPrefixSum)
+{
   // At the moment, each warp computes one sample value in the binary
   // search due to divergence. It seems possible to compute multiple
   // values and limit divergence though later on. However, no matter
@@ -615,11 +693,12 @@ sampleMultinomialWithoutReplacement(hipLaunchParm lp, curandStateMtgp32* state,
   }
 }
 
-THC_API void THCudaTensor_multinomial(struct THCState *state,
-                                      THCudaTensor *self,
-                                      THCudaTensor *prob_dist,
-                                      int n_sample,
-                                      int with_replacement)
+THC_API
+void THCudaTensor_multinomial(struct THCState *state,
+                              THCudaTensor *self,
+                              THCudaTensor *prob_dist,
+                              int n_sample,
+                              int with_replacement)
 {
   THAssert(THCudaTensor_checkGPU(state, 2, self, prob_dist));
   Generator* gen = THCRandom_getGenerator(state);
@@ -677,11 +756,15 @@ THC_API void THCudaTensor_multinomial(struct THCState *state,
     dim3 block(numCategories < maxThreads ? numCategories : maxThreads);
     dim3 grid(numDist < numSM * 4 ? numDist : numSM * 4);
 
-    hipLaunchKernel(HIP_KERNEL_NAME(sampleMultinomialOnce), dim3(grid), dim3(block), block.x * sizeof(float), THCState_getCurrentStream(state), 
-      THCudaTensor_data(state, self),
-      numDist,
-      numCategories,
-      THCudaTensor_data(state, probDistContig));
+    hipLaunchKernel(HIP_KERNEL_NAME(sampleMultinomialOnce),
+                    dim3(grid),
+                    dim3(block),
+                    block.x * sizeof(float),
+                    THCState_getCurrentStream(state),
+                    THCudaTensor_data(state, self),
+                    numDist,
+                    numCategories,
+                    THCudaTensor_data(state, probDistContig));
   } else {
     // Generic, slow implementation with memory allocations
 
@@ -715,12 +798,17 @@ THC_API void THCudaTensor_multinomial(struct THCState *state,
       // distribution concurrently.
       dim3 grid(numDist < MAX_NUM_BLOCKS ? numDist : MAX_NUM_BLOCKS);
 
-      hipLaunchKernel(HIP_KERNEL_NAME(sampleMultinomialWithReplacement), dim3(grid), dim3(block), 0, THCState_getCurrentStream(state), 
-          gen->gen_states,
-          n_sample,
-          THCudaTensor_data(state, self),
-          numDist, numCategories,
-          THCudaTensor_data(state, prefixSum));
+      hipLaunchKernel(HIP_KERNEL_NAME(sampleMultinomialWithReplacement),
+                      dim3(grid),
+                      dim3(block),
+                      0,
+                      THCState_getCurrentStream(state),
+                      gen->gen_states,
+                      n_sample,
+                      THCudaTensor_data(state, self),
+                      numDist,
+                      numCategories,
+                      THCudaTensor_data(state, prefixSum));
     } else {
       // Sample without replacement
 
@@ -747,14 +835,19 @@ THC_API void THCudaTensor_multinomial(struct THCState *state,
 
         // The kernel can only draw one sample before we have to
         // recalculate our distribution
-        hipLaunchKernel(HIP_KERNEL_NAME(sampleMultinomialWithoutReplacement), dim3(grid), dim3(block), 0, THCState_getCurrentStream(state), 
-            gen->gen_states,
-            n_sample,
-            sample,
-            THCudaTensor_data(state, self),
-            numDist, numCategories,
-            THCudaTensor_data(state, origDist),
-            THCudaTensor_data(state, prefixSum));
+        hipLaunchKernel(HIP_KERNEL_NAME(sampleMultinomialWithoutReplacement),
+                        dim3(grid),
+                        dim3(block),
+                        0,
+                        THCState_getCurrentStream(state),
+                        gen->gen_states,
+                        n_sample,
+                        sample,
+                        THCudaTensor_data(state, self),
+                        numDist,
+                        numCategories,
+                        THCudaTensor_data(state, origDist),
+                        THCudaTensor_data(state, prefixSum));
       }
     }
 

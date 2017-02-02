@@ -1,7 +1,6 @@
 #include "hip/hip_runtime.h"
 #ifndef THC_REDUCE_INC
 #define THC_REDUCE_INC
-
 //
 // This file contains dimension reduction operation functions and
 // kernels that work on both contiguous and non-contiguous tensor
@@ -12,11 +11,16 @@
 #include "THCTensorTypeUtils.cuh"
 #include "THCReduceApplyUtils.cuh"
 
+#include <hip/hip_runtime.h>
+
 // Threads per thread block
 #define THC_NONCONTIG_REDUCE_BLOCK_SIZE 32 * 16
 
 template <typename IndexType>
-__device__ __forceinline__ IndexType getReduceNoncontigDimSliceIndex() {
+__device__ __forceinline__
+static
+IndexType getReduceNoncontigDimSliceIndex()
+{
   // Each thread handles one slice
   return getLinearBlockId<IndexType>() * THC_NONCONTIG_REDUCE_BLOCK_SIZE + hipThreadIdx_x;
 }
@@ -27,7 +31,7 @@ template <typename ModifyOp,
           typename T,
           typename IndexType,
           int ADims, int BDims>
-#if __CUDA_ARCH__ >= 350
+#if __CUDA_ARCH__ >= 350 || defined(__HIP_DEVICE_COMPILE__)
 __launch_bounds__(32 * 16, 4)
 #endif
 __global__ void
@@ -37,7 +41,8 @@ kernelReduceNoncontigDim(hipLaunchParm lp, T* outData, IndexType* outSizes, Inde
                          IndexType totalSlices,
                          T init,
                          ModifyOp modifyOp,
-                         ReduceOp reduceOp) {
+                         ReduceOp reduceOp)
+{
   const IndexType sliceIndex = getReduceNoncontigDimSliceIndex<IndexType>();
 
   if (sliceIndex >= totalSlices) {
@@ -65,7 +70,10 @@ kernelReduceNoncontigDim(hipLaunchParm lp, T* outData, IndexType* outSizes, Inde
 }
 
 template <typename IndexType>
-__device__ __forceinline__ IndexType getReduceContigDimSliceIndex() {
+__device__ __forceinline__
+static
+IndexType getReduceContigDimSliceIndex()
+{
   // Each block handles one slice
   return getLinearBlockId<IndexType>();
 }
@@ -77,14 +85,14 @@ template <typename ModifyOp,
           typename T,
           typename IndexType,
           int ADims, int BDims>
-__global__ void
-kernelReduceContigDim(hipLaunchParm lp, T* outData, IndexType* outSizes, IndexType* outStrides, int outDims, 
+__global__ inline void kernelReduceContigDim(hipLaunchParm lp, T* outData, IndexType* outSizes, IndexType* outStrides, int outDims, 
                       T* inData, IndexType* inSizes, IndexType* inStrides, int inDims,
                       IndexType reductionSize,
                       IndexType totalSlices,
                       T init,
                       ModifyOp modifyOp,
-                      ReduceOp reduceOp) {
+                      ReduceOp reduceOp)
+{
   const IndexType sliceIndex = getReduceContigDimSliceIndex<IndexType>();
 
   if (sliceIndex >= totalSlices) {
@@ -109,9 +117,9 @@ kernelReduceContigDim(hipLaunchParm lp, T* outData, IndexType* outSizes, IndexTy
 
   // Reduce within the block
   // FIXME: extern name
-  HIP_DYNAMIC_SHARED( char, smemChar)
-  T* smem = (T*) smemChar;
-  r = reduceBlock<T, ReduceOp>(smem, hipBlockDim_x, r, reduceOp, init);
+  HIP_DYNAMIC_SHARED(char, smemChar)
+  auto smem = reinterpret_cast<T*>(smemChar);
+  r = reduceBlock(smem, hipBlockDim_x, r, reduceOp, init);
 
   if (hipThreadIdx_x == 0) {
     // Write out reduced value
@@ -123,7 +131,9 @@ inline dim3 getNoncontigReduceBlock() {
   return dim3(THC_NONCONTIG_REDUCE_BLOCK_SIZE);
 }
 
-inline dim3 getContigReduceBlock(ptrdiff_t numSlices, long reductionSize) {
+inline
+dim3 getContigReduceBlock(ptrdiff_t numSlices, long reductionSize)
+{
   // If the number of slices is low but the reduction dimension size
   // is high, then we should increase block size for greater parallelism.
   // Aim for at least 32 warps per SM (assume 15 SMs; don't bother
@@ -275,7 +285,6 @@ bool THC_reduceDim(THCState* state,
       }                                                \
     }                                                  \
   }
-
 
   if (TensorUtils<TensorType>::canUse32BitIndexMath(state, out) &&
       TensorUtils<TensorType>::canUse32BitIndexMath(state, in)) {

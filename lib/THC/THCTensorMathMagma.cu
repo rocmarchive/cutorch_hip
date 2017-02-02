@@ -434,7 +434,9 @@ void THCudaTensor_getri(THCState *state, THCudaTensor *ra_, THCudaTensor *a)
 }
 
 
-__global__ void THCudaTensor_copyUpperSymmetric(hipLaunchParm lp, float *input, int n, int len)
+__global__
+inline
+void THCudaTensor_copyUpperSymmetric(hipLaunchParm lp, float *input, int n, int len)
 {
   for (int idx = hipThreadIdx_x + hipBlockIdx_x * hipBlockDim_x; idx < len; idx += 65535) {
     const int r = idx % n;
@@ -473,7 +475,14 @@ void THCudaTensor_potri(THCState *state, THCudaTensor *ra_, THCudaTensor *a)
   const int len = n*n;
   dim3 blocks(std::min(DIVUP(len, 128), 65535));
   dim3 threads(128);
-  hipLaunchKernel(HIP_KERNEL_NAME(THCudaTensor_copyUpperSymmetric), dim3(blocks), dim3(threads), 0, stream, input_data, n, len);
+  /*hipLaunchKernel(HIP_KERNEL_NAME(THCudaTensor_copyUpperSymmetric),
+                  dim3(blocks),
+                  dim3(threads),
+                  0,
+                  stream,
+                  input_data,
+                  n,
+                  len);*/
 
   THCudaTensor_freeCopyTo(state, input, ra_);
 #else

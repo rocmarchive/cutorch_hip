@@ -8,6 +8,13 @@ ELSE()
   SET(HIP_PATH $ENV{HIP_PATH})
 ENDIF()
 
+# HCC_PATH
+IF(NOT DEFINED $ENV{HCC_PATH})
+  SET(HCC_PATH /opt/rocm/hcc)
+ELSE()
+  SET(HCC_PATH $ENV{HCC_PATH})
+ENDIF()
+
 # HIPBLAS_PATH
 IF(NOT DEFINED $ENV{HIPBLAS_PATH})
   SET(HIPBLAS_PATH /opt/rocm/hcblas/)
@@ -15,7 +22,10 @@ ELSE()
   SET(HIPBLAS_PATH $ENV{HIPBLAS_PATH})
 ENDIF()
 
-SET(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_CURRENT_SOURCE_DIR}/lib/THC/cmake ${CMAKE_MODULE_PATH} "${HIP_PATH}/cmake")
+SET(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake
+                      ${CMAKE_CURRENT_SOURCE_DIR}/lib/THC/cmake
+                      ${CMAKE_MODULE_PATH}
+                      "${HIP_PATH}/cmake")
 EXECUTE_PROCESS(COMMAND ${HIP_PATH}/bin/hipconfig -P OUTPUT_VARIABLE PLATFORM)
 
 include(HipTorchWrap)
@@ -41,7 +51,17 @@ IF(CUDA_HAS_FP16 OR NOT ${CUDA_VERSION} LESS 7.5)
   SET(CMAKE_CXX_FLAGS  "-std=c++11 ${CMAKE_CXX_FLAGS} ${HIP_CXX_FLAGS}")
 ENDIF()
 
+# TODO: temporary blunt implements.
+IF (${PLATFORM} MATCHES "hcc")
+  include_directories(${HCC_PATH}/include)
+  include_directories(${CMAKE_CURRENT_SOURCE_DIR}/external/bolt/include)
+  include_directories(${CMAKE_CURRENT_SOURCE_DIR}/external/boost)
+ENDIF()
+include_directories(${HIP_PATH}/include)
+
+IF (${PLATFORM} MATCHES "nvcc")
 INCLUDE_DIRECTORIES(${CUDA_INCLUDE_DIRS})
+ENDIF()
 INCLUDE_DIRECTORIES(${HIPBLAS_PATH}/include)
 
 ADD_SUBDIRECTORY(lib)
@@ -51,7 +71,7 @@ INCLUDE_DIRECTORIES("${CMAKE_CURRENT_SOURCE_DIR}/lib/THC")
 INCLUDE_DIRECTORIES("${CMAKE_CURRENT_SOURCE_DIR}/torch")
 LINK_DIRECTORIES("${HIP_PATH}/lib")
 
-SET(src Storage.cc init.cc Tensor.cc TensorMath.cc TensorOperator.cc torch/utils.c)
+SET(src Storage.cc init.cc Tensor.cc TensorMath.cpp TensorOperator.cc torch/utils.c)
 SET(luasrc init.lua Tensor.lua FFI.lua test/test.lua)
 
 ADD_HIP_TORCH_WRAP(HipTensormathwrap TensorMath.lua)
@@ -61,7 +81,7 @@ IF(${PLATFORM} MATCHES "hcc")
 TARGET_LINK_LIBRARIES(cutorch luaT THC hip_hcc)
 ELSEIF(${PLATFORM} MATCHES "nvcc")
 TARGET_LINK_LIBRARIES(cutorch luaT THC)
-ENDIF() 
+ENDIF()
 
 IF(LUALIB)
   TARGET_LINK_LIBRARIES(cutorch ${LUALIB})

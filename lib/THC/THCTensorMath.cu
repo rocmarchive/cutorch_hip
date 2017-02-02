@@ -8,11 +8,17 @@
 
 template <typename T>
 struct TensorFillOp {
+  __host__ __device__
+  explicit
   TensorFillOp(T v) : val(v) {}
-  __device__ __forceinline__ void operator()(T* v) { *v = val; }
 
- __host__  __device__ ~TensorFillOp() {}
-  const T val;
+  __device__ __forceinline__
+  void operator()(T* v) const { *v = val; }
+
+  __host__ __device__
+  ~TensorFillOp() {}
+
+  T val;
 };
 
 #include "generic/THCTensorMath.cu"

@@ -40,17 +40,26 @@ void THCudaLongTensor_fillSliceWithIndex(THCState* state,
 
   dim3 block(numThreads);
 
-#define FILL_INDEX(T, DIM)                                       \
-  hipLaunchKernel(HIP_KERNEL_NAME(fillSliceWithIndex<T, DIM>),                                     \
-      grid, block, 0, THCState_getCurrentStream(state),     \
-      info, numSlices, sliceSize, info.strides[collapseDim])
+#define FILL_INDEX(T, DIM)                                    \
+  hipLaunchKernel(HIP_KERNEL_NAME(fillSliceWithIndex<T, DIM>),\
+                  dim3{grid},                                 \
+                  dim3{block},                                \
+                  0,                                          \
+                  THCState_getCurrentStream(state),           \
+                  info.data,                                  \
+                  info.dSizes,                                \
+                  info.dStrides,                              \
+                  info.dims,                                  \
+                  numSlices,                                  \
+                  sliceSize,                                  \
+                  info.strides[collapseDim])
 
-#ifdef CUDA_PATH
   if (TensorUtils<THCudaLongTensor>::canUse32BitIndexMath(state, t)) {
     TensorInfo<long, unsigned int> info =
       getTensorInfo<THCudaLongTensor, unsigned int>(state, t);
     info.reduceDim(dim);
     int collapseDim = info.collapseDims(dim);
+
     if (info.isContiguous()) {
       FILL_INDEX(unsigned int, -2);
     } else {
@@ -71,7 +80,6 @@ void THCudaLongTensor_fillSliceWithIndex(THCState* state,
     // catch-all implementation
     FILL_INDEX(unsigned long, -1);
   }
-#endif
 
 #undef FILL_INDEX
 

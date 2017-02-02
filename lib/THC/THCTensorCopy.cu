@@ -11,8 +11,13 @@ inline int curGPU() {
 // Copy operator for the pointwise apply kernel
 template <typename TypeDst, typename TypeSrc>
 struct CopyOp {
-  __device__ __forceinline__ void operator()(TypeDst* dst, TypeSrc* src) {
+  __device__ __forceinline__
+  void operator()(TypeDst* dst, TypeSrc* src) const {
+#if __CUDA_ARCH__ >= 350 //|| defined(__HIP_DEVICE_COMPILE__)
+    *dst = ScalarConvert<TypeSrc, TypeDst>::to(__ldg(src));
+#else
     *dst = ScalarConvert<TypeSrc, TypeDst>::to(*src);
+#endif
   }
 };
 
@@ -109,8 +114,8 @@ THC_copyTensor(THCState* state, TensorTypeDst* dst, TensorTypeSrc* src) {
     // A device always has access to itself, so this also handles the
     // case srcDev == dstDev
     if (THCState_getPeerToPeerAccess(state, srcDev, dstDev)) {
-      bool succ = false;
-      succ = THC_pointwiseApply2(
+      bool succ =
+        THC_pointwiseApply2(
           state, dst, src,
           CopyOp<typename TensorUtils<TensorTypeDst>::DataType,
                  typename TensorUtils<TensorTypeSrc>::DataType>());
@@ -135,8 +140,8 @@ THC_copyTensor(THCState* state, TensorTypeDst* dst, TensorTypeSrc* src) {
         srcContig = TensorUtils<TensorTypeDst>::newTensor(state);
         TensorUtils<TensorTypeDst>::resizeAs(state, srcContig, dst);
 
-        bool succ = false;
-          succ = THC_pointwiseApply2(
+        bool succ =
+          THC_pointwiseApply2(
             state, srcContig, src,
             CopyOp<typename TensorUtils<TensorTypeDst>::DataType,
                    typename TensorUtils<TensorTypeSrc>::DataType>());

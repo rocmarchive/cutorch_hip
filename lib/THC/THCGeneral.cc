@@ -5,6 +5,7 @@
 #include "THCAllocator.h"
 #include "THCThreadLocal.h"
 #include "THCStream.h"
+
 #include <stdlib.h>
 #include <stdint.h>
 
@@ -27,12 +28,12 @@ void THCState_free(THCState* state)
   free(state);
 }
 
-static hipError_t cudaMallocWrapper(void* ctx, void** devPtr, size_t size, hipStream_t stream)
+static hipError_t cudaMallocWrapper(void* /*ctx*/, void** devPtr, size_t size, hipStream_t /*stream*/)
 {
   return hipMalloc(devPtr, size);
 }
 
-static hipError_t cudaFreeWrapper(void* ctx, void* devPtr)
+static hipError_t cudaFreeWrapper(void* /*ctx*/, void* devPtr)
 {
   return hipFree(devPtr);
 }
@@ -683,7 +684,7 @@ static const ptrdiff_t heapMinDelta = (ptrdiff_t)-1e6;
 static const double heapSoftmaxGrowthThresh = 0.8; // grow softmax if >80% max after GC
 static const double heapSoftmaxGrowthFactor = 1.4; // grow softmax by 40%
 
-void THCSetGCHandler(THCState *state, void (*cutorchGCFunction_)(void *data), void *data )
+void THCSetGCHandler(THCState *state, void (*cutorchGCFunction_)(void */*data*/), void *data )
 {
   state->cutorchGCFunction = cutorchGCFunction_;
   state->cutorchGCData = data;
@@ -703,7 +704,7 @@ hipError_t THCudaMalloc(THCState *state, void** ptr, size_t size)
 
 hipError_t THCudaFree(THCState *state, void *ptr)
 {
-  return hipFree(ptr); 
+  return hipFree(ptr);
 }
 
 static ptrdiff_t applyHeapDelta(THCState *state) {

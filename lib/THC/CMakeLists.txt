@@ -1,7 +1,9 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8 FATAL_ERROR)
 CMAKE_POLICY(VERSION 2.8)
 
-SET(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH} "${HIP_PATH}/cmake")
+SET(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake
+                      ${CMAKE_MODULE_PATH}
+                      "${HIP_PATH}/cmake")
 EXECUTE_PROCESS(COMMAND ${HIP_PATH}/bin/hipconfig -P OUTPUT_VARIABLE PLATFORM)
 
 IF(NOT Torch_FOUND)
@@ -18,7 +20,7 @@ ENDIF() # PLATFORM MATCHES
 
 EXECUTE_PROCESS(COMMAND ${HIP_PATH}/bin/hipconfig --cpp_config OUTPUT_VARIABLE HIP_CXX_FLAGS)
 
-# temoorary check with hipcc on AMD stack
+# temporary check with hipcc on AMD stack
 IF (${PLATFORM} MATCHES "hcc")
   SET(CMAKE_CXX_COMPILER ${HIP_HIPCC_EXECUTABLE})
 ENDIF()
@@ -35,7 +37,7 @@ endif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "4.7" OR CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL "4.7" )
     # add c++11 flag
-    set_property(SOURCE THCCachingAllocator.cpp APPEND PROPERTY COMPILE_FLAGS "-std=c++11") 
+    set_property(SOURCE THCCachingAllocator.cpp APPEND PROPERTY COMPILE_FLAGS "-std=c++11")
   else()
     # add c++0x flag
     set_property(SOURCE THCCachingAllocator.cpp APPEND PROPERTY COMPILE_FLAGS "-std=c++0x")
@@ -115,7 +117,7 @@ CONFIGURE_FILE(THCGeneral.h.in "${CMAKE_CURRENT_BINARY_DIR}/THCGeneral.h")
 IF(MSVC)
   LIST(APPEND CUDA_NVCC_FLAGS "-Xcompiler /wd4819")
 ELSE()
-  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${HIP_CXX_FLAGS}")
+  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${HIP_CXX_FLAGS} -v")
 ENDIF()
 
 SET(src
@@ -136,7 +138,6 @@ SET(src-cuda
   THCTensor.cu
   THCTensorCopy.cu
   THCTensorMath.cu
-  THCThrustAlternate.cu
   THCTensorMath2.cu
   THCTensorMathBlas.cu
   THCTensorMathMagma.cu
@@ -155,7 +156,7 @@ SET(src-cuda
 # loop over all types
 foreach(THC_TYPE Byte Char Short Int Long Half Float Double)
    # loop over files which need to be split between types (because of long compile times)
-   foreach(THC_FILE TensorSort TensorMathCompareT TensorMathPointwise TensorMathCompare TensorMathReduce TensorMasked)
+   foreach(THC_FILE TensorMasked TensorMathCompareT TensorMathPointwise TensorMathCompare TensorSort)# TensorMathReduce)
       if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/generated/THC${THC_FILE}${THC_TYPE}.cu")
          FILE(WRITE "${CMAKE_CURRENT_SOURCE_DIR}/generated/THC${THC_FILE}${THC_TYPE}.cu"
               "#include \"../THC${THC_FILE}.cuh\"\n#include \"../generic/THC${THC_FILE}.cu\"\n#include \"../THCGenerate${THC_TYPE}Type.h\"\n")
@@ -258,40 +259,39 @@ INSTALL(FILES
           DESTINATION "${THC_INSTALL_INCLUDE_SUBDIR}/THC")
 
 INSTALL(FILES
-          generic/THCStorage.c
-          generic/THCStorage.cu
-          generic/THCStorage.h
-          generic/THCTensor.c
-          generic/THCTensor.cu
-          generic/THCTensor.h
-          generic/THCStorageCopy.c
-          generic/THCStorageCopy.cu
-          generic/THCStorageCopy.h
-          generic/THCTensorCopy.c
-          generic/THCTensorCopy.cu
-          generic/THCTensorCopy.h
-          generic/THCTensorMasked.h
-          generic/THCTensorMasked.cu
-          generic/THCTensorMath.h
-          generic/THCTensorMath.cu
-          generic/THCThrustAlternate.cu
-          generic/THCTensorMathBlas.cu
-          generic/THCTensorMathBlas.h
-          generic/THCTensorMathCompare.h
-          generic/THCTensorMathCompare.cu
-          generic/THCTensorMathCompareT.h
-          generic/THCTensorMathCompareT.cu
-          generic/THCTensorMathPairwise.h
-          generic/THCTensorMathPairwise.cu
-          generic/THCTensorMathPointwise.h
-          generic/THCTensorMathPointwise.cu
-          generic/THCTensorMathReduce.h
-          generic/THCTensorMathReduce.cu
-          generic/THCTensorScatterGather.h
-          generic/THCTensorScatterGather.cu
-          generic/THCTensorIndex.h
-          generic/THCTensorIndex.cu
-          generic/THCTensorSort.h
-          generic/THCTensorSort.cu
-          generic/THCDeviceTensorUtils.cu
-          DESTINATION "${THC_INSTALL_INCLUDE_SUBDIR}/THC/generic")
+        generic/THCStorage.c
+        generic/THCStorage.cu
+        generic/THCStorage.h
+        generic/THCTensor.c
+        generic/THCTensor.cu
+        generic/THCTensor.h
+        generic/THCStorageCopy.c
+        generic/THCStorageCopy.cu
+        generic/THCStorageCopy.h
+        generic/THCTensorCopy.c
+        generic/THCTensorCopy.cu
+        generic/THCTensorCopy.h
+        generic/THCTensorMasked.h
+        generic/THCTensorMasked.cu
+        generic/THCTensorMath.h
+        generic/THCTensorMath.cu
+        generic/THCTensorMathBlas.cu
+        generic/THCTensorMathBlas.h
+        generic/THCTensorMathCompare.h
+        generic/THCTensorMathCompare.cu
+        generic/THCTensorMathCompareT.h
+        generic/THCTensorMathCompareT.cu
+        generic/THCTensorMathPairwise.h
+        generic/THCTensorMathPairwise.cu
+        generic/THCTensorMathPointwise.h
+        generic/THCTensorMathPointwise.cu
+        generic/THCTensorMathReduce.h
+        generic/THCTensorMathReduce.cu
+        generic/THCTensorScatterGather.h
+        generic/THCTensorScatterGather.cu
+        generic/THCTensorIndex.h
+        generic/THCTensorIndex.cu
+        generic/THCTensorSort.h
+        generic/THCTensorSort.cu
+        generic/THCDeviceTensorUtils.cu
+        DESTINATION "${THC_INSTALL_INCLUDE_SUBDIR}/THC/generic")

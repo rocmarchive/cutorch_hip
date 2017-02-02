@@ -11,8 +11,10 @@
 #include "THCDeviceUtils.cuh"
 #include "THCNumerics.cuh"
 #include "THCAtomics.cuh"
-#include <algorithm> // for std::min
+
 #include "hip/hip_runtime.h"
+
+#include <algorithm> // for std::min
 
 // We prefer this kernel to avoid reloading index points if the number
 // of indices is a small number.
@@ -139,9 +141,7 @@ __global__ void indexAddSmallIndex(hipLaunchParm lp,
         IndexType srcOffset =
           IndexToOffset<T, IndexType, SrcDim>::get(linearIndex, srcSizes, srcStrides, srcDims);
         srcOffset += srcIndex * srcStrides[srcAddDim];
-       #ifdef CUDA_PATH
         atomicAdd(&dstData[dstOffset], srcData[srcOffset]);
-       #endif
       }
     }
   }
@@ -183,9 +183,7 @@ __global__ void indexAddLargeIndex(hipLaunchParm lp,
         IndexToOffset<T, IndexType, SrcDim>::get(elementInSlice, srcSizes, srcStrides, srcDims);
       srcOffset += srcIndex * srcStrides[srcAddDim];
 
-      #ifdef CUDA_PATH
       atomicAdd(&dstData[dstOffset], srcData[srcOffset]);
-      #endif
     }
   }
 }

@@ -29,10 +29,12 @@
  *     but can be set to 0 to allow arbitrary kernel sizes
  */
 template <bool swapkernel, int T_kernel_h, int T_kernel_w>
-  __global__ void conv2generic(hipLaunchParm lp, float *input, float *kernel, float *output,
-                               int input_n, int input_h, int input_w,
-                               int kernel_n, int kernel_h, int kernel_w,
-                               int stride_h, int stride_w)
+  __global__
+  inline
+  void conv2generic(hipLaunchParm lp, float *input, float *kernel, float *output,
+                    int input_n, int input_h, int input_w,
+                    int kernel_n, int kernel_h, int kernel_w,
+                    int stride_h, int stride_w)
 {
   // output dimensions
   int output_h = (input_h - kernel_h) / stride_h + 1;
@@ -195,10 +197,12 @@ template <bool swapkernel, int T_kernel_h, int T_kernel_w>
  *   - all chunks of data should be contiguous
  *   - the swapkernel flag can be used to generate a conv2 instead of xcorr2
  */
-__global__ void conv2genericrev(hipLaunchParm lp, float *input, float *kernel, float *output,
-                                int input_n, int input_h, int input_w,
-                                int kernel_n, int kernel_h, int kernel_w,
-                                float alpha, int stride_h, int stride_w)
+__global__
+inline
+void conv2genericrev(hipLaunchParm lp, float *input, float *kernel, float *output,
+                     int input_n, int input_h, int input_w,
+                     int kernel_n, int kernel_h, int kernel_w,
+                     float alpha, int stride_h, int stride_w)
 {
   // output dimensions
   int output_h = input_h - (kernel_h - 1) * stride_h;
@@ -377,21 +381,43 @@ THC_API void THCudaTensor_conv2Dmv(THCState *state, THCudaTensor *output, float 
   // convolution: xcorr2 or conv2
   if (type[1] == 'x') {
 #define X_CONV_KERNEL(dim)                                              \
-    hipLaunchKernel(HIP_KERNEL_NAME(conv2generic<false, (dim), (dim)>), dim3(blocks), dim3(threads), 0, THCState_getCurrentStream(state),  \
-        input_data, weight_data, output_data,                           \
-        nInputPlane, nInputRows, nInputCols,                            \
-        nOutputPlane*nInputPlane, nKernelRows, nKernelCols,             \
-        srow, scol);
+    hipLaunchKernel(HIP_KERNEL_NAME(conv2generic<false, (dim), (dim)>), \
+                    dim3(blocks),                                       \
+                    dim3(threads),                                      \
+                    0,                                                  \
+                    THCState_getCurrentStream(state),                   \
+                    input_data,                                         \
+                    weight_data,                                        \
+                    output_data,                                        \
+                    nInputPlane,                                        \
+                    nInputRows,                                         \
+                    nInputCols,                                         \
+                    nOutputPlane*nInputPlane,                           \
+                    nKernelRows,                                        \
+                    nKernelCols,                                        \
+                    srow,                                               \
+                    scol);
 
     FOR_KERNEL_SPECIALIZED_DIMENSION(nKernelRows, nKernelCols, X_CONV_KERNEL);
 #undef X_CONV_KERNEL
   } else { // 'c'
-#define C_CONV_KERNEL(dim)                                              \
-    hipLaunchKernel(HIP_KERNEL_NAME(conv2generic<true, (dim), (dim)>), dim3(blocks), dim3(threads), 0, THCState_getCurrentStream(state),            \
-        input_data, weight_data, output_data,                           \
-        nInputPlane, nInputRows, nInputCols,                            \
-        nOutputPlane*nInputPlane, nKernelRows, nKernelCols,             \
-        srow, scol);
+#define C_CONV_KERNEL(dim)                                             \
+    hipLaunchKernel(HIP_KERNEL_NAME(conv2generic<true, (dim), (dim)>), \
+                    dim3(blocks),                                      \
+                    dim3(threads),                                     \
+                    0,                                                 \
+                    THCState_getCurrentStream(state),                  \
+                    input_data,                                        \
+                    weight_data,                                       \
+                    output_data,                                       \
+                    nInputPlane,                                       \
+                    nInputRows,                                        \
+                    nInputCols,                                        \
+                    nOutputPlane*nInputPlane,                          \
+                    nKernelRows,                                       \
+                    nKernelCols,                                       \
+                    srow,                                              \
+                    scol);
 
     FOR_KERNEL_SPECIALIZED_DIMENSION(nKernelRows, nKernelCols, C_CONV_KERNEL);
 #undef C_CONV_KERNEL
@@ -498,21 +524,43 @@ THC_API void THCudaTensor_conv2Dmm(THCState *state, THCudaTensor *output, float 
   // convolution: xcorr2 or conv2
   if (type[1] == 'x') {
 #define X_CONV_KERNEL(dim)                                              \
-    hipLaunchKernel(HIP_KERNEL_NAME(conv2generic<false, (dim), (dim)>), dim3(blocks), dim3(threads), 0, THCState_getCurrentStream(state),  \
-      input_data, weight_data, output_data,                             \
-      nInputPlane, nInputRows, nInputCols,                              \
-      nOutputPlane*nInputPlane, nKernelRows, nKernelCols,               \
-      srow, scol);
+    hipLaunchKernel(HIP_KERNEL_NAME(conv2generic<false, (dim), (dim)>), \
+                    dim3(blocks),                                       \
+                    dim3(threads),                                      \
+                    0,                                                  \
+                    THCState_getCurrentStream(state),                   \
+                    input_data,                                         \
+                    weight_data,                                        \
+                    output_data,                                        \
+                    nInputPlane,                                        \
+                    nInputRows,                                         \
+                    nInputCols,                                         \
+                    nOutputPlane*nInputPlane,                           \
+                    nKernelRows,                                        \
+                    nKernelCols,                                        \
+                    srow,                                               \
+                    scol);
 
     FOR_KERNEL_SPECIALIZED_DIMENSION(nKernelCols, nKernelRows, X_CONV_KERNEL);
 #undef X_CONV_KERNEL
   } else { // 'c'
-#define C_CONV_KERNEL(dim)                                              \
-    hipLaunchKernel(HIP_KERNEL_NAME(conv2generic<true, (dim), (dim)>), dim3(blocks), dim3(threads), 0, THCState_getCurrentStream(state),  \
-      input_data, weight_data, output_data,                             \
-      nInputPlane, nInputRows, nInputCols,                              \
-      nOutputPlane*nInputPlane, nKernelRows, nKernelCols,               \
-      srow, scol);                                                      \
+#define C_CONV_KERNEL(dim)                                             \
+    hipLaunchKernel(HIP_KERNEL_NAME(conv2generic<true, (dim), (dim)>), \
+                    dim3(blocks),                                      \
+                    dim3(threads),                                     \
+                    0,                                                 \
+                    THCState_getCurrentStream(state),                  \
+                    input_data,                                        \
+                    weight_data,                                       \
+                    output_data,                                       \
+                    nInputPlane,                                       \
+                    nInputRows,                                        \
+                    nInputCols,                                        \
+                    nOutputPlane*nInputPlane,                          \
+                    nKernelRows,                                       \
+                    nKernelCols,                                       \
+                    srow,                                              \
+                    scol);
 
     FOR_KERNEL_SPECIALIZED_DIMENSION(nKernelCols, nKernelRows, C_CONV_KERNEL);
 #undef C_CONV_KERNEL
@@ -595,11 +643,23 @@ THC_API void THCudaTensor_conv2DRevger(THCState *state, THCudaTensor *output, fl
   dim3 threads(128/nOutputRows, nOutputRows);
 
   // compute rev conv
-  hipLaunchKernel(HIP_KERNEL_NAME(conv2genericrev), dim3(blocks), dim3(threads), 0, THCState_getCurrentStream(state), 
-    input_data, kernel_data, output_data,
-    nInputPlane, nInputRows, nInputCols,
-    nKernelPlane, nKernelRows, nKernelCols,
-    alpha, srow, scol);
+  /*hipLaunchKernel(HIP_KERNEL_NAME(conv2genericrev),
+                  dim3(blocks),
+                  dim3(threads),
+                  0,
+                  THCState_getCurrentStream(state),
+                  input_data,
+                  kernel_data,
+                  output_data,
+                  nInputPlane,
+                  nInputRows,
+                  nInputCols,
+                  nKernelPlane,
+                  nKernelRows,
+                  nKernelCols,
+                  alpha,
+                  srow,
+                  scol);*/
 
   // clean
   THCudaTensor_free(state, input);
@@ -674,13 +734,23 @@ THC_API void THCudaTensor_conv2DRevgerm(THCState *state, THCudaTensor *output, f
     dim3 threads(cst, nOutputRows, subbatch);
 
     // compute rev conv
-    hipLaunchKernel(HIP_KERNEL_NAME(conv2genericrev), dim3(blocks), dim3(threads), 0, THCState_getCurrentStream(state), 
-      input_data + input->stride[0]*sl,
-      kernel_data + kernel->stride[0]*sl,
-      output_data,
-      nInputPlane, nInputRows, nInputCols,
-      nKernelPlane, nKernelRows, nKernelCols,
-      alpha, srow, scol);
+    /*hipLaunchKernel(HIP_KERNEL_NAME(conv2genericrev),
+                    dim3(blocks),
+                    dim3(threads),
+                    0,
+                    THCState_getCurrentStream(state),
+                    input_data + input->stride[0]*sl,
+                    kernel_data + kernel->stride[0]*sl,
+                    output_data,
+                    nInputPlane,
+                    nInputRows,
+                    nInputCols,
+                    nKernelPlane,
+                    nKernelRows,
+                    nKernelCols,
+                    alpha,
+                    srow,
+                    scol);*/
   }
 
   // clean
@@ -710,11 +780,13 @@ THC_API void THCudaTensor_conv2DRevgerm(THCState *state, THCudaTensor *output, f
  *   ---- should have a fanin set of inputs contiguously
  */
 template <bool swapkernel, int T_kernel_h, int T_kernel_w>
-  __global__ void conv2mapgeneric(hipLaunchParm lp, float *input, float *kernel, float *output,
-                                  int input_n, int input_h, int input_w,
-                                  int kernel_n, int kernel_h, int kernel_w,
-                                  int stride_w, int stride_h,
-                                  float *table, int fanin)
+  __global__
+  inline
+  void conv2mapgeneric(hipLaunchParm lp, float *input, float *kernel, float *output,
+                       int input_n, int input_h, int input_w,
+                       int kernel_n, int kernel_h, int kernel_w,
+                       int stride_w, int stride_h,
+                       float *table, int fanin)
 {
   // output dimensions
   int output_h = (input_h - kernel_h) / stride_h + 1;
@@ -930,11 +1002,25 @@ THC_API void THCudaTensor_conv2Dmap(THCState *state, THCudaTensor *output, THCud
   dim3 blocks(nOutputPlane,block_height);
   dim3 threads(nthreads_x,nthreads_y);
 
-#define GENERIC_MAP_KERNEL(dim)                                         \
-  hipLaunchKernel(HIP_KERNEL_NAME(conv2mapgeneric<false, (dim), (dim)>), dim3(blocks), dim3(threads), 0, THCState_getCurrentStream(state),  \
-      input_data, kernel_data, output_data, nInputPlane, nInputRows,    \
-      nInputCols, nOutputPlane*fanin, nKernelRows, nKernelCols,         \
-      stride_x, stride_y, table_data, fanin);
+#define GENERIC_MAP_KERNEL(dim)                                          \
+   hipLaunchKernel(HIP_KERNEL_NAME(conv2mapgeneric<false, (dim), (dim)>), \
+                  dim3(blocks),                                          \
+                  dim3(threads),                                         \
+                  0,                                                     \
+                  THCState_getCurrentStream(state),                      \
+                  input_data,                                            \
+                  kernel_data,                                           \
+                  output_data,                                           \
+                  nInputPlane,                                           \
+                  nInputRows,                                            \
+                  nInputCols,                                            \
+                  nOutputPlane*fanin,                                    \
+                  nKernelRows,                                           \
+                  nKernelCols,                                           \
+                  stride_x,                                              \
+                  stride_y,                                              \
+                  table_data,                                            \
+                  fanin);
 
   FOR_KERNEL_SPECIALIZED_DIMENSION(nKernelCols, nKernelRows, GENERIC_MAP_KERNEL);
 #undef GENERIC_MAP_KERNEL

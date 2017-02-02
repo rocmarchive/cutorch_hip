@@ -32,7 +32,7 @@ struct THCNumerics<unsigned char> {
   static inline __host__ __device__  unsigned char mul(unsigned char a, unsigned char b) { return a * b; }
   static inline __host__ __device__  unsigned char sub(unsigned char a, unsigned char b) { return a - b; }
   static inline __host__ __device__  unsigned char div(unsigned char a, unsigned char b) { return a / b; }
-  static inline __host__ __device__  unsigned char abs(unsigned char a) { return abs(a); }
+  static inline __host__ __device__  unsigned char abs(unsigned char a) { return a; }
 };
 
 template <>
@@ -89,9 +89,8 @@ struct THCNumerics<int> {
   static inline __host__ __device__  int mul(int a, int b) { return a * b; }
   static inline __host__ __device__  int sub(int a, int b) { return a - b; }
   static inline __host__ __device__  int div(int a, int b) { return a / b; }
-#ifdef CUDA_PATH
-  static inline __host__ __device__  int abs(int a) { return ::abs(a); }
-#endif
+  // TODO: Include hcc_math header and use fabs API in hc fast math space
+  static inline __host__ __device__  int abs(int a) { return 0; /*fabs(a)*/; }
 };
 
 template <>
@@ -110,9 +109,8 @@ struct THCNumerics<long> {
   static inline __host__ __device__  long mul(long a, long b) { return a * b; }
   static inline __host__ __device__  long sub(long a, long b) { return a - b; }
   static inline __host__ __device__  long div(long a, long b) { return a / b; };
-#ifdef CUDA_PATH
-  static inline __host__ __device__  long abs(long a) { return labs(a); }
-#endif
+  // TODO: Include hcc_math header and use fabs API in hc fast math space
+  static inline __host__ __device__  long abs(long a) { return 0; /*fabs(a)*/; }
 };
 
 #ifdef CUDA_HALF_TENSOR
@@ -122,91 +120,91 @@ struct THCNumerics<half> {
   static inline __host__ __device__ half max() { half h; h.x = 0x7bff; return h; }
 
   static inline __host__ __device__ bool lt(half a, half b) {
-#ifdef __CUDA_ARCH__
-#ifdef CUDA_HALF_INSTRUCTIONS
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
+//#ifdef CUDA_HALF_INSTRUCTIONS
     return __hlt(a, b);
-#else
-    float fa = __half2float(a);
-    float fb = __half2float(b);
-    return fa < fb;
-#endif
+//#else
+//    float fa = __half2float(a);
+//    float fb = __half2float(b);
+//    return fa < fb;
+//#endif
 #else // __CUDA_ARCH__
     return THC_half2float(a) < THC_half2float(b);
 #endif
   }
 
   static inline __host__ __device__ bool le(half a, half b) {
-#ifdef __CUDA_ARCH__
-#ifdef CUDA_HALF_INSTRUCTIONS
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
+//#ifdef CUDA_HALF_INSTRUCTIONS
     return __hle(a, b);
-#else
-    float fa = __half2float(a);
-    float fb = __half2float(b);
-    return fa <= fb;
-#endif
+//#else
+//    float fa = __half2float(a);
+//    float fb = __half2float(b);
+//    return fa <= fb;
+//#endif
 #else // __CUDA_ARCH__
     return THC_half2float(a) <= THC_half2float(b);
 #endif
   }
 
   static inline __host__ __device__ bool gt(half a, half b) {
-#ifdef __CUDA_ARCH__
-#ifdef CUDA_HALF_INSTRUCTIONS
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
+//#ifdef CUDA_HALF_INSTRUCTIONS
     return __hgt(a, b);
-#else
-    float fa = __half2float(a);
-    float fb = __half2float(b);
-    return fa > fb;
-#endif
+//#else
+//    float fa = __half2float(a);
+//    float fb = __half2float(b);
+//    return fa > fb;
+//#endif
 #else // __CUDA_ARCH__
     return THC_half2float(a) > THC_half2float(b);
 #endif
   }
 
   static inline __host__ __device__ bool ge(half a, half b) {
-#ifdef __CUDA_ARCH__
-#ifdef CUDA_HALF_INSTRUCTIONS
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
+//#ifdef CUDA_HALF_INSTRUCTIONS
     return __hge(a, b);
-#else
-    float fa = __half2float(a);
-    float fb = __half2float(b);
-    return fa >= fb;
-#endif
+//#else
+//    float fa = __half2float(a);
+//    float fb = __half2float(b);
+//    return fa >= fb;
+//#endif
 #else // __CUDA_ARCH__
     return THC_half2float(a) >= THC_half2float(b);
 #endif
   }
 
   static inline __host__ __device__ bool eq(half a, half b) {
-#ifdef __CUDA_ARCH__
-#ifdef CUDA_HALF_INSTRUCTIONS
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
+//#ifdef CUDA_HALF_INSTRUCTIONS
     return __heq(a, b);
-#else
-    float fa = __half2float(a);
-    float fb = __half2float(b);
-    return fa == fb;
-#endif
+//#else
+//    float fa = __half2float(a);
+//    float fb = __half2float(b);
+//    return fa == fb;
+//#endif
 #else // __CUDA_ARCH__
     return THC_half2float(a) == THC_half2float(b);
 #endif
   }
 
   static inline __host__ __device__ bool ne(half a, half b) {
-#ifdef __CUDA_ARCH__
-#ifdef CUDA_HALF_INSTRUCTIONS
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
+//#ifdef CUDA_HALF_INSTRUCTIONS
     return __hne(a, b);
-#else
-    float fa = __half2float(a);
-    float fb = __half2float(b);
-    return fa != fb;
-#endif
+//#else
+//    float fa = __half2float(a);
+//    float fb = __half2float(b);
+//    return fa != fb;
+//#endif
 #else // __CUDA_ARCH__
     return THC_half2float(a) != THC_half2float(b);
 #endif
   }
 
   static inline __host__ __device__ half exp(half a) {
-#ifdef __CUDA_ARCH__
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
 #ifdef CUDA_HALF_INSTRUCTIONS
     return hexp(a);
 #else
@@ -219,7 +217,7 @@ struct THCNumerics<half> {
   }
 
   static inline __host__ __device__ half log(half a) {
-#ifdef __CUDA_ARCH__
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
 #ifdef CUDA_HALF_INSTRUCTIONS
     return hlog(a);
 #else
@@ -232,7 +230,7 @@ struct THCNumerics<half> {
   }
 
   static inline __host__ __device__ half log1p(half a) {
-#ifdef __CUDA_ARCH__
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
     float fa = __half2float(a);
     return __float2half(log1pf(fa));
 #else // __CUDA_ARCH__
@@ -241,7 +239,7 @@ struct THCNumerics<half> {
   }
 
   static inline __host__ __device__ half cos(half a) {
-#ifdef __CUDA_ARCH__
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
 #ifdef CUDA_HALF_INSTRUCTIONS
     return hcos(a);
 #else
@@ -254,7 +252,7 @@ struct THCNumerics<half> {
   }
 
   static inline __host__ __device__ half sin(half a) {
-#ifdef __CUDA_ARCH__
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
 #ifdef CUDA_HALF_INSTRUCTIONS
     return hsin(a);
 #else
@@ -267,7 +265,7 @@ struct THCNumerics<half> {
   }
 
   static inline __host__ __device__ half sqrt(half a) {
-#ifdef __CUDA_ARCH__
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
 #ifdef CUDA_HALF_INSTRUCTIONS
     return hsqrt(a);
 #else
@@ -280,7 +278,7 @@ struct THCNumerics<half> {
   }
 
   static inline __host__ __device__ half rsqrt(half a) {
-#ifdef __CUDA_ARCH__
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
 #ifdef CUDA_HALF_INSTRUCTIONS
     return hrsqrt(a);
 #else
@@ -293,7 +291,7 @@ struct THCNumerics<half> {
   }
 
   static inline __host__ __device__ half ceil(half a) {
-#ifdef __CUDA_ARCH__
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
 #ifdef CUDA_HALF_INSTRUCTIONS
     return hceil(a);
 #else
@@ -306,7 +304,7 @@ struct THCNumerics<half> {
   }
 
   static inline __host__ __device__ half floor(half a) {
-#ifdef __CUDA_ARCH__
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
 #ifdef CUDA_HALF_INSTRUCTIONS
     return hfloor(a);
 #else
@@ -319,7 +317,7 @@ struct THCNumerics<half> {
   }
 
   static inline __host__ __device__ half trunc(half a) {
-#ifdef __CUDA_ARCH__
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
 #ifdef CUDA_HALF_INSTRUCTIONS
     return htrunc(a);
 #else
@@ -332,20 +330,20 @@ struct THCNumerics<half> {
   }
 
   static inline __host__ __device__ half neg(half a) {
-#ifdef __CUDA_ARCH__
-#ifdef CUDA_HALF_INSTRUCTIONS
-    return __hneg(a);
-#else
-    float fa = __half2float(a);
-    return __float2half(-fa);
-#endif
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
+//#ifdef CUDA_HALF_INSTRUCTIONS
+    return __hneq(a);
+//#else
+//    float fa = __half2float(a);
+//    return __float2half(-fa);
+//#endif
 #else // __CUDA_ARCH__
     return THC_float2half(-(THC_half2float(a)));
 #endif
   }
 
   static inline __host__ __device__ half acos(half a) {
-#ifdef __CUDA_ARCH__
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
     float fa = __half2float(a);
     return __float2half(acosf(fa));
 #else // __CUDA_ARCH__
@@ -354,7 +352,7 @@ struct THCNumerics<half> {
   }
 
   static inline __host__ __device__ half cosh(half a) {
-#ifdef __CUDA_ARCH__
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
     float fa = __half2float(a);
     return __float2half(coshf(fa));
 #else // __CUDA_ARCH__
@@ -363,7 +361,7 @@ struct THCNumerics<half> {
   }
 
   static inline __host__ __device__ half asin(half a) {
-#ifdef __CUDA_ARCH__
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
     float fa = __half2float(a);
     return __float2half(asinf(fa));
 #else // __CUDA_ARCH__
@@ -372,7 +370,7 @@ struct THCNumerics<half> {
   }
 
   static inline __host__ __device__ half sinh(half a) {
-#ifdef __CUDA_ARCH__
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
     float fa = __half2float(a);
     return __float2half(sinhf(fa));
 #else // __CUDA_ARCH__
@@ -381,7 +379,7 @@ struct THCNumerics<half> {
   }
 
   static inline __host__ __device__ half tan(half a) {
-#ifdef __CUDA_ARCH__
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
     float fa = __half2float(a);
     return __float2half(tanf(fa));
 #else // __CUDA_ARCH__
@@ -390,7 +388,7 @@ struct THCNumerics<half> {
   }
 
   static inline __host__ __device__ half atan(half a) {
-#ifdef __CUDA_ARCH__
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
     float fa = __half2float(a);
     return __float2half(atanf(fa));
 #else // __CUDA_ARCH__
@@ -399,7 +397,7 @@ struct THCNumerics<half> {
   }
 
   static inline __host__ __device__ half tanh(half a) {
-#ifdef __CUDA_ARCH__
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
     float fa = __half2float(a);
     return __float2half(tanhf(fa));
 #else // __CUDA_ARCH__
@@ -408,7 +406,7 @@ struct THCNumerics<half> {
   }
 
   static inline __host__ __device__ half abs(half a) {
-#ifdef __CUDA_ARCH__
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
     float fa = __half2float(a);
     return __float2half(fabs(fa));
 #else // __CUDA_ARCH__
@@ -417,7 +415,7 @@ struct THCNumerics<half> {
   }
 
   static inline __host__ __device__ half round(half a) {
-#ifdef __CUDA_ARCH__
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
     float fa = __half2float(a);
     return __float2half(roundf(fa));
 #else // __CUDA_ARCH__
@@ -426,7 +424,7 @@ struct THCNumerics<half> {
   }
 
   static inline __host__ __device__ half frac(half a) {
-#ifdef __CUDA_ARCH__
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
     float fa = __half2float(a);
     return __float2half(fa - truncf(fa));
 #else // __CUDA_ARCH__
@@ -436,7 +434,7 @@ struct THCNumerics<half> {
   }
 
   static inline __host__ __device__ half cinv(half a) {
-#ifdef __CUDA_ARCH__
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
     float fa = __half2float(a);
     return __float2half(1.0f / fa);
 #else // __CUDA_ARCH__
@@ -445,21 +443,21 @@ struct THCNumerics<half> {
   }
 
   static inline __host__ __device__ half add(half a, half b) {
-#ifdef __CUDA_ARCH__
-#ifdef CUDA_HALF_INSTRUCTIONS
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
+//#ifdef CUDA_HALF_INSTRUCTIONS
     return __hadd(a, b);
-#else
-    float fa = __half2float(a);
-    float fb = __half2float(b);
-    return __float2half( fa + fb );
-#endif
+//#else
+//    float fa = __half2float(a);
+//    float fb = __half2float(b);
+//    return __float2half( fa + fb );
+//#endif
 #else // __CUDA_ARCH__
     return THC_float2half(THC_half2float(a) + THC_half2float(b));
 #endif
   }
 
   static inline __host__ __device__ half div(half a, half b) {
-#ifdef __CUDA_ARCH__
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
     float fa = __half2float(a);
     float fb = __half2float(b);
     return __float2half( fa / fb );
@@ -469,35 +467,35 @@ struct THCNumerics<half> {
   }
 
   static inline __host__ __device__ half mul(half a, half b) {
-#ifdef __CUDA_ARCH__
-#ifdef CUDA_HALF_INSTRUCTIONS
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
+//#ifdef CUDA_HALF_INSTRUCTIONS
     return __hmul(a, b);
-#else
-    float fa = __half2float(a);
-    float fb = __half2float(b);
-    return __float2half( fa * fb );
-#endif
+//#else
+//    float fa = __half2float(a);
+//    float fb = __half2float(b);
+//    return __float2half( fa * fb );
+//#endif
 #else // __CUDA_ARCH__
     return THC_float2half(THC_half2float(a) * THC_half2float(b));
 #endif
   }
 
   static inline __host__ __device__ half sub(half a, half b) {
-#ifdef __CUDA_ARCH__
-#ifdef CUDA_HALF_INSTRUCTIONS
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
+//#ifdef CUDA_HALF_INSTRUCTIONS
     return __hsub(a, b);
-#else
-    float fa = __half2float(a);
-    float fb = __half2float(b);
-    return __float2half( fa - fb );
-#endif
+//#else
+//    float fa = __half2float(a);
+//    float fb = __half2float(b);
+//    return __float2half( fa - fb );
+//#endif
 #else // __CUDA_ARCH__
     return THC_float2half(THC_half2float(a) - THC_half2float(b));
 #endif
   }
 
   static inline __host__ __device__ half pow(half a, half b) {
-#ifdef __CUDA_ARCH__
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
     float fa = __half2float(a);
     float fb = __half2float(b);
     return __float2half(powf(fa, fb));
@@ -574,7 +572,7 @@ struct THCNumerics<double> {
   static inline __host__ __device__  double ceil (double a) { return  ::ceil(a); }
   static inline __host__ __device__  double floor(double a) { return ::floor(a); }
   static inline __host__ __device__  double trunc(double a) { return ::trunc(a); }
-  static inline __host__ __device__  double neg  (double a) { return       -a; }
+  static inline __host__ __device__  double neg  (double a) { return         -a; }
   static inline __host__ __device__  double acos (double a) { return  ::acos(a); }
   static inline __host__ __device__  double cosh (double a) { return  ::cosh(a); }
   static inline __host__ __device__  double acosh(double a) { return ::acosh(a); }
@@ -584,9 +582,7 @@ struct THCNumerics<double> {
   static inline __host__ __device__  double tan  (double a) { return   ::tan(a); }
   static inline __host__ __device__  double atan (double a) { return  ::atan(a); }
   static inline __host__ __device__  double tanh (double a) { return  ::tanh(a); }
-#ifdef CUDA_PATH
-  static inline __host__ __device__  double abs  (double a) { return   ::abs(a); }
-#endif
+  static inline __host__ __device__  double abs  (double a) { return  ::fabs(a); }
   static inline __host__ __device__  double round(double a) { return ::round(a); }
   static inline __host__ __device__  double frac (double a) { return a - ::trunc(a); }
   static inline __host__ __device__  double cinv (double a) { return 1.0 / a; }
@@ -603,14 +599,18 @@ struct THCNumerics<double> {
 /// tensor expects.
 template <typename In, typename Out>
 struct ScalarConvert {
-  static __host__ __device__ Out to(const In v) { return (Out) v; }
+  __device__
+  static
+  Out to(const In v) { return (Out) v; }
 };
 
 #ifdef CUDA_HALF_TENSOR
 template <typename Out>
 struct ScalarConvert<half, Out> {
-  static __host__ __device__ Out to(const half v) {
-#ifdef __CUDA_ARCH__
+  __device__
+  static
+  Out to(const half v) {
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
     return (Out) __half2float(v);
 #else
     return (Out) THC_half2float(v);
@@ -620,8 +620,10 @@ struct ScalarConvert<half, Out> {
 
 template <typename In>
 struct ScalarConvert<In, half> {
-  static __host__ __device__ half to(const In v) {
-#ifdef __CUDA_ARCH__
+  __device__
+  static
+  half to(const In v) {
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
     return __float2half((float) v);
 #else
     return THC_float2half((float) v);
@@ -631,10 +633,10 @@ struct ScalarConvert<In, half> {
 
 template <>
 struct ScalarConvert<half, half> {
-  static __host__ __device__ half to(const half v) {
-    return v;
-  }
+  __device__
+  static
+  half to(const half v) { return v; }
 };
 #endif
 
-#endif // THC_NUMERICS_INC
+#endif // THC_NUMERICS_INC

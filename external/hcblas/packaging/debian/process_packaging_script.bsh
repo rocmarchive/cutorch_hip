@@ -1,0 +1,9 @@
+#!/bin/bash
+
+# This is a script to generate the postinst and postrm scripts for the Debian package
+# Usage: process_package_script <script_template> <script output>
+
+input=$1; shift
+output=$1; shift
+
+cat $input >$output

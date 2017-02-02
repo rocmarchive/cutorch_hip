@@ -18,14 +18,12 @@
 // CUDA kernel argument that defines tensor layout
 template <typename T, typename IndexType>
 struct TensorInfo {
-  // constructor
   TensorInfo(T* p,
              int dim,
-             IndexType sz[MAX_CUTORCH_DIMS],
-             IndexType st[MAX_CUTORCH_DIMS]);
+             const IndexType (&sz)[MAX_CUTORCH_DIMS],
+             const IndexType (&st)[MAX_CUTORCH_DIMS]);
 
-  // Destructor
-  ~TensorInfo(void); 
+  ~TensorInfo(void);
 
   // Set the size of the given dimension to 1, as if it were a
   // reduction dim (allows you to calculate offsets of the reduction
@@ -41,28 +39,27 @@ struct TensorInfo {
   // since the collapsed dimensions are <= the input dimensions.
   int collapseDims(int excludeDim = -1);
 
-  // Contiguous tensors of more than one dimension are collapsed down
-  // to one tensor
-  __host__ __device__ inline bool isContiguous() const {
-    return (dims == 1 && strides[0] == 1);
-  }
+    // Contiguous tensors of more than one dimension are collapsed down
+    // to one tensor
+    __host__ __device__
+    bool isContiguous() const { return (dims == 1 && strides[0] == 1); }
 
-  T* data;
-  IndexType sizes[MAX_CUTORCH_DIMS];
-  IndexType strides[MAX_CUTORCH_DIMS];
-  IndexType* dSizes;
-  IndexType* dStrides;
-  int dims;
+    T* data;
+    IndexType sizes[MAX_CUTORCH_DIMS];
+    IndexType strides[MAX_CUTORCH_DIMS];
+    IndexType* dSizes;
+    IndexType* dStrides;
+    int dims;
 };
 
 template <typename T, typename IndexType>
 TensorInfo<T, IndexType>::TensorInfo(T* p,
                                      int dim,
-                                     IndexType sz[MAX_CUTORCH_DIMS],
-                                     IndexType st[MAX_CUTORCH_DIMS]) {
-  data = p;
-  dims = dim;
-  //assert(dims > 0 && dims < MAX_CUTORCH_DIMS);
+                                     const IndexType (&sz)[MAX_CUTORCH_DIMS],
+                                     const IndexType (&st)[MAX_CUTORCH_DIMS])
+    : data{p}, dims{dim}
+{
+  assert(dims > 0 && dims < MAX_CUTORCH_DIMS);
 
   // Allocate to accomodate device strides and sizes for the tensor
   THCudaCheck(hipMalloc((void **)&dSizes, sizeof(IndexType) * MAX_CUTORCH_DIMS));
@@ -243,7 +240,7 @@ TensorInfo<T, IndexType>::collapseDims(int excludeDim) {
   // Update the deviceSizes and deviceStrides with new sizes and strides informations
   THCudaCheck(hipMemcpy(dSizes, sizes, sizeof(IndexType) * MAX_CUTORCH_DIMS, hipMemcpyHostToDevice));
   THCudaCheck(hipMemcpy(dStrides, strides, sizeof(IndexType) * MAX_CUTORCH_DIMS, hipMemcpyHostToDevice));
-  
+
 
   // After collapsing, the original `excludeDim` may have been
   // renumbered to this new `returnDim`, since some dimensions could
@@ -255,9 +252,13 @@ TensorInfo<T, IndexType>::collapseDims(int excludeDim) {
 // specialized on `Dims` to reduce nvcc compilation time
 template <typename T, typename IndexType, int Dims>
 struct IndexToOffset {
-  static __host__ __device__ IndexType get(
-    IndexType linearId,
-    IndexType* sizes, IndexType* strides, int dims) {
+  __host__ __device__
+  static
+  IndexType get(IndexType linearId,
+                IndexType* sizes,
+                IndexType* strides,
+                int dims)
+  {
     IndexType offset = 0;
 
     // Use static dims
@@ -277,18 +278,25 @@ struct IndexToOffset {
 
 template <typename T, typename IndexType>
 struct IndexToOffset<T, IndexType, -2> {
-  static inline __host__ __device__ IndexType
-    get(IndexType linearId, IndexType* sizes, IndexType* strides, int dims) {
+  __host__ __device__
+  static
+  IndexType get(IndexType linearId,
+                IndexType* /*sizes*/,
+                IndexType* /*strides*/,
+                int /*dims*/) {
     return linearId;
   }
 };
 
 template <typename T, typename IndexType>
 struct IndexToOffset<T, IndexType, -1> {
-  static inline __host__ __device__ IndexType get(
-    IndexType linearId,
-    IndexType* sizes, IndexType* strides, int dims) {
-
+  __host__ __device__
+  static
+  IndexType get(IndexType linearId,
+                IndexType* sizes,
+                IndexType* strides,
+                int dims)
+  {
     IndexType offset = 0;
 
     // Use dynamic dims

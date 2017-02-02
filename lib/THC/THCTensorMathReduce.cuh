@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 #ifndef THC_TENSORMATH_REDUCE_CUH
 #define THC_TENSORMATH_REDUCE_CUH
 
@@ -7,123 +6,150 @@
 #include "THCNumerics.cuh"
 #include "THCReduce.cuh"
 #include "THCReduceAll.cuh"
-#include "THCThrustAlternate.h"
+#if defined(THRUST_PATH)
+#include <thrust/functional.h>
+#else
+#include <bolt/amp/functional.h>
+#include <bolt/amp/pair.h>
+#endif
+#include <hip/hip_runtime.h>
+
 // Reduction operators that support `half`, unlike Thrust
 template <typename InT, typename AccT>
 struct ReduceAdd {
-  inline __device__ AccT operator()(AccT a, InT b) const {
-    return a + (AccT) b;
-  }
+__device__
+AccT operator()(AccT a, InT b) const {  return a + (AccT) b;  }
 };
 
 #ifdef CUDA_HALF_TENSOR
 template <>
 struct ReduceAdd<half, half> {
-  inline __device__ half operator()(half a, half b) const {
+inline __device__ half operator()(half a, half b) const {
 #ifdef CUDA_HALF_INSTRUCTIONS
-    return __hadd(a, b);
+return __hadd(a, b);
 #else
-    float fa = __half2float(a);
-    float fb = __half2float(b);
-    return __float2half(fa + fb);
+float fa = __half2float(a);
+float fb = __half2float(b);
+return __float2half(fa + fb);
 #endif
-  }
+}
 };
 
 template <>
 struct ReduceAdd<half, float> {
-  inline __device__ float operator()(float a, half b) const {
-    return a + __half2float(b);
-  }
+__device__
+float operator()(float a, half b) const { return a + __half2float(b); }
 };
 #endif // CUDA_HALF_TENSOR
 
 template <typename InT, typename AccT>
 struct ReduceMultiply {
-  inline __device__ AccT operator()(AccT a, InT b) const {
-    return a * (AccT) b;
-  }
+__device__
+AccT operator()(AccT a, InT b) const { return a * (AccT) b; }
 };
 
 #ifdef CUDA_HALF_TENSOR
 template <>
 struct ReduceMultiply<half, half> {
-  inline __device__ half operator()(half a, half b) const {
+__device__
+half operator()(half a, half b) const
+{
 #ifdef CUDA_HALF_INSTRUCTIONS
-    return __hmul(a, b);
+return __hmul(a, b);
 #else
-    float fa = __half2float(a);
-    float fb = __half2float(b);
-    return __float2half(fa * fb);
+float fa = __half2float(a);
+float fb = __half2float(b);
+return __float2half(fa * fb);
 #endif
-  }
+}
 };
 
 template <>
 struct ReduceMultiply<half, float> {
-  inline __device__ float operator()(float a, half b) const {
-    return a * __half2float(b);
-  }
+__device__
+float operator()(float a, half b) const { return a * __half2float(b); }
 };
 #endif // CUDA_HALF_TENSOR
 
 template <typename ResT, typename ArgT>
 struct SquareFunctor {
-    SquareFunctor(ResT mean): mean_(mean) {}
+//__host__ __device__
+explicit
+SquareFunctor(ResT mean): mean_(mean) {}
 
-    inline __device__ ResT operator()(ArgT x) const {
-      return (((ResT) x) - mean_) * (((ResT) x) - mean_);
-    }
+__device__
+ResT operator()(ArgT x) const
+{
+return (((ResT) x) - mean_) * (((ResT) x) - mean_);
+}
 
-    const ResT mean_;
+__host__ __device__
+~SquareFunctor() {}
+
+ResT mean_;
 };
 
 #ifdef CUDA_HALF_TENSOR
 template <typename ResT>
 struct SquareFunctor<ResT, half> {
-    SquareFunctor(ResT mean): mean_(mean) {}
+explicit
+SquareFunctor(ResT mean): mean_(mean) {}
 
-    inline __device__ ResT operator()(half x) const {
-      return THCNumerics<ResT>::mul(
-        THCNumerics<ResT>::sub(mean_, ScalarConvert<half, ResT>::to(x)),
-        THCNumerics<ResT>::sub(mean_, ScalarConvert<half, ResT>::to(x))
-      );
-    }
+__device__
+ResT operator()(half x) const
+{
+return THCNumerics<ResT>::mul(
+THCNumerics<ResT>::sub(mean_, ScalarConvert<half, ResT>::to(x)),
+THCNumerics<ResT>::sub(mean_, ScalarConvert<half, ResT>::to(x))
+);
+}
 
-    const ResT mean_;
+ResT mean_;
 };
 #endif // CUDA_HALF_TENSOR
 
 template <typename T>
 struct ReduceMin {
-  inline __device__ T operator()(T a, T b) const {
-    return THCNumerics<T>::lt(a, b) ? a : b;
-  }
+__device__
+T operator()(T a, T b) const
+{
+return THCNumerics<T>::lt(a, b) ? a : b;
+}
 };
 
 template <typename T>
 struct ReduceMax {
-  inline __device__ T operator()(T a, T b) const {
-    return THCNumerics<T>::gt(a, b) ? a : b;
-  }
+__device__
+T operator()(T a, T b) const
+{
+return THCNumerics<T>::gt(a, b) ? a : b;
+}
 };
 
 struct LogicalAll {
-  inline __device__ unsigned char operator()(unsigned char x,
-                                             unsigned char y) const {
-    return (x && y);
-  }
+__device__
+unsigned char operator()(unsigned char x, unsigned char y) const
+{
+return (x && y);
+}
 };
 
 struct LogicalAny {
-  inline __device__ unsigned char operator()(unsigned char x,
-                                             unsigned char y) const {
-    return (x || y);
-  }
+__device__
+unsigned char operator()(unsigned char x, unsigned char y) const
+{
+return (x || y);
+}
 };
 
 template<typename Real>
-inline __global__ void THCTensor_kernel_renorm(hipLaunchParm lp, Real *data, const Real value, const ptrdiff_t size, const Real maxnorm)
+__global__
+inline
+void THCTensor_kernel_renorm(hipLaunchParm lp,
+                             Real *data,
+                             Real value,
+                             ptrdiff_t size,
+                             Real maxnorm)
 {
   __shared__ Real buffer[32];
   long tx = hipThreadIdx_x;
@@ -134,7 +160,6 @@ inline __global__ void THCTensor_kernel_renorm(hipLaunchParm lp, Real *data, con
   buffer[tx] = ScalarConvert<int, Real>::to(0);
 
   // get norm of axis
-#ifdef CUDA_PATH
   for (ptrdiff_t i=tx; i<size; i+=step)
   {
     buffer[tx] = THCNumerics<Real>::add(
@@ -144,7 +169,6 @@ inline __global__ void THCTensor_kernel_renorm(hipLaunchParm lp, Real *data, con
         value)
     );
   }
-#endif
   // add (reduce)
   for (unsigned int stride = hipBlockDim_x >> 1; stride > 0; stride >>= 1)
   {
@@ -176,7 +200,9 @@ template <typename T>
 struct TensorNonZeroOp
 {
   TensorNonZeroOp() {}
-  __host__ __device__ T operator()(T lhs) const {
+  __host__ __device__
+  T operator()(T lhs) const
+  {
     if (THCNumerics<T>::eq(lhs, ScalarConvert<float, T>::to(0.0))) {
       return ScalarConvert<int, T>::to(0);
     } else {
@@ -190,7 +216,9 @@ struct TensorNormOp
 {
   TensorNormOp(T exp) : exponent(exp) {}
 
-  __host__ __device__ T operator()(T x) const {
+  __host__ __device__
+  T operator()(T x) const
+  {
     if (StaticExp == 1) {
       return (T) fabsf((float) x);
     } else if (StaticExp == 2) {
@@ -200,7 +228,7 @@ struct TensorNormOp
     }
   }
 
-  const T exponent;
+  T exponent;
 };
 
 template <int StaticExp>
@@ -208,7 +236,9 @@ struct TensorNormOp<double, StaticExp>
 {
   TensorNormOp(double exp) : exponent(exp) {}
 
-  __host__ __device__ double operator()(double x) const {
+  __host__ __device__
+  double operator()(double x) const
+  {
     if (StaticExp == 1) {
       return fabs(x);
     } else if (StaticExp == 2) {
@@ -218,7 +248,7 @@ struct TensorNormOp<double, StaticExp>
     }
   }
 
-  const double exponent;
+  double exponent;
 };
 
 #ifdef CUDA_HALF_TENSOR
@@ -227,7 +257,9 @@ struct TensorNormOp<half, StaticExp>
 {
   TensorNormOp(half exp) : exponent(exp) {}
 
-  __host__ __device__ half operator()(half x) const {
+  __host__ __device__
+  half operator()(half x) const
+  {
     if (StaticExp == 1) {
       return THCNumerics<half>::abs(x);
     } else if (StaticExp == 2) {
@@ -237,29 +269,40 @@ struct TensorNormOp<half, StaticExp>
     }
   }
 
-  const half exponent;
+  half exponent;
 };
 #endif
 
 template <typename T>
 struct TensorDistOp
 {
-  TensorDistOp(T exp) : exponent(exp) {}
+  __host__ __device__
+  TensorDistOp() : exponent{} {};
+  __host__ __device__
+  TensorDistOp(const TensorDistOp& x) : exponent{x.exponent} {}
 
-  __host__ __device__ T operator()(T x, T y) const {
-    return THCNumerics<T>::pow(
-      THCNumerics<T>::abs(THCNumerics<T>::sub(x, y)),
-      exponent
-    );
+  __host__ __device__
+  explicit
+  TensorDistOp(T exp) : exponent{exp} {}
+
+  __host__ __device__
+  T operator()(T x, T y) const
+  {
+    return THCNumerics<T>::pow(THCNumerics<T>::abs(THCNumerics<T>::sub(x, y)),
+                               exponent);
   }
 
-  const T exponent;
-};
+  __host__ __device__
+  ~TensorDistOp() {}
 
+  T exponent;
+};
 
 // Given the sum of values and the sum of squares, compute the variance or standard deviation.
 template<typename Real, bool flag, bool apply_sqrt>
-__forceinline__ __device__ Real THCTensor_computeVar(Real sum, Real sum2, unsigned row_size) {
+__forceinline__ __device__
+static
+Real THCTensor_computeVar(Real sum, Real sum2, unsigned row_size) {
   Real rs2 = ScalarConvert<unsigned, Real>::to(row_size);
   Real rs2m = ScalarConvert<unsigned, Real>::to(row_size - 1);
   Real zero = ScalarConvert<int, Real>::to(0);
@@ -298,7 +341,14 @@ __forceinline__ __device__ Real THCTensor_computeVar(Real sum, Real sum2, unsign
  * Each thread processes a single inner row at a time.
  */
 template<typename Real, bool flag, bool apply_sqrt>
-inline __global__ void THCTensor_kernel_varOuterDim(hipLaunchParm lp, Real *tgt, Real *src_, unsigned num_orows, unsigned num_irows, unsigned row_size)
+__global__
+inline
+void THCTensor_kernel_varOuterDim(hipLaunchParm lp,
+                                  Real *tgt,
+                                  Real *src_,
+                                  unsigned num_orows,
+                                  unsigned num_irows,
+                                  unsigned row_size)
 {
   for (unsigned orow = hipBlockIdx_x; orow < num_orows; orow += hipGridDim_x) {
     for (unsigned irow = hipBlockIdx_y * hipBlockDim_x + hipThreadIdx_x; irow < num_irows; irow += hipGridDim_y * hipBlockDim_x) {
@@ -322,7 +372,7 @@ inline __global__ void THCTensor_kernel_varOuterDim(hipLaunchParm lp, Real *tgt,
 }
 
 template<typename TensorTypeK, typename Real, bool apply_sqrt>
-void THCTensor_varOuterDim(THCState *state, TensorTypeK *tgt, TensorTypeK *src, long dimension, int flag)
+__host__ void THCTensor_varOuterDim(THCState *state, TensorTypeK *tgt, TensorTypeK *src, long dimension, int flag)
 {
   unsigned ndim = TensorUtils<TensorTypeK>::getDims(state, src);
   // Treat all outer dimensions (i.e. dim < dimension) as one.
@@ -342,11 +392,27 @@ void THCTensor_varOuterDim(THCState *state, TensorTypeK *tgt, TensorTypeK *src, 
   dim3 grid(min(maxGridDim, num_orows), min(maxGridDim, THCCeilDiv(num_irows, threads.x)));
 
   if (flag) {
-    hipLaunchKernel(HIP_KERNEL_NAME(THCTensor_kernel_varOuterDim<Real, true, apply_sqrt>), dim3(grid), dim3(threads), 0, THCState_getCurrentStream(state), 
-        TensorUtils<TensorTypeK>::getData(state, tgt), TensorUtils<TensorTypeK>::getData(state, src), num_orows, num_irows, row_size);
+    hipLaunchKernel(HIP_KERNEL_NAME(THCTensor_kernel_varOuterDim<Real, true, apply_sqrt>),
+                    dim3(grid),
+                    dim3(threads),
+                    0,
+                    THCState_getCurrentStream(state),
+                    TensorUtils<TensorTypeK>::getData(state, tgt),
+                    TensorUtils<TensorTypeK>::getData(state, src),
+                    num_orows,
+                    num_irows,
+                    row_size);
   } else {
-    hipLaunchKernel(HIP_KERNEL_NAME(THCTensor_kernel_varOuterDim<Real, false, apply_sqrt>), dim3(grid), dim3(threads), 0, THCState_getCurrentStream(state), 
-        TensorUtils<TensorTypeK>::getData(state, tgt), TensorUtils<TensorTypeK>::getData(state, src), num_orows, num_irows, row_size);
+    hipLaunchKernel(HIP_KERNEL_NAME(THCTensor_kernel_varOuterDim<Real, false, apply_sqrt>),
+                    dim3(grid),
+                    dim3(threads),
+                    0,
+                    THCState_getCurrentStream(state),
+                    TensorUtils<TensorTypeK>::getData(state, tgt),
+                    TensorUtils<TensorTypeK>::getData(state, src),
+                    num_orows,
+                    num_irows,
+                    row_size);
   }
   hipError_t errcode = hipGetLastError();
   if (errcode != hipSuccess) {
@@ -367,7 +433,13 @@ void THCTensor_varOuterDim(THCState *state, TensorTypeK *tgt, TensorTypeK *src, 
  * per thread block is quicker than processing a single row, especially for short rows).
  */
 template<typename Real, bool flag, bool apply_sqrt>
-inline __global__ void THCTensor_kernel_varInnermostDim(hipLaunchParm lp, Real *tgt, Real *src_, unsigned num_rows, unsigned row_size)
+__global__
+inline
+void THCTensor_kernel_varInnermostDim(hipLaunchParm lp,
+                                      Real *tgt,
+                                      Real *src_,
+                                      unsigned num_rows,
+                                      unsigned row_size)
 {
   __shared__ Real ssum[32][16];
   __shared__ Real ssum2[32][16];
@@ -409,7 +481,7 @@ inline __global__ void THCTensor_kernel_varInnermostDim(hipLaunchParm lp, Real *
 }
 
 template<typename TensorTypeK, typename Real, bool apply_sqrt>
-void THCTensor_varInnermostDim(THCState *state, TensorTypeK *tgt, TensorTypeK *src, int flag)
+__host__ void THCTensor_varInnermostDim(THCState *state, TensorTypeK *tgt, TensorTypeK *src, int flag)
 {
   unsigned ndim = TensorUtils<TensorTypeK>::getDims(state, src);
   // Treat all outer dimensions as a single dimension.
@@ -424,11 +496,25 @@ void THCTensor_varInnermostDim(THCState *state, TensorTypeK *tgt, TensorTypeK *s
   dim3 grid(min(1024, THCCeilDiv(num_rows, threads.y)));
 
   if (flag) {
-    hipLaunchKernel(HIP_KERNEL_NAME(THCTensor_kernel_varInnermostDim<Real, true, apply_sqrt>), dim3(grid), dim3(threads), 0, THCState_getCurrentStream(state), 
-        TensorUtils<TensorTypeK>::getData(state, tgt), TensorUtils<TensorTypeK>::getData(state, src), num_rows, row_size);
+    hipLaunchKernel(HIP_KERNEL_NAME(THCTensor_kernel_varInnermostDim<Real, true, apply_sqrt>),
+                    dim3(grid),
+                    dim3(threads),
+                    0,
+                    THCState_getCurrentStream(state),
+                    TensorUtils<TensorTypeK>::getData(state, tgt),
+                    TensorUtils<TensorTypeK>::getData(state, src),
+                    num_rows,
+                    row_size);
   } else {
-    hipLaunchKernel(HIP_KERNEL_NAME(THCTensor_kernel_varInnermostDim<Real, false, apply_sqrt>), dim3(grid), dim3(threads), 0, THCState_getCurrentStream(state), 
-        TensorUtils<TensorTypeK>::getData(state, tgt), TensorUtils<TensorTypeK>::getData(state, src), num_rows, row_size);
+    hipLaunchKernel(HIP_KERNEL_NAME(THCTensor_kernel_varInnermostDim<Real, false, apply_sqrt>),
+                    dim3(grid),
+                    dim3(threads),
+                    0,
+                    THCState_getCurrentStream(state),
+                    TensorUtils<TensorTypeK>::getData(state, tgt),
+                    TensorUtils<TensorTypeK>::getData(state, src),
+                    num_rows,
+                    row_size);
   }
   hipError_t errcode = hipGetLastError();
   if (errcode != hipSuccess) {
@@ -443,26 +529,37 @@ void THCTensor_varInnermostDim(THCState *state, TensorTypeK *tgt, TensorTypeK *s
    The structure of the kernels follows the structure of the reduction kernels.
 */
 template <typename K, typename Index, class BinaryFunction>
-inline __global__ void
-kernelTransformReduceOuterDimIndex(hipLaunchParm lp, K *tgt1,
-                                   Index *tgt2,
-                                   K *src_,
-                                   unsigned num_orows,
-                                   unsigned num_irows,
-                                   unsigned row_size,
-                                   thrust_alternate::Pair<K, Index> init,
-                                   BinaryFunction binary_op) {
+__global__
+inline
+void kernelTransformReduceOuterDimIndex(hipLaunchParm lp,
+                                        K *tgt1,
+                                        Index *tgt2,
+                                        K *src_,
+                                        unsigned num_orows,
+                                        unsigned num_irows,
+                                        unsigned row_size,
+#if defined(THRUST_PATH)
+                                        thrust::pair<K, Index> init,
+#else
+                                        bolt::amp::pair<K, Index> init,
+#endif
+                                        BinaryFunction binary_op)
+{
   for (unsigned orow = hipBlockIdx_x; orow < num_orows; orow += hipGridDim_x) {
     for (unsigned irow = hipBlockIdx_y * hipBlockDim_x + hipThreadIdx_x;
          irow < num_irows;
          irow += hipGridDim_y * hipBlockDim_x) {
       K *src = src_ + orow * row_size * num_irows + irow;
-      thrust_alternate::Pair<K, Index> acc = init;
+      auto acc = init;
 
       for (unsigned col = 0; col < row_size; ++col) {
         // +1 for Lua index
-        acc = binary_op(thrust_alternate::Make_Pair<K, Index>(*src, col + TH_INDEX_BASE),
-                        acc);
+        #if defined(THRUST_PATH)
+            acc = binary_op(thrust::make_pair<K, Index>(*src, col + TH_INDEX_BASE),
+                            acc);
+        #else
+            acc = binary_op(bolt::amp::make_pair(*src, col + TH_INDEX_BASE), acc);
+        #endif
         src += num_irows;
       }
 
@@ -475,16 +572,20 @@ kernelTransformReduceOuterDimIndex(hipLaunchParm lp, K *tgt1,
 template <typename TensorTypeK,
           typename TensorTypeIndex,
           typename BinaryFunction>
-void
-THC_transformReduceOuterDimIndex(THCState *state,
-                                 TensorTypeK *tgt1,
-                                 TensorTypeIndex *tgt2,
-                                 TensorTypeK *src,
-                                 long rdim,
-                                 const thrust_alternate::Pair<
-                                 typename TensorUtils<TensorTypeK>::DataType,
-                                 typename TensorUtils<TensorTypeIndex>::DataType>& init,
-                                 BinaryFunction binary_op) {
+void THC_transformReduceOuterDimIndex(THCState *state,
+                                      TensorTypeK *tgt1,
+                                      TensorTypeIndex *tgt2,
+                                      TensorTypeK *src,
+                                      long rdim,
+#if defined(THRUST_PATH)
+                                      const thrust::pair<typename TensorUtils<TensorTypeK>::DataType,
+                                                         typename TensorUtils<TensorTypeIndex>::DataType>& init,
+#else
+                                      const bolt::amp::pair<typename TensorUtils<TensorTypeK>::DataType,
+                                                            typename TensorUtils<TensorTypeIndex>::DataType>& init,
+#endif
+                                 BinaryFunction binary_op)
+{
   unsigned ndim = TensorUtils<TensorTypeK>::getDims(state, src);
   unsigned num_orows = 1;
   for (long dim = 0; dim < rdim; dim++) {
@@ -501,15 +602,24 @@ THC_transformReduceOuterDimIndex(THCState *state,
   dim3 grid(min(maxGridDim, num_orows),
             min(maxGridDim, THCCeilDiv(num_irows, threads.x)));
 
-  hipLaunchKernel(HIP_KERNEL_NAME(kernelTransformReduceOuterDimIndex), dim3(grid), dim3(threads), 0, THCState_getCurrentStream(state), 
-      TensorUtils<TensorTypeK>::getData(state, tgt1),
-      TensorUtils<TensorTypeIndex>::getData(state, tgt2),
-      TensorUtils<TensorTypeK>::getData(state, src),
-      num_orows, num_irows, row_size, init, binary_op);
+  hipLaunchKernel(HIP_KERNEL_NAME(kernelTransformReduceOuterDimIndex),
+                  dim3(grid),
+                  dim3(threads),
+                  0,
+                  THCState_getCurrentStream(state),
+                  TensorUtils<TensorTypeK>::getData(state, tgt1),
+                  TensorUtils<TensorTypeIndex>::getData(state, tgt2),
+                  TensorUtils<TensorTypeK>::getData(state, src),
+                  num_orows,
+                  num_irows,
+                  row_size,
+                  init,
+                  binary_op);
 
   THCudaCheck(hipGetLastError());
 }
-/* Reduce the innermost dimension of a tensor (on thrust_alternate::Pair functors which are (value, index))
+
+/* Reduce the innermost dimension of a tensor (on pair functors which are (value, index))
  *
  * For an n-d tensor (n <= 4) where the reduction is along the innermost dimension:
  *
@@ -520,14 +630,21 @@ THC_transformReduceOuterDimIndex(THCState *state,
  * Reduction along other dimensions is handled in a separate kernel.
  */
 template <typename K, typename Index, class BinaryFunction>
-inline __global__ void
-kernelTransformReduceInnermostDimIndex(hipLaunchParm lp, K *tgt1,
-                                       Index* tgt2,
-                                       K *src_,
-                                       unsigned num_rows,
-                                       unsigned row_size,
-                                       thrust_alternate::Pair<K, Index> init,
-                                       BinaryFunction binary_op) {
+__global__
+inline
+void kernelTransformReduceInnermostDimIndex(hipLaunchParm lp,
+                                            K* tgt1,
+                                            Index* tgt2,
+                                            K* src_,
+                                            unsigned num_rows,
+                                            unsigned row_size,
+#if defined(THRUST_PATH)
+                                            thrust::pair<K, Index> init,
+#else
+                                            bolt::amp::pair<K, Index> init,
+#endif
+                                            BinaryFunction binary_op)
+{
   __shared__ K sbuf[32][16 + 1]; // avoid bank conflict
   __shared__ Index ibuf[32][16 + 1]; // avoid bank conflict
 
@@ -535,12 +652,16 @@ kernelTransformReduceInnermostDimIndex(hipLaunchParm lp, K *tgt1,
        block_row < num_rows;
        block_row += hipBlockDim_y * hipGridDim_x) {
     unsigned row = block_row + hipThreadIdx_y;
-    thrust_alternate::Pair<K, Index> acc = init;
+    auto acc = init;
     if (row < num_rows) {
       K *src = src_ + row * row_size;
       // Sequential reduction within a thread.
       for (unsigned col = hipThreadIdx_x; col < row_size; col += hipBlockDim_x) {
-        acc = binary_op(thrust_alternate::Make_Pair<K, Index>(src[col], col + TH_INDEX_BASE), acc);
+#if defined(THRUST_PATH)
+        acc = binary_op(thrust::make_pair<K, Index>(src[col], col + TH_INDEX_BASE), acc);
+#else
+        acc = binary_op(bolt::amp::make_pair(src[col], col + TH_INDEX_BASE), acc);
+#endif
       }
     }
 
@@ -554,11 +675,14 @@ kernelTransformReduceInnermostDimIndex(hipLaunchParm lp, K *tgt1,
     Index* iline = &ibuf[hipThreadIdx_y][0];
     for (unsigned s = 8; s > 0; s >>= 1) {
       if (row < num_rows && hipThreadIdx_x < s) {
-        thrust_alternate::Pair<K, Index> arg1 =
-          thrust_alternate::Make_Pair<K, Index>(sline[hipThreadIdx_x], iline[hipThreadIdx_x]);
-        thrust_alternate::Pair<K, Index> arg2 =
-          thrust_alternate::Make_Pair<K, Index>(sline[hipThreadIdx_x + s], iline[hipThreadIdx_x + s]);
-        thrust_alternate::Pair<K, Index> res = binary_op(arg1, arg2);
+#if defined(THRUST_PATH)
+        thrust::pair<K, Index> arg1{sline[hipThreadIdx_x], iline[hipThreadIdx_x]};
+        thrust::pair<K, Index> arg2{sline[hipThreadIdx_x + s], iline[hipThreadIdx_x + s]};
+#else
+        bolt::amp::pair<K, Index> arg1{sline[hipThreadIdx_x], iline[hipThreadIdx_x]};
+        bolt::amp::pair<K, Index> arg2{sline[hipThreadIdx_x + s], iline[hipThreadIdx_x + s]};
+#endif
+        auto res = binary_op(arg1, arg2);
 
         sline[hipThreadIdx_x] = res.first;
         iline[hipThreadIdx_x] = res.second;
@@ -577,15 +701,19 @@ kernelTransformReduceInnermostDimIndex(hipLaunchParm lp, K *tgt1,
 template <typename TensorTypeK,
           typename TensorTypeIndex,
           typename BinaryFunction>
-void
-THC_transformReduceInnermostDimIndex(THCState *state,
-                                     TensorTypeK *tgt1,
-                                     TensorTypeIndex *tgt2,
-                                     TensorTypeK *src,
-                                     const thrust_alternate::Pair<
-                                     typename TensorUtils<TensorTypeK>::DataType,
-                                     typename TensorUtils<TensorTypeIndex>::DataType>& init,
-                                     BinaryFunction binary_op) {
+void THC_transformReduceInnermostDimIndex(THCState *state,
+                                          TensorTypeK *tgt1,
+                                          TensorTypeIndex *tgt2,
+                                          TensorTypeK *src,
+#if defined(THRUST_PATH)
+                                          const thrust::pair<typename TensorUtils<TensorTypeK>::DataType,
+                                                             typename TensorUtils<TensorTypeIndex>::DataType>& init,
+#else
+                                          const bolt::amp::pair<typename TensorUtils<TensorTypeK>::DataType,
+                                                                typename TensorUtils<TensorTypeIndex>::DataType>& init,
+#endif
+                                          BinaryFunction binary_op)
+{
   unsigned ndim = TensorUtils<TensorTypeK>::getDims(state, src);
   unsigned num_rows = 1;
   for (unsigned dim = 0; dim < ndim - 1; dim++) {
@@ -596,11 +724,18 @@ THC_transformReduceInnermostDimIndex(THCState *state,
   dim3 threads(16, 32);
   dim3 grid(min(1024, THCCeilDiv(num_rows, threads.y)));
 
-  hipLaunchKernel(HIP_KERNEL_NAME(kernelTransformReduceInnermostDimIndex), dim3(grid), dim3(threads), 0, THCState_getCurrentStream(state), 
-      TensorUtils<TensorTypeK>::getData(state, tgt1),
-      TensorUtils<TensorTypeIndex>::getData(state, tgt2),
-      TensorUtils<TensorTypeK>::getData(state, src),
-      num_rows, row_size, init, binary_op);
+  hipLaunchKernel(HIP_KERNEL_NAME(kernelTransformReduceInnermostDimIndex),
+                  dim3(grid),
+                  dim3(threads),
+                  0,
+                  THCState_getCurrentStream(state),
+                  TensorUtils<TensorTypeK>::getData(state, tgt1),
+                  TensorUtils<TensorTypeIndex>::getData(state, tgt2),
+                  TensorUtils<TensorTypeK>::getData(state, src),
+                  num_rows,
+                  row_size,
+                  init,
+                  binary_op);
 
   THCudaCheck(hipGetLastError());
 }
@@ -608,16 +743,19 @@ THC_transformReduceInnermostDimIndex(THCState *state,
 template <typename TensorTypeK,
           typename TensorTypeIndex,
           typename BinaryFunction>
-void
-THC_reduceDimIndex(THCState *state,
-                   TensorTypeK *tgt1_,
-                   TensorTypeIndex *tgt2_,
-                   TensorTypeK *src,
-                   long dimension,
-                   const thrust_alternate::Pair<
-                   typename TensorUtils<TensorTypeK>::DataType,
-                   typename TensorUtils<TensorTypeIndex>::DataType>& init,
-                   BinaryFunction binary_op)
+void THC_reduceDimIndex(THCState *state,
+                        TensorTypeK *tgt1_,
+                        TensorTypeIndex *tgt2_,
+                        TensorTypeK *src,
+                        long dimension,
+#if defined(THRUST_PATH)
+                        const thrust::pair<typename TensorUtils<TensorTypeK>::DataType,
+                                           typename TensorUtils<TensorTypeIndex>::DataType>& init,
+#else
+                        const bolt::amp::pair<typename TensorUtils<TensorTypeK>::DataType,
+                                              typename TensorUtils<TensorTypeIndex>::DataType>& init,
+#endif
+                        BinaryFunction binary_op)
 {
   THArgCheck(dimension >= 0 &&
              dimension < TensorUtils<TensorTypeK>::getDims(state, src),
@@ -647,17 +785,28 @@ THC_reduceDimIndex(THCState *state,
 template <typename T, typename Index>
 struct MaxValuePair {
   __host__ __device__
-  thrust_alternate::Pair<T, Index> operator()(const thrust_alternate::Pair<T, Index>& a,
-                                    const thrust_alternate::Pair<T, Index>& b) {
+#if defined(THRUST_PATH)
+  thrust::pair<T, Index> operator()(const thrust::pair<T, Index>& a,
+                                    const thrust::pair<T, Index>& b) const
+#else
+  bolt::amp::pair<T, Index> operator()(const bolt::amp::pair<T, Index>& a,
+                                       const bolt::amp::pair<T, Index>& b) const
+#endif
+  {
     return THCNumerics<T>::ge(a.first, b.first) ? a : b;
   }
 };
 
 template <typename T, typename Index>
 struct MinValuePair {
-  __host__ __device__
-  thrust_alternate::Pair<T, Index> operator()(const thrust_alternate::Pair<T, Index>& a,
-                                    const thrust_alternate::Pair<T, Index>& b) {
+#if defined(THRUST_PATH)
+  thrust::pair<T, Index> operator()(const thrust::pair<T, Index>& a,
+                                    const thrust::pair<T, Index>& b) const
+#else
+  bolt::amp::pair<T, Index> operator()(const bolt::amp::pair<T, Index>& a,
+                                       const bolt::amp::pair<T, Index>& b) const
+#endif
+  {
     return THCNumerics<T>::le(a.first, b.first) ? a : b;
   }
 };

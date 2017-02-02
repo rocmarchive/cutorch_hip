@@ -6,11 +6,14 @@
 #include "THCAsmUtils.cuh"
 #include "THCScanUtils.cuh"
 #include "THCTensorTypeUtils.cuh"
-#include <algorithm> // for std::min
+
 #ifdef CUDA_PATH
-#if CUDA_VERSION >= 7000
-#include <thrust/system/cuda/execution_policy.h>
+    #if CUDA_VERSION >= 7000
+        #include <thrust/system/cuda/execution_policy.h>
+    #endif
 #endif
+
+#include <algorithm> // for std::min
 
 // Converts a float to an integer representation with the same
 // sorting; i.e., for floats f1, f2:
@@ -19,19 +22,24 @@
 // This also gives a relative order for NaNs, but that's ok, as they
 // will all be adjacent
 struct FloatToSortedInt {
-  inline __host__ __device__ FloatToSortedInt() {}
+  __host__ __device__
+  FloatToSortedInt() {}
 
-  inline __device__ unsigned int convert(float v) const {
-    unsigned int x = __float_as_int(v);
+  __device__
+  unsigned int convert(float v) const
+  {
+    unsigned int x = (unsigned int)v;//__float_as_int(v);
     unsigned int mask = (x & 0x80000000) ? 0xffffffff : 0x80000000;
 
     return (x ^ mask);
   }
 
-  inline __device__ float deconvert(unsigned int v) const {
+  __device__
+  float deconvert(unsigned int v) const
+  {
     unsigned int mask = (v & 0x80000000) ? 0x80000000 : 0xffffffff;
 
-    return __int_as_float(v ^ mask);
+    return (float)(v ^ mask);//__int_as_float(v ^ mask);
   }
 };
 
@@ -40,18 +48,24 @@ struct FloatToSortedInt {
 // those that pass the filter `((v & desiredMask) == desired)`.
 // This produces and broadcasts the seen counts for a single block only.
 // `smem` must have at least `RadixSize` elements.
-template <typename DataType, typename BitDataType,
-          typename IndexType, typename CountType,
-          typename RadixConverter, int RadixSize, int RadixBits>
-__device__ void countRadixUsingMask(const RadixConverter& conv,
-                                    CountType counts[RadixSize],
-                                    CountType* smem,
-                                    BitDataType desired,
-                                    BitDataType desiredMask,
-                                    int radixDigitPos,
-                                    IndexType sliceSize,
-                                    IndexType withinSliceStride,
-                                    DataType* data) {
+template <typename DataType,
+          typename BitDataType,
+          typename IndexType,
+          typename CountType,
+          typename RadixConverter,
+          int RadixSize,
+          int RadixBits>
+__device__
+void countRadixUsingMask(const RadixConverter& conv,
+                         CountType (&counts)[RadixSize],
+                         CountType* smem,
+                         BitDataType desired,
+                         BitDataType desiredMask,
+                         int radixDigitPos,
+                         IndexType sliceSize,
+                         IndexType withinSliceStride,
+                         DataType* data)
+{
   // Clear out per-thread counts from a previous round
 #pragma unroll
   for (int i = 0; i < RadixSize; ++i) {
@@ -69,7 +83,7 @@ __device__ void countRadixUsingMask(const RadixConverter& conv,
     BitDataType val = conv.convert(doLdg(&data[i * withinSliceStride]));
 
     bool hasVal = ((val & desiredMask) == desired);
-    unsigned int digitInRadix = getBitfield(val, radixDigitPos, RadixBits);
+    unsigned int digitInRadix = 0;//getBitfield(val, radixDigitPos, RadixBits);
 
 #pragma unroll
     for (unsigned int j = 0; j < RadixSize; ++j) {
@@ -79,7 +93,8 @@ __device__ void countRadixUsingMask(const RadixConverter& conv,
   }
 
   // Now, for each warp, sum values
-  if (getLaneId() == 0) {
+  // TODO: this is technically incorrect.
+  if (hipThreadIdx_x % warpSize == 0) {//getLaneId() == 0) {
 #pragma unroll
     for (unsigned int i = 0; i < RadixSize; ++i) {
       atomicAdd(&smem[i], counts[i]);
@@ -105,13 +120,14 @@ __device__ void countRadixUsingMask(const RadixConverter& conv,
 // This finds the unique value `v` that matches the pattern
 // ((v & desired) == desiredMask) in our sorted int format
 template <typename DataType, typename IndexType, typename RadixConverter>
-__device__ float findPattern(const RadixConverter& conv,
-                             DataType* smem,
-                             DataType* data,
-                             IndexType sliceSize,
-                             IndexType withinSliceStride,
-                             unsigned int desired,
-                             unsigned int desiredMask) {
+__device__
+float findPattern(const RadixConverter& conv,
+                  DataType* smem,
+                  DataType* data,
+                  IndexType sliceSize,
+                  IndexType withinSliceStride,
+                  unsigned int desired,
+                  unsigned int desiredMask) {
   if (hipThreadIdx_x < 32) {
     smem[hipThreadIdx_x] = (DataType) 0;
   }
@@ -145,20 +161,27 @@ __device__ float findPattern(const RadixConverter& conv,
   }
 
   // should not get here
-  assert(false);
+  // TODO: this causes linkage failure, and is quite odd to begin with.
+  //assert(false);
   return (DataType) 0;
 }
 
 // Returns the top-Kth element found in the data using radix selection
-template <typename DataType, typename BitDataType, typename IndexType,
-          typename RadixConverter, bool Order>
-__device__ void radixSelect(const RadixConverter& conv,
-                            DataType* data,
-                            IndexType k,
-                            IndexType sliceSize,
-                            IndexType withinSliceStride,
-                            int* smem,
-                            DataType* topK) {
+//template <typename DataType, typename BitDataType, typename IndexType,
+//          typename RadixConverter, bool Order>
+template<typename BitDataType,
+         bool Order,
+         typename RadixConverter,
+         typename DataType,
+         typename IndexType>
+__device__
+void radixSelect(const RadixConverter& conv,
+                 DataType* data,
+                 IndexType k,
+                 IndexType sliceSize,
+                 IndexType withinSliceStride,
+                 int* smem,
+                 DataType* topK) {
   // Per-thread buckets into which we accumulate digit counts in our
   // radix
   int counts[RADIX_SIZE];
@@ -176,7 +199,7 @@ __device__ void radixSelect(const RadixConverter& conv,
 
   // We start at the most significant digit in our radix, scanning
   // through to the least significant digit
-#pragma unroll
+  #pragma unroll
   for (int digitPos = sizeof(BitDataType) * 8 - RADIX_BITS;
        digitPos >= 0;
        digitPos -= RADIX_BITS) {
@@ -200,25 +223,29 @@ __device__ void radixSelect(const RadixConverter& conv,
     /* threads will return from the function. */                        \
     if (count == 1 && kToFind == 1) {                                   \
       /* There is a unique answer. */                                   \
-      desired = setBitfield(desired, i, digitPos, RADIX_BITS);          \
-      desiredMask =                                                     \
-        setBitfield(desiredMask, RADIX_MASK, digitPos, RADIX_BITS);     \
+      /*desired = setBitfield(desired, i, digitPos, RADIX_BITS);*/      \
+      /*desiredMask = setBitfield(desiredMask, RADIX_MASK, digitPos, RADIX_BITS);*/     \
                                                                         \
       /* The answer is now the unique element v such that: */           \
       /* (v & desiredMask) == desired */                                \
       /* However, we do not yet know what the actual element is. We */  \
       /* need to perform a search through the data to find the */       \
       /* element that matches this pattern. */                          \
-      *topK = findPattern<DataType, IndexType, RadixConverter>(         \
-        conv, (float*) smem, data, sliceSize,                           \
-        withinSliceStride, desired, desiredMask);                       \
+       *topK = findPattern<DataType,                                    \
+                           IndexType,                                   \
+                           RadixConverter>(conv,                        \
+                                           reinterpret_cast<float*>(smem), \
+                                           data,                        \
+                                           sliceSize,                   \
+                                           withinSliceStride,           \
+                                           desired,                     \
+                                           desiredMask);                \
       return;                                                           \
     }                                                                   \
                                                                         \
     if (count >= kToFind) {                                             \
-      desired = setBitfield(desired, i, digitPos, RADIX_BITS);          \
-      desiredMask =                                                     \
-        setBitfield(desiredMask, RADIX_MASK, digitPos, RADIX_BITS);     \
+      /*desired = setBitfield(desired, i, digitPos, RADIX_BITS);*/          \
+      /*desiredMask = setBitfield(desiredMask, RADIX_MASK, digitPos, RADIX_BITS);*/       \
                                                                         \
       /* The top-Kth element v must now be one such that: */            \
       /* (v & desiredMask == desired) */                                \
@@ -231,18 +258,18 @@ __device__ void radixSelect(const RadixConverter& conv,
 
     if (Order) {
       // Process in descending order
-#pragma unroll
+      #pragma unroll
       for (int i = RADIX_SIZE - 1; i >= 0; --i) {
         CHECK_RADIX(i);
       }
     } else {
       // Process in ascending order
-#pragma unroll
+      #pragma unroll
       for (int i = 0; i < RADIX_SIZE; ++i) {
         CHECK_RADIX(i);
       }
     }
-#undef CHECK_RADIX
+  #undef CHECK_RADIX
   } // end digitPos for
 
   // There is no unique result, but there is a non-unique result
@@ -251,19 +278,18 @@ __device__ void radixSelect(const RadixConverter& conv,
 }
 
 template <typename IndexType, int Dim, bool Order>
-__global__ void gatherTopK(hipLaunchParm lp, TensorInfo<float, IndexType> input,
-                           IndexType inputSliceSize,
-                           IndexType outputSliceSize, // aka `k`
-
-                           IndexType numInputSlices,
-                           IndexType inputWithinSliceStride,
-
-                           TensorInfo<float, IndexType> topK,
-                           IndexType numTopKSlices,
-                           IndexType topKWithinSliceStride,
-
-                           TensorInfo<long, IndexType> indices,
-                           IndexType indicesWithinSliceStride) {
+__global__
+void gatherTopK(hipLaunchParm lp,
+                TensorInfo<float, IndexType> input,
+                IndexType inputSliceSize,
+                IndexType outputSliceSize, // aka `k`
+                IndexType numInputSlices,
+                IndexType inputWithinSliceStride,
+                TensorInfo<float, IndexType> topK,
+                IndexType numTopKSlices,
+                IndexType topKWithinSliceStride,
+                TensorInfo<long, IndexType> indices,
+                IndexType indicesWithinSliceStride) {
   // Indices are limited to integer fp precision, so counts can fit in
   // int32, regardless of IndexType
   __shared__ int smem[32]; // one per each warp, up to warp limit
@@ -287,12 +313,13 @@ __global__ void gatherTopK(hipLaunchParm lp, TensorInfo<float, IndexType> input,
 
   // Find the k-th highest element in our input
   float topKValue = -1.0f;
-  radixSelect<float, unsigned int, IndexType, FloatToSortedInt, Order>(
-    FloatToSortedInt(),
-    inputSliceStart, outputSliceSize,
-    inputSliceSize, inputWithinSliceStride,
-    smem, &topKValue);
-
+  radixSelect<unsigned int, Order>(FloatToSortedInt{},
+                                   inputSliceStart,
+                                   outputSliceSize,
+                                   inputSliceSize,
+                                   inputWithinSliceStride,
+                                   smem,
+                                   &topKValue);
   // Every value that is strictly less/greater than `pattern`
   // (depending on sort dir) in sorted int format is in the top-K.
   // The top-K value itself might not be unique.
@@ -327,7 +354,7 @@ __global__ void gatherTopK(hipLaunchParm lp, TensorInfo<float, IndexType> input,
 
     if (hasTopK) {
       int writeIndex = writeIndexStart + index;
-      assert(writeIndex < outputSliceSize);
+      //assert(writeIndex < outputSliceSize);
 
       IndexType topKOffset = writeIndex * topKWithinSliceStride;
       IndexType indexOffset = writeIndex * indicesWithinSliceStride;
@@ -344,7 +371,7 @@ __global__ void gatherTopK(hipLaunchParm lp, TensorInfo<float, IndexType> input,
   // writeIndexStart. There might be more than that number available,
   // in which case we have to choose the first seen set. We do this
   // via a prefix sum to calculate indices for writing results.
-  assert(outputSliceSize >= writeIndexStart);
+  //assert(outputSliceSize >= writeIndexStart);
   IndexType topKRemaining = (outputSliceSize - writeIndexStart);
 
   for (IndexType i = hipThreadIdx_x; i < numIterations; i += hipBlockDim_x) {
@@ -359,7 +386,7 @@ __global__ void gatherTopK(hipLaunchParm lp, TensorInfo<float, IndexType> input,
 
     if (hasTopK && index < topKRemaining) {
       int writeIndex = writeIndexStart + index;
-      assert(writeIndex < outputSliceSize);
+      //assert(writeIndex < outputSliceSize);
 
       IndexType topKOffset = writeIndex * topKWithinSliceStride;
       IndexType indexOffset = writeIndex * indicesWithinSliceStride;
@@ -407,21 +434,24 @@ THC_API void THCudaTensor_topk(THCState* state,
   THCudaLongTensor_resize(state, indices, topKSize, NULL);
   THLongStorage_free(topKSize);
 
-#define RUN_K(INDEX_T, DIM, DIR)                                        \
-  hipLaunchKernel(HIP_KERNEL_NAME(gatherTopK<INDEX_T, DIM, DIR>),                                         \
-      grid, block, 0, THCState_getCurrentStream(state),             \
-      inputInfo,                                                        \
-      sliceSize,                                                        \
-      k,                                                                \
-      inputSlices,                                                      \
-      /* The actual dimension that the k-selection is running in */     \
-      /* may have changed from collapseDims() */                        \
-      inputInfo.dStrides[collapseInputDim],                              \
-      topKInfo,                                                         \
-      topKSlices,                                                       \
-      topKInfo.dStrides[collapseTopKDim],                                \
-      indicesInfo,                                                      \
-      indicesInfo.dStrides[collapseIndicesDim])
+#define RUN_K(INDEX_T, DIM, DIR)   //                                            \
+  hipLaunchKernel(HIP_KERNEL_NAME(gatherTopK<INDEX_T, DIM, DIR>),              \
+                  dim3{grid},                                                  \
+                  dim3{block},                                                 \
+                  0,                                                           \
+                  THCState_getCurrentStream(state),                            \
+                  inputInfo,                                                   \
+                  sliceSize,                                                   \
+                  k,                                                           \
+                  inputSlices,                                                 \
+                  /* The actual dimension that the k-selection is running in */\
+                  /* may have changed from collapseDims()                    */\
+                  inputInfo.strides[collapseInputDim],                         \
+                  topKInfo,                                                    \
+                  topKSlices,                                                  \
+                  topKInfo.strides[collapseTopKDim],                           \
+                  indicesInfo,                                                 \
+                  indicesInfo.strides[collapseIndicesDim])
 
 #define RUN_DIR(INDEX_T, DIM)                   \
   if (dir) {                                    \
@@ -534,4 +564,3 @@ THC_API void THCudaTensor_topk(THCState* state,
 
   THCudaCheck(hipGetLastError());
 }
-#endif

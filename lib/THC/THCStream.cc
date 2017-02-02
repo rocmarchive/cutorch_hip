@@ -1,8 +1,8 @@
 #include "THCStream.h"
 
-#include <hip/hip_runtime_api.h>
 #include "THAtomic.h"
 
+#include <hip/hip_runtime_api.h>
 
 THCStream* THCStream_new(int flags)
 {
