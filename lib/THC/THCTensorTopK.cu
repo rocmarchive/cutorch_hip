@@ -88,7 +88,8 @@ void countRadixUsingMask(const RadixConverter& conv,
 #pragma unroll
     for (unsigned int j = 0; j < RadixSize; ++j) {
       bool vote = hasVal && (digitInRadix == j);
-      counts[j] += __popc(__ballot(vote));
+     //TODO: Enable by Neel
+    //  counts[j] += __popc(__ballot(vote));
     }
   }
 

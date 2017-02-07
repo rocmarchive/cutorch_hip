@@ -62,13 +62,16 @@ __device__
 inline
 void inclusiveBinaryPrefixSum(T* smem, bool in, T* out) {
   // Within-warp, we use warp voting.
-  T vote = __ballot(in);
+  // TODO: Enable by Neel
+  //T vote = __ballot(in);
 #ifdef CUDA_PATH
   T index = __popc(getLaneMaskLe() & vote);
 #else
   T index = 0;
 #endif
-  T carry = __popc(vote);
+  T carry = 0;
+  // TODO: Enable by Neel
+  //T carry = __popc(vote);
 
   int warp = hipThreadIdx_x / 32;
 

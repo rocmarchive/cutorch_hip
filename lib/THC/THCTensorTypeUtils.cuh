@@ -137,17 +137,19 @@ struct ScalarInv<half> {
   }
 };
 
-static
-inline
-bool operator==(half a, half b) {
-  return a.x == b.x;
-}
+//static
+//inline
+//bool operator==(half a, half b) {
+//TODO: Enable by Neel
+//  return a.x == b.x;
+//}
 
-static
-inline
-bool operator!=(half a, half b) {
-  return a.x != b.x;
-}
+//static
+//inline
+//bool operator!=(half a, half b) {
+//TODO: Enable by Neel
+//  return a.x != b.x;
+//}
 
 #endif // CUDA_HALF_TENSOR
 

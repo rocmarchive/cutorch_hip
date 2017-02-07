@@ -103,11 +103,12 @@ static inline  __device__ void atomicAdd(half *address, half val) {
        //       support for FP16 and can simplify significantly.
     assumed = old;
     half hsum;
-    hsum.x = (size_t)address & 2 ? (old >> 16) : (old & 0xffff);
+    // TODO: Enable by Neel
+    /*hsum.x = (size_t)address & 2 ? (old >> 16) : (old & 0xffff);
     hsum = THCNumerics<half>::add(hsum, val);
     old = (size_t)address & 2 ? (old & 0xffff) |
           ((unsigned short)hsum.x << 16) : (old & 0xffff0000) |
-          (unsigned short)hsum.x;
+          (unsigned short)hsum.x;*/
     old = atomicCAS(address_as_ui, assumed, old);
    } while (assumed != old);
 }

@@ -11,6 +11,10 @@
 #define CUDA_HALF_TENSOR 1
 //#endif
 
+#ifdef __HCC__
+using namespace hc;
+#endif
+
 #ifdef CUDA_HALF_TENSOR
 
 #ifdef __HCC__

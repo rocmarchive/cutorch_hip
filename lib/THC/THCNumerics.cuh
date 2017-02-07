@@ -116,8 +116,8 @@ struct THCNumerics<long> {
 #ifdef CUDA_HALF_TENSOR
 template <>
 struct THCNumerics<half> {
-  static inline __host__ __device__ half min() { half h; h.x = 0xfbff; return h; }
-  static inline __host__ __device__ half max() { half h; h.x = 0x7bff; return h; }
+  static inline __host__ __device__ half min() { half h; /* h.x = 0xfbff*/; return h; } // TODO: Enable by Neel
+  static inline __host__ __device__ half max() { half h; /*h.x = 0x7bff*/; return h; } // TODO: Enable by Neel
 
   static inline __host__ __device__ bool lt(half a, half b) {
 #if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
@@ -332,7 +332,7 @@ struct THCNumerics<half> {
   static inline __host__ __device__ half neg(half a) {
 #if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
 //#ifdef CUDA_HALF_INSTRUCTIONS
-    return __hneq(a);
+    return __hneg(a);
 //#else
 //    float fa = __half2float(a);
 //    return __float2half(-fa);
