@@ -67,32 +67,32 @@ void fillSliceWithIndex(hipLaunchParm lp,
 // For slice sorting in Thrust; extracts a slice index from a linear
 // index and uses that for comparison
 struct SliceComp {
-//  __host__ __device__
-//  SliceComp() = default;
-//  __host__ __device__
-//  SliceComp(const SliceComp&) = default;
-//  __host__ __device__
-//  SliceComp(SliceComp&&) = default;
-//
-//  //__device__ __host__
-//  explicit
-//  SliceComp(long size) : sliceSize{size} {}
+  __host__ __device__
+  SliceComp() = default;
+  __host__ __device__
+  SliceComp(const SliceComp&) = default;
+  __host__ __device__
+  SliceComp(SliceComp&&) = default;
 
-  __device__
+  __device__ __host__
+  explicit
+  SliceComp(long size) : sliceSize{size} {}
+
+  __device__ __host__
   bool operator()(long a, long b) const
   {
     // Since the slices are guaranteed to be innermost, the segment is
     // just via long division. It also means that they can just be directly
     // compared, since in this case division is order preserving (same sign, no
     // truncation.
-    //long segA = a / sliceSize;
-    //long segB = b / sliceSize;
-    //return segA < segB;
+    long segA = a / sliceSize;
+    long segB = b / sliceSize;
+    return segA < segB;
     return a < b;
   }
 
-//  __host__ __device__
-//  ~SliceComp() {}
+  __host__ __device__
+  ~SliceComp() {}
 
   long sliceSize;
 };
