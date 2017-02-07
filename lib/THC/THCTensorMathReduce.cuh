@@ -144,7 +144,7 @@ return (x || y);
 
 template<typename Real>
 __global__
-inline
+inline __attribute__((used))
 void THCTensor_kernel_renorm(hipLaunchParm lp,
                              Real *data,
                              Real value,
@@ -342,7 +342,7 @@ Real THCTensor_computeVar(Real sum, Real sum2, unsigned row_size) {
  */
 template<typename Real, bool flag, bool apply_sqrt>
 __global__
-inline
+inline __attribute__((used))
 void THCTensor_kernel_varOuterDim(hipLaunchParm lp,
                                   Real *tgt,
                                   Real *src_,
@@ -530,7 +530,7 @@ __host__ void THCTensor_varInnermostDim(THCState *state, TensorTypeK *tgt, Tenso
 */
 template <typename K, typename Index, class BinaryFunction>
 __global__
-inline
+inline __attribute__((used))
 void kernelTransformReduceOuterDimIndex(hipLaunchParm lp,
                                         K *tgt1,
                                         Index *tgt2,
@@ -631,7 +631,7 @@ void THC_transformReduceOuterDimIndex(THCState *state,
  */
 template <typename K, typename Index, class BinaryFunction>
 __global__
-inline
+inline __attribute__((used))
 void kernelTransformReduceInnermostDimIndex(hipLaunchParm lp,
                                             K* tgt1,
                                             Index* tgt2,
