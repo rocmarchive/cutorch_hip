@@ -13,6 +13,10 @@
 
 #ifdef CUDA_HALF_TENSOR
 
+#ifdef __HCC__
+using namespace hc;
+#endif
+
 #include <stdint.h>
 
 THC_EXTERNC void THCFloat2Half(THCState *state, half *out, float *in, ptrdiff_t len);
