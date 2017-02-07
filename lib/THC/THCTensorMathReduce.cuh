@@ -433,7 +433,7 @@ __host__ void THCTensor_varOuterDim(THCState *state, TensorTypeK *tgt, TensorTyp
  * per thread block is quicker than processing a single row, especially for short rows).
  */
 template<typename Real, bool flag, bool apply_sqrt>
-__global__
+__global__ __attribute__((used))
 inline
 void THCTensor_kernel_varInnermostDim(hipLaunchParm lp,
                                       Real *tgt,
