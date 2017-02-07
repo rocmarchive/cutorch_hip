@@ -10,42 +10,42 @@
 
 template <typename T, typename TOut>
 struct TensorLTOp {
-  __device__ inline void operator()(TOut* out, T* a, T* b) {
+  __device__ __host__ inline void operator()(TOut* out, T* a, T* b) {
     *out = ScalarConvert<bool, TOut>::to(THCNumerics<T>::lt(*a, *b));
   }
 };
 
 template <typename T, typename TOut>
 struct TensorGTOp {
-  __device__ inline void operator()(TOut* out, T* a, T* b) {
+  __device__ __host__ inline void operator()(TOut* out, T* a, T* b) {
     *out = ScalarConvert<bool, TOut>::to(THCNumerics<T>::gt(*a, *b));
   }
 };
 
 template <typename T, typename TOut>
 struct TensorLEOp {
-  __device__ inline void operator()(TOut* out, T* a, T* b) {
+  __device__ __host__ inline void operator()(TOut* out, T* a, T* b) {
     *out = ScalarConvert<bool, TOut>::to(THCNumerics<T>::le(*a, *b));
   }
 };
 
 template <typename T, typename TOut>
 struct TensorGEOp {
-  __device__ inline void operator()(TOut* out, T* a, T* b) {
+  __device__ __host__ inline void operator()(TOut* out, T* a, T* b) {
     *out = ScalarConvert<bool, TOut>::to(THCNumerics<T>::ge(*a, *b));
   }
 };
 
 template <typename T, typename TOut>
 struct TensorEQOp {
-  __device__ inline void operator()(TOut* out, T* a, T* b) {
+  __device__ __host__ inline void operator()(TOut* out, T* a, T* b) {
     *out = ScalarConvert<bool, TOut>::to(THCNumerics<T>::eq(*a, *b));
   }
 };
 
 template <typename T, typename TOut>
 struct TensorNEOp {
-  __device__ inline void operator()(TOut* out, T* a, T* b) {
+  __device__ __host__ inline void operator()(TOut* out, T* a, T* b) {
     *out = ScalarConvert<bool, TOut>::to(THCNumerics<T>::ne(*a, *b));
   }
 };

@@ -20,7 +20,7 @@
 
 template <typename T>
 struct ThrustGTOp {
-  __device__
+  __device__ __host__
   bool operator()(const T& lhs, const T& rhs) const {
     return THCNumerics<T>::gt(lhs, rhs);
   }
@@ -28,7 +28,7 @@ struct ThrustGTOp {
 
 template <typename T>
 struct ThrustLTOp {
-  __device__ bool operator()(const T& lhs, const T& rhs) const {
+  __device__ __host__ bool operator()(const T& lhs, const T& rhs) const {
     return THCNumerics<T>::lt(lhs, rhs);
   }
 };
