@@ -277,7 +277,7 @@ void THCudaBlas_Sgemm(THCState *state, char transa, char transb, long m, long n,
 #if CUDA_VERSION < 8000
 #  define CUDA_R_16F CUBLAS_DATA_HALF
 #endif
-/*
+
 void THCudaBlas_Hgemm(THCState *state, char transa, char transb, long m, long n, long k, half alpha, half *a, long lda, half *b, long ldb, half beta, half *c, long ldc)
 {
   adjustLd(transa, transb, m, n, k, &lda, &ldb, &ldc);
@@ -296,13 +296,14 @@ void THCudaBlas_Hgemm(THCState *state, char transa, char transb, long m, long n,
     hipblasHandle_t handle = THCState_getCurrentBlasHandle(state);
     hipblasSetStream(handle, THCState_getCurrentStream(state));
 
-#ifdef HIPBLAS_TODO
     // Check for native Hgemm support
     if (THC_fastHalfInstructions(state)) {
       THCublasCheck(hipblasHgemm(handle, opa, opb,
-				i_m, i_n, i_k, &alpha, a, i_lda, b, i_ldb,
-				&beta, c, i_ldc));
-    } else {
+				i_m, i_n, i_k, const_cast<const hiphalf*>((hiphalf*)&alpha), const_cast<hiphalf*>((hiphalf*)a), i_lda, const_cast<hiphalf*>((hiphalf*)b), i_ldb,
+				const_cast<const hiphalf*>((hiphalf*)&beta), const_cast<hiphalf*>((hiphalf*)c), i_ldc));
+    }
+#ifdef HIPBLAS_TODO
+    else {
       // Simulated Hgemm
       float fAlpha = THC_half2float(alpha);
       float fBeta = THC_half2float(beta);
@@ -338,7 +339,6 @@ void THCudaBlas_Hgemm(THCState *state, char transa, char transb, long m, long n,
           "with th bound [val] <= %d", INT_MAX);
 
 }
-*/
 #endif
 void THCudaBlas_Dgemm(THCState *state, char transa, char transb, long m, long n, long k, double alpha, double *a, long lda, double *b, long ldb, double beta, double *c, long ldc)
 {
