@@ -36,7 +36,7 @@ struct TensorSigmoidOp<half> {
     half one = ScalarConvert<int, half>::to(1);
     *out = hdiv(one, __hadd(one, hexp(__hneg(*in))));
 #else
-    float fin = __half2float(*in);
+    float fin = (float)(*in);
     *out = __float2half(1.0f / (1.0f + expf(- fin)));
 #endif
   }
@@ -48,7 +48,7 @@ struct TensorSigmoidOp<half> {
     half one = ScalarConvert<int, half>::to(1);
     *v = hdiv(one, __hadd(one, hexp(__hneg(*v))));
 #else
-    float fv = __half2float(*v);
+    float fv = (float)(*v);
     *v = __float2half(1.0f / (1.0f + expf(- fv)));
 #endif
   }
@@ -101,7 +101,7 @@ struct TensorSignOp<half> {
     //*out = __float2half((float) __hgt(orig, zero) - (float) __hlt(orig, zero));
     *out = __float2half((orig > 0) - (orig < 0));
 #else
-    float orig = __half2float(*in);
+    float orig = (float)(*in);
     *out = __float2half((orig > 0) - (orig < 0));
 #endif
   }
@@ -115,7 +115,7 @@ struct TensorSignOp<half> {
     //*v = __float2half((float) __hgt(orig, zero) -  (float) __hlt(orig, zero));
     *v = __float2half((orig > 0) - (orig < 0));
 #else
-    float orig = __half2float(*v);
+    float orig = (float)(*v);
     *v = __float2half((orig > 0) - (orig < 0));
 #endif
   }
@@ -140,8 +140,8 @@ struct TensorAddOp<half> {
 #ifdef CUDA_HALF_INSTRUCTIONS
     *out = __hadd(*out, *in);
 #else
-    float fout = __half2float(*out);
-    float fin = __half2float(*in);
+    float fout = (float)(*out);
+    float fin = (float)(*in);
     fout += fin;
     *out = __float2half(fout);
 #endif
@@ -153,8 +153,8 @@ struct TensorAddOp<half> {
 #ifdef CUDA_HALF_INSTRUCTIONS
     *out = __hadd(*in1, *in2);
 #else
-    float fin1 = __half2float(*in1);
-    float fin2 = __half2float(*in2);
+    float fin1 = (float)(*in1);
+    float fin2 = (float)(*in2);
     float fout = fin1 + fin2;
     *out = __float2half(fout);
 #endif
@@ -197,9 +197,9 @@ struct TensorCAddOp<half> {
 #ifdef CUDA_HALF_INSTRUCTIONS
     *out = __hadd(*out, __hmul(val, *in));
 #else
-    float fout = __half2float(*out);
-    float fval = __half2float(val);
-    float fin = __half2float(*in);
+    float fout = (float)(*out);
+    float fval = (float)(val);
+    float fin = (float)(*in);
 
     fout += fval * fin;
     *out = __float2half(fout);
@@ -212,9 +212,9 @@ struct TensorCAddOp<half> {
 #ifdef CUDA_HALF_INSTRUCTIONS
     *out = __hadd(*in1, __hmul(val, *in2));
 #else
-    float fin1 = __half2float(*in1);
-    float fin2 = __half2float(*in2);
-    float fval = __half2float(val);
+    float fin1 = (float)(*in1);
+    float fin2 = (float)(*in2);
+    float fval = (float)(val);
 
     float fout = fin1 + fval * fin2;
     *out = __float2half(fout);
@@ -248,8 +248,8 @@ struct TensorSubOp<half> {
 #ifdef CUDA_HALF_INSTRUCTIONS
     *out = __hsub(*out, *in);
 #else
-    float fout = __half2float(*out);
-    float fin = __half2float(*in);
+    float fout = (float)(*out);
+    float fin = (float)(*in);
     fout -= fin;
     *out = __float2half(fout);
 #endif
@@ -261,8 +261,8 @@ struct TensorSubOp<half> {
 #ifdef CUDA_HALF_INSTRUCTIONS
     *out = __hsub(*in1, *in2);
 #else
-    float fin1 = __half2float(*in1);
-    float fin2 = __half2float(*in2);
+    float fin1 = (float)(*in1);
+    float fin2 = (float)(*in2);
     float fout = fin1 - fin2;
     *out = __float2half(fout);
 #endif
@@ -288,8 +288,8 @@ struct TensorMulOp<half> {
 #ifdef CUDA_HALF_INSTRUCTIONS
     *out = __hmul(*out, *in);
 #else
-    float fout = __half2float(*out);
-    float fin = __half2float(*in);
+    float fout = (float)(*out);
+    float fin = (float)(*in);
     fout *= fin;
     *out = __float2half(fout);
 #endif
@@ -301,8 +301,8 @@ struct TensorMulOp<half> {
 #ifdef CUDA_HALF_INSTRUCTIONS
     *out = __hmul(*in1, *in2);
 #else
-    float fin1 = __half2float(*in1);
-    float fin2 = __half2float(*in2);
+    float fin1 = (float)(*in1);
+    float fin2 = (float)(*in2);
     float fout = fin1 * fin2;
     *out = __float2half(fout);
 #endif
@@ -357,8 +357,8 @@ struct TensorPowOp<half> {
   void operator()(half* out, half* in) const
   {
     // No fp16 pow function yet
-    float fin = __half2float(*in);
-    float fval = __half2float(val);
+    float fin = (float)(*in);
+    float fval = (float)(val);
     float fout = powf(fin, fval);
     *out = __float2half(fout);
   }
@@ -367,8 +367,8 @@ struct TensorPowOp<half> {
   void operator()(half* v) const
   {
     // No fp16 pow function yet
-    float fv = __half2float(*v);
-    float fval = __half2float(val);
+    float fv = (float)(*v);
+    float fval = (float)(val);
     float fout = powf(fv, fval);
     *v = __float2half(fout);
   }
@@ -411,8 +411,8 @@ struct TensorCPowOp<half> {
   void operator()(half* out, half* in) const
   {
     // No fp16 pow function yet
-    float fout = __half2float(*out);
-    float fin = __half2float(*in);
+    float fout = (float)(*out);
+    float fin = (float)(*in);
     fout = powf(fout, fin);
     *out = __float2half(fout);
   }
@@ -421,8 +421,8 @@ struct TensorCPowOp<half> {
   void operator()(half* out, half* in1, half* in2) const
   {
     // No fp16 pow function yet
-    float fin1 = __half2float(*in1);
-    float fin2 = __half2float(*in2);
+    float fin1 = (float)(*in1);
+    float fin2 = (float)(*in2);
     float fout = powf(fin1, fin2);
     *out = __float2half(fout);
   }
@@ -445,8 +445,8 @@ struct TensorDivOp<half> {
   void operator()(half* out, half* in) const
   {
     // No fp16 div instruction yet
-    float fout = __half2float(*out);
-    float fin = __half2float(*in);
+    float fout = (float)(*out);
+    float fin = (float)(*in);
     fout /= fin;
     *out = __float2half(fout);
   }
@@ -455,8 +455,8 @@ struct TensorDivOp<half> {
   void operator()(half* out, half* in1, half* in2) const
   {
     // No fp16 div instruction yet
-    float fin1 = __half2float(*in1);
-    float fin2 = __half2float(*in2);
+    float fin1 = (float)(*in1);
+    float fin2 = (float)(*in2);
     float fout = fin1 / fin2;
     *out = __float2half(fout);
   }

@@ -7,7 +7,7 @@
 #endif
 
 struct __half2floatOp {
-  __device__ float operator()(half v) const { return __half2float(v); }
+  __device__ float operator()(half v) const { return (float)(v); }
 };
 
 struct __float2halfOp {

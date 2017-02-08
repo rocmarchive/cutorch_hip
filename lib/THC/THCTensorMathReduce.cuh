@@ -28,8 +28,8 @@ inline __device__ half operator()(half a, half b) const {
 #ifdef CUDA_HALF_INSTRUCTIONS
 return __hadd(a, b);
 #else
-float fa = __half2float(a);
-float fb = __half2float(b);
+float fa = (float)(a);
+float fb = (float)(b);
 return __float2half(fa + fb);
 #endif
 }
@@ -38,7 +38,7 @@ return __float2half(fa + fb);
 template <>
 struct ReduceAdd<half, float> {
 __device__
-float operator()(float a, half b) const { return a + __half2float(b); }
+float operator()(float a, half b) const { return a + (float)(b); }
 };
 #endif // CUDA_HALF_TENSOR
 
@@ -57,8 +57,8 @@ half operator()(half a, half b) const
 #ifdef CUDA_HALF_INSTRUCTIONS
 return __hmul(a, b);
 #else
-float fa = __half2float(a);
-float fb = __half2float(b);
+float fa = (float)(a);
+float fb = (float)(b);
 return __float2half(fa * fb);
 #endif
 }
@@ -67,7 +67,7 @@ return __float2half(fa * fb);
 template <>
 struct ReduceMultiply<half, float> {
 __device__
-float operator()(float a, half b) const { return a * __half2float(b); }
+float operator()(float a, half b) const { return a * (float)(b); }
 };
 #endif // CUDA_HALF_TENSOR
 

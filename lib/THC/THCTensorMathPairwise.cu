@@ -49,7 +49,7 @@ struct TensorAddConstantOp<half> {
 #ifdef CUDA_HALF_INSTRUCTIONS
     *out = __hadd(*in, val);
 #else
-    float fin = __half2float(*in);
+    float fin = (float)(*in);
     float fout = fin + fval;
     *out = __float2half(fout);
 #endif
@@ -60,7 +60,7 @@ struct TensorAddConstantOp<half> {
 #ifdef CUDA_HALF_INSTRUCTIONS
     *v = __hadd(*v, val);
 #else
-    float fv = __half2float(*v);
+    float fv = (float)(*v);
     fv += fval;
     *v = __float2half(fv);
 #endif
@@ -109,7 +109,7 @@ struct TensorSubConstantOp<half> {
 
   explicit
 #ifdef CUDA_HALF_INSTRUCTIONS
-  TensorSubConstantOp(half v): val(__float2half(-(__half2float(v)))) {}
+  TensorSubConstantOp(half v): val(__float2half(-((float)(v)))) {}
 #else
   TensorSubConstantOp(half v): fval(-(THC_half2float(v))) {}
 #endif
@@ -119,7 +119,7 @@ struct TensorSubConstantOp<half> {
 #ifdef CUDA_HALF_INSTRUCTIONS
     *out = __hadd(*in, val);
 #else
-    float fin = __half2float(*in);
+    float fin = (float)(*in);
     float fout = fin + fval;
     *out = __float2half(fout);
 #endif
@@ -130,7 +130,7 @@ struct TensorSubConstantOp<half> {
 #ifdef CUDA_HALF_INSTRUCTIONS
     *v = __hadd(*v, val);
 #else
-    float fv = __half2float(*v);
+    float fv = (float)(*v);
     fv += fval;
     *v = __float2half(fv);
 #endif
@@ -189,7 +189,7 @@ struct TensorMulConstantOp<half> {
 #ifdef CUDA_HALF_INSTRUCTIONS
     *out = __hmul(*in, val);
 #else
-    float fin = __half2float(*in);
+    float fin = (float)(*in);
     float fout = fin * fval;
     *out = __float2half(fout);
 #endif
@@ -200,7 +200,7 @@ struct TensorMulConstantOp<half> {
 #ifdef CUDA_HALF_INSTRUCTIONS
     *v = __hmul(*v, val);
 #else
-    float fv = __half2float(*v);
+    float fv = (float)(*v);
     fv *= fval;
     *v = __float2half(fv);
 #endif
@@ -307,7 +307,7 @@ struct TensorDivConstantOp<half> {
 #ifdef CUDA_HALF_INSTRUCTIONS
     *out = __hmul(*in, val);
 #else
-    float fin = __half2float(*in);
+    float fin = (float)(*in);
     float fout = fin * fval;
     *out = __float2half(fout);
 #endif
@@ -318,7 +318,7 @@ struct TensorDivConstantOp<half> {
 #ifdef CUDA_HALF_INSTRUCTIONS
     *v = __hmul(*v, val);
 #else
-    float fv = __half2float(*v);
+    float fv = (float)(*v);
     fv *= fval;
     *v = __float2half(fv);
 #endif
