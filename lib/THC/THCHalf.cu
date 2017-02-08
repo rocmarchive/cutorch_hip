@@ -3,7 +3,7 @@
 #ifdef THRUST_PATH
   #include <thrust/transform.h>
 #else
-  #include <bolt/amp/transform.h>
+ // #include <bolt/amp/transform.h>
 #endif
 
 struct __half2floatOp {
@@ -25,7 +25,7 @@ void THCFloat2Half(THCState *state, half *out, float *in, ptrdiff_t len)
   #endif
     in, in + len, out, __float2halfOp());
 #else
-  bolt::amp::transform(in, in + len, out, __float2halfOp());
+  //bolt::amp::transform(in, in + len, out, __float2halfOp());
 #endif
 }
 
@@ -40,15 +40,15 @@ void THCHalf2Float(THCState *state, float *out, half *in, ptrdiff_t len)
   #endif
     in, in + len, out, __half2floatOp());
 #else
-  bolt::amp::transform(in, in + len, out, __half2floatOp());
+  //bolt::amp::transform(in, in + len, out, __half2floatOp());
 #endif
 }
 
 float THC_half2float(half a)
 {
-  unsigned int bits = a.x & 0x7fff;
-  unsigned int sign = a.x & 0x8000;
-  unsigned int exp = a.x & 0x7c00;
+  unsigned int bits = (unsigned short)a & 0x7fff;
+  unsigned int sign = (unsigned short)a & 0x8000;
+  unsigned int exp = (unsigned short)a & 0x7c00;
 
   bits <<= 13;
   sign <<= 16;
