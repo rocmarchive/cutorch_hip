@@ -16,6 +16,7 @@ template <typename T>
 struct THCNumerics {
 };
 
+
 template <>
 struct THCNumerics<unsigned char> {
   static inline __host__ __device__ unsigned char min() { return 0; }
@@ -150,7 +151,7 @@ struct THCNumerics<half> {
   static inline __host__ __device__ bool gt(half a, half b) {
 #if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
 //#ifdef CUDA_HALF_INSTRUCTIONS
-    return __hgt(a, b);
+    return a > b ? true : false;
 //#else
 //    float fa = __half2float(a);
 //    float fb = __half2float(b);

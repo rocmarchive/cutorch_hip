@@ -98,7 +98,8 @@ struct TensorSignOp<half> {
 #ifdef CUDA_HALF_INSTRUCTIONS
     half zero = ScalarConvert<int, half>::to(0);
     half orig = *in;
-    *out = __float2half((float) __hgt(orig, zero) - (float) __hlt(orig, zero));
+    //*out = __float2half((float) __hgt(orig, zero) - (float) __hlt(orig, zero));
+    *out = __float2half((orig > 0) - (orig < 0));
 #else
     float orig = __half2float(*in);
     *out = __float2half((orig > 0) - (orig < 0));
@@ -111,7 +112,8 @@ struct TensorSignOp<half> {
 #ifdef CUDA_HALF_INSTRUCTIONS
     half zero = ScalarConvert<int, half>::to(0);
     half orig = *v;
-    *v = __float2half((float) __hgt(orig, zero) -  (float) __hlt(orig, zero));
+    //*v = __float2half((float) __hgt(orig, zero) -  (float) __hlt(orig, zero));
+    *v = __float2half((orig > 0) - (orig < 0));
 #else
     float orig = __half2float(*v);
     *v = __float2half((orig > 0) - (orig < 0));
