@@ -89,7 +89,8 @@ struct THCNumerics<int> {
   static inline __host__ __device__  int mul(int a, int b) { return a * b; }
   static inline __host__ __device__  int sub(int a, int b) { return a - b; }
   static inline __host__ __device__  int div(int a, int b) { return a / b; }
-  static inline __host__ __device__  int abs(int a) { return fabs(a); }
+  // TODO: Include hcc_math header and use fabs API in hc fast math space
+  static inline __host__ __device__  int abs(int a) { return 0; /*fabs(a)*/; }
 };
 
 template <>
@@ -108,7 +109,8 @@ struct THCNumerics<long> {
   static inline __host__ __device__  long mul(long a, long b) { return a * b; }
   static inline __host__ __device__  long sub(long a, long b) { return a - b; }
   static inline __host__ __device__  long div(long a, long b) { return a / b; };
-  static inline __host__ __device__  long abs(long a) { return fabs(a); }
+  // TODO: Include hcc_math header and use fabs API in hc fast math space
+  static inline __host__ __device__  long abs(long a) { return 0; /*fabs(a)*/; }
 };
 
 #ifdef CUDA_HALF_TENSOR
