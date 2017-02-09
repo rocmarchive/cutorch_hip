@@ -7,7 +7,7 @@
 #endif
 
 struct __half2floatOp {
-  __device__ float operator()(half v) const { return (float)(v); }
+  __device__ float operator()(half v) const { return __half2float(v); }
 };
 
 struct __float2halfOp {
@@ -46,9 +46,15 @@ void THCHalf2Float(THCState *state, float *out, half *in, ptrdiff_t len)
 
 float THC_half2float(half a)
 {
+#ifdef __NVCC__
+  unsigned int bits = a.x & 0x7fff;
+  unsigned int sign = a.x & 0x8000;
+  unsigned int exp = a.x & 0x7c00;
+#elif __HCC__
   unsigned int bits = (unsigned short)a & 0x7fff;
   unsigned int sign = (unsigned short)a & 0x8000;
   unsigned int exp = (unsigned short)a & 0x7c00;
+#endif
 
   bits <<= 13;
   sign <<= 16;

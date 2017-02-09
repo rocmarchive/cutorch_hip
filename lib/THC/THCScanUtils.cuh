@@ -1,9 +1,8 @@
+#include "hip/hip_runtime.h"
 #ifndef THC_SCAN_UTILS_INC
 #define THC_SCAN_UTILS_INC
 
 #include "THCAsmUtils.cuh"
-
-#include <hip/hip_runtime.h>
 
 // Collection of in-kernel scan / prefix sum utilities
 
@@ -58,20 +57,13 @@ __device__ void exclusivePrefixSum(T* smem, T in, T* out, T* carry) {
 // Inclusive prefix sum for binary vars using intra-warp voting +
 // shared memory
 template <typename T, bool KillWARDependency>
-__device__
-inline
-void inclusiveBinaryPrefixSum(T* smem, bool in, T* out) {
+__device__ void inclusiveBinaryPrefixSum(T* smem, bool in, T* out) {
   // Within-warp, we use warp voting.
-  // TODO: Enable by Neel
-  //T vote = __ballot(in);
+  T vote = __ballot(in);
 #ifdef CUDA_PATH
   T index = __popc(getLaneMaskLe() & vote);
-#else
-  T index = 0;
 #endif
-  T carry = 0;
-  // TODO: Enable by Neel
-  //T carry = __popc(vote);
+  T carry = __popc(vote);
 
   int warp = hipThreadIdx_x / 32;
 
@@ -112,9 +104,7 @@ void inclusiveBinaryPrefixSum(T* smem, bool in, T* out) {
 // Exclusive prefix sum for binary vars using intra-warp voting +
 // shared memory
 template <typename T, bool KillWARDependency>
-__device__
-inline
-void exclusiveBinaryPrefixSum(T* smem, bool in, T* out, T* carry) {
+__device__ void exclusiveBinaryPrefixSum(T* smem, bool in, T* out, T* carry) {
   inclusiveBinaryPrefixSum<T, false>(smem, in, out);
 
   // Inclusive to exclusive

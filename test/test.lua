@@ -1674,7 +1674,7 @@ function test.indexAdd()
    testIndexAdd(typenames)
 end
 
-function test.indexAddHalf()
+--[[function test.indexAddHalf()
    -- don't have cpu versions of half, so let's compare with float.
    -- additional divergence due to float/half:
    -- half_digits_precision = log10(2^11) ~ 3, reserve another
@@ -1690,7 +1690,7 @@ function test.indexAddHalf()
       testIndexAdd(halfOnly, halft2gpu2)
       local test_tolerance =  old_tolerance
   end
-end
+end]]--
 
 function test.indexFill()
    local sz1 = chooseInt(minsize, maxsize)
@@ -3253,7 +3253,7 @@ function test.topk()
    end
 end]]--
 
-function test.cat()
+--[[function test.cat()
    for k, typename in ipairs(typenames) do
       for dim = 1, 3 do
 	 local x = torch.Tensor(13, minsize, minsize):uniform()
@@ -3291,7 +3291,7 @@ function test.catArray()
 	 tester:assertTensorEq(mx, mxx, 0, 'torch.cat value')
       end
    end
-end
+end]]--
 
 function test.streamWaitFor()
    local size = 2000000

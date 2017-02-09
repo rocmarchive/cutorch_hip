@@ -314,14 +314,17 @@ void THCudaBlas_Hgemm(THCState *state, char transa, char transb, long m, long n,
 				  i_ldb, &fBeta, c, CUDA_R_16F, i_ldc));
     }
 #else
+//TODO: Remove __NVCC__ Path
 #ifdef __NVCC__
-    cublasSetStream((cublasHandle_t)handle, THCState_getCurrentStream(state));
+    hipblasSetStream((hipblasHandle_t)handle, THCState_getCurrentStream(state));
     // Check for native Hgemm support
     if (THC_fastHalfInstructions(state)) {
-      cublasHgemm(handle, opa, opb,
+      hipblasHgemm(handle, opa, opb,
 				i_m, i_n, i_k, &alpha, a, i_lda, b, i_ldb,
 				&beta, c, i_ldc);
-    } else {
+    } 
+ #ifdef HIPBLAS_TODO
+    else {
       // Simulated Hgemm
       float fAlpha = THC_half2float(alpha);
       float fBeta = THC_half2float(beta);
@@ -331,6 +334,7 @@ void THCudaBlas_Hgemm(THCState *state, char transa, char transb, long m, long n,
                                   a, CUDA_R_16F, i_lda, b, CUDA_R_16F,
 				  i_ldb, &fBeta, c, CUDA_R_16F, i_ldc);
     }
+#endif
 #endif
 #endif
     return;

@@ -57,8 +57,9 @@ TensorInfo<T, IndexType>::TensorInfo(T* p,
                                      int dim,
                                      const IndexType (&sz)[MAX_CUTORCH_DIMS],
                                      const IndexType (&st)[MAX_CUTORCH_DIMS])
-    : data{p}, dims{dim}
 {
+  data = p;
+  dims = dim;
   assert(dims > 0 && dims < MAX_CUTORCH_DIMS);
 
   // Allocate to accomodate device strides and sizes for the tensor

@@ -2,32 +2,33 @@
 #define THC_GENERIC_FILE "generic/THCTensorMathPointwise.cu"
 #else
 
-#define IMPLEMENT_CUDA_TENSOR_BASIC_FUNC_(NAME, CFUNC, REAL)                       \
-  struct Tensor_##NAME##_##REAL##_Op {                                             \
-    __device__ __forceinline__                                                     \
-    void operator()(real* out, real* in) const { *out = CFUNC(*in); }              \
-                                                                                   \
-    __device__ __forceinline__                                                     \
-    void operator()(real* v) const { *v = CFUNC(*v); }                             \
-  };                                                                               \
-                                                                                   \
-  void THCTensor_(NAME)(THCState* state, THCTensor* self_, THCTensor* src)         \
-  {                                                                                \
-    THAssert(THCTensor_(checkGPU)(state, 2, self_, src));                          \
-    if (self_ == src) {                                                            \
-      if (!THC_pointwiseApply1(state, self_, Tensor_##NAME##_##REAL##_Op())) {     \
-        THArgCheck(false, 2, CUTORCH_DIM_WARNING);                                 \
-      }                                                                            \
-    } else {                                                                       \
-      THCTensor_(resizeAs)(state, self_, src);                                     \
-                                                                                   \
-      if (!THC_pointwiseApply2(state, self_, src, Tensor_##NAME##_##REAL##_Op())) {\
-        THArgCheck(false, 2, CUTORCH_DIM_WARNING);                                 \
-      }                                                                            \
-    }                                                                              \
-                                                                                   \
-    THCudaCheck(hipGetLastError());                                                \
+#define IMPLEMENT_CUDA_TENSOR_BASIC_FUNC_(NAME, CFUNC, REAL)             \
+  struct Tensor_##NAME##_##REAL##_Op {                                  \
+    __device__ __forceinline__ void operator()(real* out, real* in) const { \
+      *out = CFUNC(*in);                                                \
+    }                                                                   \
+                                                                        \
+    __device__ __forceinline__ void operator()(real* v) const {         \
+      *v = CFUNC(*v);                                                   \
+    }                                                                   \
+  };                                                                    \
+                                                                        \
+  void THCTensor_(NAME)(THCState* state, THCTensor* self_, THCTensor* src) { \
+    THAssert(THCTensor_(checkGPU)(state, 2, self_, src));               \
+    if (self_ == src) {                                                 \
+      if (!THC_pointwiseApply1(state, self_, Tensor_##NAME##_##REAL##_Op())) { \
+        THArgCheck(false, 2, CUTORCH_DIM_WARNING);                      \
+      }     \
+    } else {                                                            \
+      THCTensor_(resizeAs)(state, self_, src);                          \
+                                                                        \
+      if (!THC_pointwiseApply2(state, self_, src, Tensor_##NAME##_##REAL##_Op())) { \
+        THArgCheck(false, 2, CUTORCH_DIM_WARNING);                      \
+      }                                                                 \
+    }                                                                   \
+    THCudaCheck(hipGetLastError());                                    \
   }
+
 
 #define IMPLEMENT_CUDA_TENSOR_BASIC_FUNC(NAME, CFUNC, REAL) \
   IMPLEMENT_CUDA_TENSOR_BASIC_FUNC_(NAME, CFUNC, REAL)
@@ -57,17 +58,16 @@ IMPLEMENT_CUDA_TENSOR_BASIC_FUNC(round, THCNumerics<real>::round, Real)
 IMPLEMENT_CUDA_TENSOR_BASIC_FUNC( frac, THCNumerics<real>::frac,  Real)
 IMPLEMENT_CUDA_TENSOR_BASIC_FUNC( cinv, THCNumerics<real>::cinv,  Real)
 
-#endif
-
+#ifdef CUDA_PATH
 IMPLEMENT_CUDA_TENSOR_BASIC_FUNC(  abs, THCNumerics<real>::abs,   Real)
-
+#endif
 #undef IMPLEMENT_CUDA_TENSOR_BASIC_FUNC_
 #undef IMPLEMENT_CUDA_TENSOR_BASIC_FUNC
-
+#endif
 void THCTensor_(sign)(THCState* state, THCTensor* self_, THCTensor* src) {
   THAssert(THCTensor_(checkGPU)(state, 2, self_, src));
   if (self_ == src) {
-    if (!THC_pointwiseApply1(state, self_, TensorSignOp<real>{})) {
+    if (!THC_pointwiseApply1(state, self_, TensorSignOp<real>())) {
       THArgCheck(false, 2, CUTORCH_DIM_WARNING);
     }
   } else {
@@ -105,7 +105,7 @@ THCTensor_(cross)(THCState *state, THCTensor *self, THCTensor *x, THCTensor *y, 
 
   int i;
   long nd = THCTensor_(nDimension)(state, x);
-  //ptrdiff_t nelem = THCTensor_(nElement)(state, x);
+  ptrdiff_t nelem = THCTensor_(nElement)(state, x);
   THArgCheck(nd == THCTensor_(nDimension)(state, y), 1, "tensors must have same number of dimensions");
   for (i = 0; i < nd; i++) {
     THArgCheck(THCTensor_(size)(state, x, i) == THCTensor_(size)(state, y, i), 1, "dimension %i of x and y does not match", i);

@@ -24,7 +24,7 @@ template <typename Op,
 #if __CUDA_ARCH__ >= 350
 __launch_bounds__(32 * 16, 4)
 #endif
-__global__ inline void
+__global__  void
 kernelPointwiseApply1(hipLaunchParm lp, Ta* Adata, IndexType* Asizes, 
                       IndexType* Astrides,
                       IndexType totalElements,
@@ -47,7 +47,7 @@ template <typename Op,
 #if __CUDA_ARCH__ >= 350
 __launch_bounds__(32 * 16, 4)
 #endif
-__global__ inline void
+__global__ void
 kernelPointwiseApply2(hipLaunchParm lp, Ta* Adata, IndexType* Asizes,
                       IndexType* Astrides,
                       Tb* Bdata,
@@ -77,7 +77,7 @@ template <typename Op,
 #if __CUDA_ARCH__ >= 350
 __launch_bounds__(32 * 16, 4)
 #endif
-__global__ inline void
+__global__  void
 kernelPointwiseApply3(hipLaunchParm lp, Ta* Adata, IndexType* Asizes, IndexType* Astrides,
                       Tb* Bdata, IndexType* Bsizes, IndexType* Bstrides,
                       Tc* Cdata, IndexType* Csizes, IndexType* Cstrides,

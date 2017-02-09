@@ -1,12 +1,12 @@
 #ifndef THC_TENSOR_TYPE_UTILS_INC
 #define THC_TENSOR_TYPE_UTILS_INC
 
+#include <cuda.h>
+#include <assert.h>
 #include "THCGeneral.h"
 #include "THCHalf.h"
 #include "THCTensor.h"
 #include "THCTensorInfo.cuh"
-
-#include <assert.h>
 
 /// A utility for accessing THCuda*Tensor types in a generic manner
 
@@ -33,7 +33,7 @@ struct TensorUtils {
 
 #define TENSOR_UTILS(TENSOR_TYPE, DATA_TYPE, ACC_DATA_TYPE)             \
   template <>                                                           \
-  struct THC_CLASS TensorUtils<TENSOR_TYPE> {                           \
+  struct THC_CLASS TensorUtils<TENSOR_TYPE> {                                     \
     typedef DATA_TYPE DataType;                                         \
     typedef ACC_DATA_TYPE AccDataType;                                  \
                                                                         \
@@ -50,7 +50,7 @@ struct TensorUtils {
     static void resizeAs(THCState* state, TENSOR_TYPE* dst,             \
                          TENSOR_TYPE* src);                             \
     static DATA_TYPE* getData(THCState* state, TENSOR_TYPE* t);         \
-    static ptrdiff_t getNumElements(THCState* state, TENSOR_TYPE* t);   \
+    static ptrdiff_t getNumElements(THCState* state, TENSOR_TYPE* t);        \
     static long getSize(THCState* state, TENSOR_TYPE* t, int dim);      \
     static long getStride(THCState* state, TENSOR_TYPE* t, int dim);    \
     static int getDims(THCState* state, TENSOR_TYPE* t);                \
@@ -110,11 +110,11 @@ struct ScalarInv {
 template <>
 struct ScalarNegate<half> {
   static __host__ __device__ half to(const half v) {
-#if defined(__CUDA_ARCH__)  || defined(__HIP_DEVICE_COMPILE__)
+#ifdef __CUDA_ARCH__
 #ifdef CUDA_HALF_INSTRUCTIONS
     return __hneg(v);
 #else
-    return __float2half(-(float)(v));
+    return __float2half(-__half2float(v));
 #endif
 #else
     half out = v;
@@ -127,8 +127,8 @@ struct ScalarNegate<half> {
 template <>
 struct ScalarInv<half> {
   static __host__ __device__ half to(const half v) {
-#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
-    return __float2half(1.0f / (float)(v));
+#ifdef __CUDA_ARCH__
+    return __float2half(1.0f / __half2float(v));
 #else
     float fv = THC_half2float(v);
     fv = 1.0f / fv;
@@ -137,20 +137,15 @@ struct ScalarInv<half> {
   }
 };
 
-//static
-//inline
-//bool operator==(half a, half b) {
-//TODO: Enable by Neel
-//  return a.x == b.x;
-//}
+inline bool operator==(half a, half b) {
+  return a.x == b.x;
+}
 
-//static
-//inline
-//bool operator!=(half a, half b) {
-//TODO: Enable by Neel
-//  return a.x != b.x;
-//}
+inline bool operator!=(half a, half b) {
+  return a.x != b.x;
+}
 
 #endif // CUDA_HALF_TENSOR
 
 #endif // THC_TENSOR_TYPE_UTILS_INC
+

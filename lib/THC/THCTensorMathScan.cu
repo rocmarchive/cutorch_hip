@@ -1,17 +1,12 @@
+#include "hip/hip_runtime.h"
 #include "THCTensorMath.h"
 #include "THCGeneral.h"
 #include "THCBlas.h"
 #include "THCTensorCopy.h"
 #include "THCApply.cuh"
 #include "THCReduce.cuh"
+#include "THCThrustAlternate.h"
 
-#if defined(THRUST_PATH)
-    #include <thrust/functional>
-#else
-    #include <bolt/amp/functional.h>
-#endif
-
-#include <hip/hip_runtime.h>
 /* Perform an inclusive scan along an outer dimension of a tensor.
  *
  * - num_orows is the size of the flattened outer dimensions;
@@ -24,15 +19,9 @@
  * Each thread processes a single inner row at a time.
  */
 template<class BinaryOp>
-__global__
-void THCudaTensor_kernel_scanOuterDim(hipLaunchParm lp,
-                                      float *tgt_,
-                                      float *src_,
-                                      unsigned num_orows,
-                                      unsigned num_irows,
-                                      unsigned row_size,
-                                      float init,
-                                      BinaryOp binary_op)
+__global__ void THCudaTensor_kernel_scanOuterDim(hipLaunchParm lp, float *tgt_, float *src_,
+                                                 unsigned num_orows, unsigned num_irows, unsigned row_size,
+                                                 float init, BinaryOp binary_op)
 {
   for (unsigned orow = hipBlockIdx_x; orow < num_orows; orow += hipGridDim_x) {
     for (unsigned irow = hipBlockIdx_y * hipBlockDim_x + hipThreadIdx_x; irow < num_irows; irow += hipGridDim_y * hipBlockDim_x) {
@@ -52,12 +41,8 @@ void THCudaTensor_kernel_scanOuterDim(hipLaunchParm lp,
 }
 
 template<class BinaryOp>
-void THCudaTensor_scanOuterDim(THCState *state,
-                               THCudaTensor *tgt,
-                               THCudaTensor *src,
-                               long dimension,
-                               float init,
-                               BinaryOp binary_op)
+void THCudaTensor_scanOuterDim(THCState *state, THCudaTensor *tgt, THCudaTensor *src, long dimension,
+                                        float init, BinaryOp binary_op)
 {
   unsigned ndim = THCudaTensor_nDimension(state, src);
   // Treat all outer dimensions (i.e. dim < dimension) as one.
@@ -76,18 +61,8 @@ void THCudaTensor_scanOuterDim(THCState *state,
   unsigned maxGridDim = 1024;
   dim3 grid(min(maxGridDim, num_orows), min(maxGridDim, THCCeilDiv(num_irows, threads.x)));
 
-  hipLaunchKernel(HIP_KERNEL_NAME(THCudaTensor_kernel_scanOuterDim),
-                  dim3(grid),
-                  dim3(threads),
-                  0,
-                  THCState_getCurrentStream(state),
-                  THCudaTensor_data(state, tgt),
-                  THCudaTensor_data(state, src),
-                  num_orows,
-                  num_irows,
-                  row_size,
-                  init,
-                  binary_op);
+  hipLaunchKernel(HIP_KERNEL_NAME(THCudaTensor_kernel_scanOuterDim), dim3(grid), dim3(threads), 0, THCState_getCurrentStream(state), 
+      THCudaTensor_data(state, tgt), THCudaTensor_data(state, src), num_orows, num_irows, row_size, init, binary_op);
   hipError_t errcode = hipGetLastError();
   if (errcode != hipSuccess) {
     THError(hipGetErrorString(errcode));
@@ -106,14 +81,9 @@ void THCudaTensor_scanOuterDim(THCState *state,
  * per thread block is quicker than processing a single row, especially for short rows).
  */
 template<int num_threads_x, int num_threads_y, class BinaryFunction>
-__global__
-void THCudaTensor_kernel_scanInnermostDim(hipLaunchParm lp,
-                                          float *tgt_,
-                                          float *src_,
-                                          unsigned num_rows,
-                                          unsigned row_size,
-                                          float init,
-                                          BinaryFunction binary_op)
+__global__ void THCudaTensor_kernel_scanInnermostDim(hipLaunchParm lp, float *tgt_, float *src_,
+                                                     unsigned num_rows, unsigned row_size,
+                                                     float init, BinaryFunction binary_op)
 {
   __shared__ float sbuf[num_threads_y][2 * num_threads_x];
 
@@ -197,17 +167,8 @@ void THCudaTensor_scanInnermostDim(THCState *state, THCudaTensor *tgt, THCudaTen
   dim3 threads(16, 32);
   dim3 grid(min(1024, THCCeilDiv(num_rows, threads.y)));
 
-  hipLaunchKernel(HIP_KERNEL_NAME(THCudaTensor_kernel_scanInnermostDim<16, 32>),
-                  dim3(grid),
-                  dim3(threads),
-                  0,
-                  THCState_getCurrentStream(state),
-                  THCudaTensor_data(state, tgt),
-                  THCudaTensor_data(state, src),
-                  num_rows,
-                  row_size,
-                  init,
-                  binary_op);
+  hipLaunchKernel(HIP_KERNEL_NAME(THCudaTensor_kernel_scanInnermostDim<16, 32>), dim3(grid), dim3(threads), 0, THCState_getCurrentStream(state), 
+      THCudaTensor_data(state, tgt), THCudaTensor_data(state, src), num_rows, row_size, init, binary_op);
   hipError_t errcode = hipGetLastError();
   if (errcode != hipSuccess) {
     THError(hipGetErrorString(errcode));
@@ -235,29 +196,11 @@ void THCudaTensor_scanDim(THCState *state, THCudaTensor *self_, THCudaTensor *sr
 void THCudaTensor_cumsum(THCState *state, THCudaTensor *self, THCudaTensor *src, long dimension)
 {
   THAssert(THCudaTensor_checkGPU(state, 2, self, src));
-  return THCudaTensor_scanDim(state,
-                              self,
-                              src,
-                              dimension,
-                              0.0f,
-#if defined(THRUST_PATH)
-                              thrust::plus<float>());
-#else
-                              bolt::amp::plus<float>());
-#endif
+  return THCudaTensor_scanDim(state, self, src, dimension, 0.0f, thrust_alternate::sum<float>());
 }
 
 void THCudaTensor_cumprod(THCState *state, THCudaTensor *self, THCudaTensor *src, long dimension)
 {
   THAssert(THCudaTensor_checkGPU(state, 2, self, src));
-  return THCudaTensor_scanDim(state,
-                              self,
-                              src,
-                              dimension,
-                              1.0f,
-#if defined(THRUST_PATH)
-                              thrust::multiplies<float>());
-#else
-                              bolt::amp::multiplies<float>());
-#endif
+  return THCudaTensor_scanDim(state, self, src, dimension, 1.0f, thrust_alternate::multiply<float>());
 }
