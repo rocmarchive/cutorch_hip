@@ -24,7 +24,8 @@ struct ReduceAdd {
 #ifdef CUDA_HALF_TENSOR
 template <>
 struct ReduceAdd<half, half> {
-  inline __device__ half operator()(half a, half b) const {
+  __device__
+  half operator()(half a, half b) const {
 #ifdef CUDA_HALF_INSTRUCTIONS
     return __hadd(a, b);
 #else
@@ -110,20 +111,42 @@ struct SquareFunctor<ResT, half> {
 
 template <typename T>
 struct ReduceMin {
+  template<typename U = T,
+           typename std::enable_if<std::is_integral<U>::value>::type* = nullptr>
   __device__
-  T operator()(T a, T b) const
+  T operator()(U a, U b) const
+  {// TODO: this is a temporary workaround for a compiler bug. It is not quite
+    //       correct in general.
+      return b ^ ((a ^ b) & -(a < b));
+  }
+
+  template<typename U = T,
+           typename std::enable_if<!std::is_integral<U>::value>::type* = nullptr>
+  __device__
+  T operator()(U a, U b) const
   {
-    return THCNumerics<T>::lt(a, b) ? a : b;
+      return THCNumerics<T>::lt(b, a) ? b : a;
   }
 };
 
 template <typename T>
 struct ReduceMax {
-  __device__
-  T operator()(T a, T b) const
-  {
-    return THCNumerics<T>::gt(a, b) ? a : b;
-  }
+    template<typename U = T,
+            typename std::enable_if<std::is_integral<U>::value>::type* = nullptr>
+    __device__
+    T operator()(U a, U b) const
+    {// TODO: this is a temporary workaround for a compiler bug. It is not quite
+        //       correct in general.
+        return b ^ ((a ^ b) & -(a < b));
+    }
+
+    template<typename U = T,
+            typename std::enable_if<!std::is_integral<U>::value>::type* = nullptr>
+    __device__
+    T operator()(U a, U b) const
+    {
+        return THCNumerics<T>::lt(b, a) ? a : b;
+    }
 };
 
 struct LogicalAll {
@@ -228,6 +251,9 @@ struct TensorNormOp
     }
   }
 
+  __host__ __device__
+  ~TensorNormOp() {}
+
   T exponent;
 };
 
@@ -247,6 +273,9 @@ struct TensorNormOp<double, StaticExp>
       return pow(fabs(x), exponent);
     }
   }
+
+  __host__ __device__
+  ~TensorNormOp() {}
 
   double exponent;
 };
@@ -268,6 +297,9 @@ struct TensorNormOp<half, StaticExp>
       return THCNumerics<half>::pow(THCNumerics<half>::abs(x), exponent);
     }
   }
+
+  __host__ __device__
+  ~TensorNormOp() {}
 
   half exponent;
 };

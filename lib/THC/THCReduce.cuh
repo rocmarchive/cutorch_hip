@@ -38,8 +38,16 @@ __global__
 inline
 void
 kernelReduceNoncontigDim(hipLaunchParm lp,
-                         TensorInfo<T, IndexType> out,
-                         TensorInfo<T, IndexType> in,
+                         //TensorInfo<T, IndexType> out,
+                         //TensorInfo<T, IndexType> in,
+                         T* outData,
+                         IndexType* outSizes,
+                         IndexType* outStrides,
+                         int outDims,
+                         T* inData,
+                         IndexType* inSizes,
+                         IndexType* inStrides,
+                         int inDims,
                          IndexType reductionStride,
                          IndexType reductionSize,
                          IndexType totalSlices,
@@ -56,26 +64,27 @@ kernelReduceNoncontigDim(hipLaunchParm lp,
   // Each thread picks a point in `out` and `in` for which it is
   // producing the reduction
   const IndexType outOffset =
-    IndexToOffset<T, IndexType, ADims>::get(sliceIndex, out.dSizes, out.dStrides, out.dims);
+    IndexToOffset<T, IndexType, ADims>::get(sliceIndex, outSizes, outStrides, outDims);
   const IndexType inBaseOffset =
-    IndexToOffset<T, IndexType, BDims>::get(sliceIndex, in.dSizes, in.dStrides, in.dims);
+    IndexToOffset<T, IndexType, BDims>::get(sliceIndex, inSizes, inStrides, inDims);
 
   // For each point in reductionSize, reduce into `r`
   IndexType inOffset = inBaseOffset;
   T r = init;
 
   for (IndexType i = 0; i < reductionSize; ++i) {
-    r = reduceOp(r, modifyOp(in.data[inOffset]));
+    r = reduceOp(r, modifyOp(inData[inOffset]));
     inOffset += reductionStride;
   }
 
   // Write out reduced value
-  out.data[outOffset] = r;
+  outData[outOffset] = r;
 }
 
 template <typename IndexType>
 __device__ __forceinline__
 static
+inline
 IndexType getReduceContigDimSliceIndex()
 {
   // Each block handles one slice
@@ -93,8 +102,16 @@ __global__
 inline
 void
 kernelReduceContigDim(hipLaunchParm lp,
-                      TensorInfo<T, IndexType> out,
-                      TensorInfo<T, IndexType> in,
+                      T* outData,
+                      IndexType* outSizes,
+                      IndexType* outStrides,
+                      int outDims,
+                      T* inData,
+                      IndexType* inSizes,
+                      IndexType* inStrides,
+                      int inDims,
+                      //TensorInfo<T, IndexType> out,
+                      //TensorInfo<T, IndexType> in,
                       IndexType reductionSize,
                       IndexType totalSlices,
                       T init,
@@ -109,18 +126,18 @@ kernelReduceContigDim(hipLaunchParm lp,
 
   // Get the offset in `out` for the reduction
   const IndexType outOffset =
-    IndexToOffset<T, IndexType, ADims>::get(sliceIndex, out.dSizes, out.dStrides, out.dims);
+    IndexToOffset<T, IndexType, ADims>::get(sliceIndex, outSizes, outStrides, outDims);
 
   // Get the base offset in `in` for this block's reduction
   const IndexType inBaseOffset =
-    IndexToOffset<T, IndexType, BDims>::get(sliceIndex, in.dSizes, in.dStrides, in.dims);
+    IndexToOffset<T, IndexType, BDims>::get(sliceIndex, inSizes, inStrides, inDims);
 
   // Each thread in the block will reduce some subset of elements in
   // the slice. The elements are guaranteed contiguous starting at
   // `inBaseOffset`.
   T r = init;
   for (IndexType i = hipThreadIdx_x; i < reductionSize; i += hipBlockDim_x) {
-    r = reduceOp(r, modifyOp(in.data[inBaseOffset + i]));
+    r = reduceOp(r, modifyOp(inData[inBaseOffset + i]));
   }
 
   // Reduce within the block
@@ -131,7 +148,7 @@ kernelReduceContigDim(hipLaunchParm lp,
 
   if (hipThreadIdx_x == 0) {
     // Write out reduced value
-    out.data[outOffset] = r;
+    outData[outOffset] = r;
   }
 }
 
@@ -239,7 +256,7 @@ bool THC_reduceDim(THCState* state,
   // (or vice versa), the contiguous tensor can be collapsed to one
   // dimension, and the loop to translate the linear index to the array
   // index can be similarly collapsed. That is what this unrolling is for.
-#define HANDLE_CASE(TYPE, OUT, IN)                                                                       \
+#define HANDLE_CASE(TYPE, OUT, IN)                                                                     \
   if (contigReduction) {                                                                                 \
     hipLaunchKernel(HIP_KERNEL_NAME(kernelReduceContigDim<ModifyOp,                                      \
                                                           ReduceOp,                                      \
@@ -251,8 +268,14 @@ bool THC_reduceDim(THCState* state,
                     dim3{block},                                                                         \
                     smemSize,                                                                            \
                     THCState_getCurrentStream(state),                                                    \
-                    outInfo,                                                                             \
-                    inInfo,                                                                              \
+                    outInfo.data,                                                                        \
+                    outInfo.dSizes,                                                                      \
+                    outInfo.dStrides,                                                                    \
+                    outInfo.dims,                                                                        \
+                    inInfo.data,                                                                         \
+                    inInfo.dSizes,                                                                       \
+                    inInfo.dStrides,                                                                     \
+                    inInfo.dims,                                                                         \
                     reductionSize,                                                                       \
                     (TYPE) outElements,                                                                  \
                     init,                                                                                \
@@ -269,8 +292,14 @@ bool THC_reduceDim(THCState* state,
                     dim3{block},                                                                         \
                     0,                                                                                   \
                     THCState_getCurrentStream(state),                                                    \
-                    outInfo,                                                                             \
-                    inInfo,                                                                              \
+                    outInfo.data,                                                                        \
+                    outInfo.dSizes,                                                                      \
+                    outInfo.dStrides,                                                                    \
+                    outInfo.dims,                                                                        \
+                    inInfo.data,                                                                         \
+                    inInfo.dSizes,                                                                       \
+                    inInfo.dStrides,                                                                     \
+                    inInfo.dims,                                                                         \
                     reductionStride,                                                                     \
                     reductionSize,                                                                       \
                     (TYPE) outElements,                                                                  \

@@ -17,7 +17,7 @@ struct __float2halfOp {
 void THCFloat2Half(THCState *state, half *out, float *in, ptrdiff_t len)
 {
 #if defined(THRUST_PATH)
-  thrust::transform( // TODO: add the localised execution version.
+  thrust::transform(
   #if CUDA_VERSION >= 7000
   //    thrust::cuda::par.on(THCState_getCurrentStream(state)),
   #else
@@ -25,6 +25,7 @@ void THCFloat2Half(THCState *state, half *out, float *in, ptrdiff_t len)
   #endif
     in, in + len, out, __float2halfOp());
 #else
+  // TODO: add the localised execution version.
   bolt::amp::transform(in, in + len, out, __float2halfOp());
 #endif
 }

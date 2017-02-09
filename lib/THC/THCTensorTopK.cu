@@ -280,16 +280,29 @@ void radixSelect(const RadixConverter& conv,
 template <typename IndexType, int Dim, bool Order>
 __global__
 void gatherTopK(hipLaunchParm lp,
-                TensorInfo<float, IndexType> input,
+                //TensorInfo<float, IndexType> input,
+                float* inputData,
+                IndexType* inputSizes,
+                IndexType* inputStrides,
+                int inputDims,
                 IndexType inputSliceSize,
                 IndexType outputSliceSize, // aka `k`
                 IndexType numInputSlices,
                 IndexType inputWithinSliceStride,
-                TensorInfo<float, IndexType> topK,
+                //TensorInfo<float, IndexType> topK,
+                float* topKData,
+                IndexType* topKSizes,
+                IndexType* topKStrides,
+                int topKDims,
                 IndexType numTopKSlices,
                 IndexType topKWithinSliceStride,
-                TensorInfo<long, IndexType> indices,
-                IndexType indicesWithinSliceStride) {
+                //TensorInfo<long, IndexType> indices,
+                long* indicesData,
+                IndexType* indicesSizes,
+                IndexType* indicesStrides,
+                int indicesDims,
+                IndexType indicesWithinSliceStride)
+{
   // Indices are limited to integer fp precision, so counts can fit in
   // int32, regardless of IndexType
   __shared__ int smem[32]; // one per each warp, up to warp limit
@@ -301,15 +314,15 @@ void gatherTopK(hipLaunchParm lp,
 
   // Find the start offset for our slice
   IndexType sliceStartIndex =
-    IndexToOffset<float, IndexType, Dim>::get(slice, input.dSizes, input.dStrides, input.dims);
+    IndexToOffset<float, IndexType, Dim>::get(slice, inputSizes, inputStrides, inputDims);
   IndexType topKSliceStartIndex =
-    IndexToOffset<float, IndexType, Dim>::get(slice, topK.dSizes, topK.dStrides, topK.dims);
+    IndexToOffset<float, IndexType, Dim>::get(slice, topKSizes, topKStrides, topKDims);
   IndexType indicesSliceStartIndex =
-    IndexToOffset<long, IndexType, Dim>::get(slice, indices.dSizes, indices.dStrides, indices.dims);
+    IndexToOffset<long, IndexType, Dim>::get(slice, indicesSizes, indicesStrides, indicesDims);
 
-  float* inputSliceStart = &input.data[sliceStartIndex];
-  float* topKSliceStart = &topK.data[topKSliceStartIndex];
-  long* indicesSliceStart = &indices.data[indicesSliceStartIndex];
+  float* inputSliceStart = &inputData[sliceStartIndex];
+  float* topKSliceStart = &topKData[topKSliceStartIndex];
+  long* indicesSliceStart = &indicesData[indicesSliceStartIndex];
 
   // Find the k-th highest element in our input
   float topKValue = -1.0f;
@@ -434,23 +447,32 @@ THC_API void THCudaTensor_topk(THCState* state,
   THCudaLongTensor_resize(state, indices, topKSize, NULL);
   THLongStorage_free(topKSize);
 
-#define RUN_K(INDEX_T, DIM, DIR)   //                                            \
+#define RUN_K(INDEX_T, DIM, DIR)                                               \
   hipLaunchKernel(HIP_KERNEL_NAME(gatherTopK<INDEX_T, DIM, DIR>),              \
                   dim3{grid},                                                  \
                   dim3{block},                                                 \
                   0,                                                           \
                   THCState_getCurrentStream(state),                            \
-                  inputInfo,                                                   \
+                  inputInfo.data,                                              \
+                  inputInfo.dSizes,                                            \
+                  inputInfo.dStrides,                                          \
+                  inputInfo.dims,                                              \
                   sliceSize,                                                   \
                   k,                                                           \
                   inputSlices,                                                 \
                   /* The actual dimension that the k-selection is running in */\
                   /* may have changed from collapseDims()                    */\
                   inputInfo.strides[collapseInputDim],                         \
-                  topKInfo,                                                    \
+                  topKInfo.data,                                               \
+                  topKInfo.dSizes,                                             \
+                  topKInfo.dStrides,                                           \
+                  topKInfo.dims,                                               \
                   topKSlices,                                                  \
                   topKInfo.strides[collapseTopKDim],                           \
-                  indicesInfo,                                                 \
+                  indicesInfo.data,                                            \
+                  indicesInfo.dSizes,                                          \
+                  indicesInfo.dStrides,                                        \
+                  indicesInfo.dims,                                            \
                   indicesInfo.strides[collapseIndicesDim])
 
 #define RUN_DIR(INDEX_T, DIM)                   \

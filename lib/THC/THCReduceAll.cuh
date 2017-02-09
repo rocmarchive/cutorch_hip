@@ -39,7 +39,8 @@ kernelReduceAll(hipLaunchParm lp,
                 ModifyOp modifyOp,
                 ReduceOp reduceOp,
                 ReduceAccOp reduceAccOp,
-                AccT* out) {
+                AccT* out)
+{
   // With a block-wide stride, have each thread perform its own reduction.
   AccT r = init;
   for (IndexType i = hipThreadIdx_x; i < totalElements; i += hipBlockDim_x) {
@@ -61,6 +62,7 @@ kernelReduceAll(hipLaunchParm lp,
 template <typename IndexType>
 __device__ __forceinline__
 static
+inline
 IndexType getStartIndex(IndexType totalSize) {
   IndexType sizePerBlock = THCCeilDiv(totalSize, (IndexType) hipGridDim_x);
   return hipBlockIdx_x * sizePerBlock;
@@ -69,6 +71,7 @@ IndexType getStartIndex(IndexType totalSize) {
 template <typename IndexType>
 __device__ __forceinline__
 static
+inline
 IndexType getEndIndex(IndexType totalSize) {
   IndexType sizePerBlock = THCCeilDiv(totalSize, (IndexType) hipGridDim_x);
   return min((IndexType) ((hipBlockIdx_x + 1) * sizePerBlock), totalSize);
@@ -95,7 +98,8 @@ kernelReduceAllPass1(hipLaunchParm lp,
                      ModifyOp modifyOp,
                      ReduceOp reduceOp,
                      ReduceAccOp reduceAccOp,
-                     AccT* scratchSpace) {
+                     AccT* scratchSpace)
+{
   const IndexType startIndex = getStartIndex<IndexType>(totalElements);
   const IndexType endIndex = getEndIndex<IndexType>(totalElements);
 
@@ -117,41 +121,48 @@ kernelReduceAllPass1(hipLaunchParm lp,
   }
 }
 
-template <typename ReduceOp, typename T, typename IndexType>
-__global__
-inline
-void
-kernelReduceAllPass2(hipLaunchParm lp,
-                     int numPass1Blocks,
-                     T init,
-                     ReduceOp reduceOp,
-                     T* scratchSpace,
-                     T* out)
+
+namespace
 {
-  T r = init;
-  if (hipThreadIdx_x < numPass1Blocks) {
-    r = scratchSpace[hipThreadIdx_x];
-  }
+    template<typename ReduceOp, typename T/*, typename IndexType*/>
+    __global__
+    inline
+    void kernelReduceAllPass2(hipLaunchParm lp,
+                              int numPass1Blocks,
+                              T init,
+                              ReduceOp reduceOp,
+                              T* scratchSpace,
+                              T* out)
+    {
+      T r = init;
+      if (hipThreadIdx_x < numPass1Blocks) {
+        r = scratchSpace[hipThreadIdx_x];
+      }
 
-  // Reduce within the block
-  HIP_DYNAMIC_SHARED(char, smemChar)
-  auto smem = reinterpret_cast<T*>(smemChar);
+      // Reduce within the block
+      HIP_DYNAMIC_SHARED(char, smemChar)
+      auto smem = reinterpret_cast<T*>(smemChar);
 
-  r = reduceBlock(smem, numPass1Blocks, r, reduceOp, init);
+      r = reduceBlock(smem, numPass1Blocks, r, reduceOp, init);
 
-  if (hipThreadIdx_x == 0) {
-    *out = r;
-  }
+      if (hipThreadIdx_x == 0) {
+        *out = r;
+      }
+    }
 }
 
 // Perform a two-pass reduction if the tensor is large enough to
 // warrant it.
-inline bool isTwoPassReductionSize(ptrdiff_t elements) {
+inline
+bool isTwoPassReductionSize(ptrdiff_t elements)
+{
   return (elements > THC_TWO_PASS_REDUCTION_SIZE);
 }
 
 template <typename InT, typename AccT>
-inline ptrdiff_t getTwoPassBlocks(THCState* state, ptrdiff_t elements) {
+inline
+ptrdiff_t getTwoPassBlocks(THCState* state, ptrdiff_t elements)
+{
   ptrdiff_t numBlocks = THCCeilDiv(elements, (ptrdiff_t)THC_REDUCE_ALL_BLOCK_SIZE);
 
   // We can only have as many blocks as there is scratch space
@@ -168,23 +179,34 @@ inline ptrdiff_t getTwoPassBlocks(THCState* state, ptrdiff_t elements) {
 
 // Get the block/grid size that we want
 template <typename InT, typename AccT>
-inline void getPass1ReduceBlockGrid(THCState* state, ptrdiff_t elements,
-                                    dim3& grid, dim3& block) {
+inline
+void getPass1ReduceBlockGrid(THCState* state,
+                             ptrdiff_t elements,
+                             dim3& grid,
+                             dim3& block)
+{
   grid = dim3(getTwoPassBlocks<InT, AccT>(state, elements));
   block = dim3(THC_REDUCE_ALL_BLOCK_SIZE);
 }
 
 template <typename InT, typename AccT>
-inline void getPass2ReduceBlockGrid(THCState* state, ptrdiff_t elements,
-                                    dim3& grid, dim3& block) {
+inline
+void getPass2ReduceBlockGrid(THCState* state,
+                             ptrdiff_t elements,
+                             dim3& grid,
+                             dim3& block)
+{
   grid = dim3(1);
   // We only need as many threads as there were blocks originally
   block = dim3(getTwoPassBlocks<InT, AccT>(state, elements));
 }
 
 template <typename InT, typename AccT>
-inline void getSinglePassReduceBlockGrid(ptrdiff_t elements,
-                                         dim3& grid, dim3& block) {
+inline
+void getSinglePassReduceBlockGrid(ptrdiff_t elements,
+                                  dim3& grid,
+                                  dim3& block)
+{
   grid = dim3(1);
   block = dim3(THC_REDUCE_ALL_BLOCK_SIZE);
 }
@@ -205,7 +227,8 @@ void callReduceAll(THCState* state,
                    const ModifyOp& modifyOp,
                    const ReduceOp& reduceOp,
                    const ReduceAccOp& reduceAccOp,
-                   AccT* devOut) {
+                   AccT* devOut)
+{
   dim3 grid;
   dim3 block;
 
@@ -247,7 +270,7 @@ void callReduceAll(THCState* state,
     getPass2ReduceBlockGrid<InT, AccT>(state, totalElements, grid, block);
     smemSize = block.x * sizeof(AccT);
 
-    hipLaunchKernel(HIP_KERNEL_NAME(kernelReduceAllPass2<ReduceAccOp, AccT, IndexType>),
+    hipLaunchKernel(HIP_KERNEL_NAME(kernelReduceAllPass2),
                     dim3(grid),
                     dim3(block),
                     smemSize,
@@ -296,6 +319,7 @@ template <typename TensorType,
           typename ReduceOp,
           typename ReduceAccOp,
           typename AccT>
+inline
 bool THC_reduceAll(THCState* state,
                    TensorType* in,
                    const ModifyOp& modifyOp,

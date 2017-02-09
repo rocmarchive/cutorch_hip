@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 #ifndef THC_GENERIC_FILE
 #define THC_GENERIC_FILE "generic/THCTensorMathReduce.cu"
 #else
@@ -12,7 +11,9 @@ void THCTensor_(sum)(THCState* state,
                      long dimension)
 {
   THAssert(THCTensor_(checkGPU)(state, 2, self, src));
-  if (!THC_reduceDim(state, self, src,
+  if (!THC_reduceDim(state,
+                     self,
+                     src,
                      bolt::amp::identity<real>(),
                      ReduceAdd<real, real>(),
                      ScalarConvert<int, real>::to(0),
@@ -27,7 +28,9 @@ THC_API
 void THCTensor_(prod)(THCState* state, THCTensor* self, THCTensor* src, long dimension)
 {
   THAssert(THCTensor_(checkGPU)(state, 2, self, src));
-  if (!THC_reduceDim(state, self, src,
+  if (!THC_reduceDim(state,
+                     self,
+                     src,
                      bolt::amp::identity<real>(),
                      ReduceMultiply<real, real>(),
                      ScalarConvert<int, real>::to(1),
@@ -65,14 +68,14 @@ THCTensor_(renorm)(THCState *state, THCTensor* self, THCTensor* src, real value,
   dim3 threads(32);
 
   hipLaunchKernel(HIP_KERNEL_NAME(THCTensor_kernel_renorm<real>),
-                    dim3(grid),
-                    dim3(threads),
-                    0,
-                    THCState_getCurrentStream(state),
-                    THCTensor_(data)(state, data),
-                    value,
-                    size,
-                    maxnorm);
+                  dim3(grid),
+                  dim3(threads),
+                  0,
+                  THCState_getCurrentStream(state),
+                  THCTensor_(data)(state, data),
+                  value,
+                  size,
+                  maxnorm);
 
   hipError_t errcode = hipGetLastError();
   if(errcode != hipSuccess)
@@ -219,12 +222,14 @@ accreal THCTensor_(normall)(THCState *state, THCTensor *self, real value)
                   &result, 0);
     result = THCNumerics<accreal>::sqrt(result);
   } else {
-    THC_reduceAll(state, self,
+    THC_reduceAll(state,
+                  self,
                   TensorNormOp<real, -1>(value),
                   ReduceAdd<real, accreal>(),
                   ReduceAdd<accreal, accreal>(),
                   ScalarConvert<float, accreal>::to(0.0f),
-                  &result, 0);
+                  &result,
+                  0);
     result = THCNumerics<accreal>::pow(
       result,
       ScalarConvert<real, accreal>::to(THCNumerics<real>::cinv(value))
@@ -242,14 +247,21 @@ accreal THCTensor_(sumall)(THCState *state, THCTensor *self)
 {
   THAssert(THCTensor_(checkGPU)(state, 1, self));
   accreal val;
-  if (!THC_reduceAll(state, self,
-                     bolt::amp::identity<real>(),
-                     ReduceAdd<real, accreal>(),
-                     ReduceAdd<accreal, accreal>(),
-                     ScalarConvert<int, accreal>::to(0),
-                     &val, 0)) {
-    THArgCheck(false, 1, CUTORCH_DIM_WARNING);
-  }
+
+  #if defined(__HIP_PLATFORM_HCC__)
+    // TODO: temporarily disabled due to compiler breakage.
+  #else
+      if (!THC_reduceAll(state,
+                         self,
+                         bolt::amp::identity<real>(),
+                         ReduceAdd<real, accreal>(),
+                         ReduceAdd<accreal, accreal>(),
+                         ScalarConvert<int, accreal>::to(0),
+                         &val,
+                         0)) {
+        THArgCheck(false, 1, CUTORCH_DIM_WARNING);
+      }
+  #endif
 
   THCudaCheck(hipGetLastError());
   return val;
@@ -260,14 +272,19 @@ accreal THCTensor_(prodall)(THCState *state, THCTensor *self)
 {
   THAssert(THCTensor_(checkGPU)(state, 1, self));
   accreal val;
-  if (!THC_reduceAll(state, self,
-                     bolt::amp::identity<real>(),
-                     ReduceMultiply<real, accreal>(),
-                     ReduceMultiply<accreal, accreal>(),
-                     ScalarConvert<int, accreal>::to(1),
-                     &val, 0)) {
-    THArgCheck(false, 1, CUTORCH_DIM_WARNING);
-  }
+
+  #if defined(__HIP_PLATFORM_HCC__)
+    // TODO: temporarily disabled due to compiler breakage.
+  #else
+      if (!THC_reduceAll(state, self,
+                         bolt::amp::identity<real>(),
+                         ReduceMultiply<real, accreal>(),
+                         ReduceMultiply<accreal, accreal>(),
+                         ScalarConvert<int, accreal>::to(1),
+                         &val, 0)) {
+        THArgCheck(false, 1, CUTORCH_DIM_WARNING);
+      }
+  #endif
 
   val = THCNumerics<accreal>::div(
     val,

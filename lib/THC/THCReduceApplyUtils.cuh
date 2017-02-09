@@ -26,13 +26,11 @@ IndexType getLinearBlockId() {
 // Block-wide reduction in shared memory helper; only hipThreadIdx_x == 0 will
 // return the reduced value
 template <typename T, typename ReduceOp>
+__device__
 static
 inline
-__device__ T reduceBlock(T* smem,
-                         int numVals,
-                         T threadVal,
-                         ReduceOp reduceOp,
-                         T init) {
+T reduceBlock(T* smem, int numVals, T threadVal, ReduceOp reduceOp, T init)
+{
   if (numVals == 0) {
     return init;
   }
@@ -62,10 +60,10 @@ __device__ T reduceBlock(T* smem,
 
     int numLanesParticipating = min(numVals, warpSize);
 
-    if (numLanesParticipating == 32) {
+    if (numLanesParticipating == warpSize) {
       // Unroll for warpSize == 32 and numVals >= 32
 #pragma unroll
-      for (int i = 1; i < 32; ++i) {
+      for (int i = 1; i < warpSize; ++i) {
         r = reduceOp(r, smem[i]);
       }
     } else {

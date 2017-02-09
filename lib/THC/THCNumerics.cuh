@@ -330,7 +330,7 @@ struct THCNumerics<half> {
   static inline __host__ __device__ half neg(half a) {
 #if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
 //#ifdef CUDA_HALF_INSTRUCTIONS
-    return __hneg(a);
+    return __hneq(a);
 //#else
 //    float fa = __half2float(a);
 //    return __float2half(-fa);

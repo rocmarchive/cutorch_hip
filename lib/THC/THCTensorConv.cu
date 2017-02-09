@@ -643,7 +643,7 @@ THC_API void THCudaTensor_conv2DRevger(THCState *state, THCudaTensor *output, fl
   dim3 threads(128/nOutputRows, nOutputRows);
 
   // compute rev conv
-  /*hipLaunchKernel(HIP_KERNEL_NAME(conv2genericrev),
+  hipLaunchKernel(HIP_KERNEL_NAME(conv2genericrev),
                   dim3(blocks),
                   dim3(threads),
                   0,
@@ -659,7 +659,7 @@ THC_API void THCudaTensor_conv2DRevger(THCState *state, THCudaTensor *output, fl
                   nKernelCols,
                   alpha,
                   srow,
-                  scol);*/
+                  scol);
 
   // clean
   THCudaTensor_free(state, input);
@@ -734,7 +734,7 @@ THC_API void THCudaTensor_conv2DRevgerm(THCState *state, THCudaTensor *output, f
     dim3 threads(cst, nOutputRows, subbatch);
 
     // compute rev conv
-    /*hipLaunchKernel(HIP_KERNEL_NAME(conv2genericrev),
+    hipLaunchKernel(HIP_KERNEL_NAME(conv2genericrev),
                     dim3(blocks),
                     dim3(threads),
                     0,
@@ -750,7 +750,7 @@ THC_API void THCudaTensor_conv2DRevgerm(THCState *state, THCudaTensor *output, f
                     nKernelCols,
                     alpha,
                     srow,
-                    scol);*/
+                    scol);
   }
 
   // clean
@@ -1002,25 +1002,25 @@ THC_API void THCudaTensor_conv2Dmap(THCState *state, THCudaTensor *output, THCud
   dim3 blocks(nOutputPlane,block_height);
   dim3 threads(nthreads_x,nthreads_y);
 
-#define GENERIC_MAP_KERNEL(dim)                                          \
+#define GENERIC_MAP_KERNEL(dim)                                           \
    hipLaunchKernel(HIP_KERNEL_NAME(conv2mapgeneric<false, (dim), (dim)>), \
-                  dim3(blocks),                                          \
-                  dim3(threads),                                         \
-                  0,                                                     \
-                  THCState_getCurrentStream(state),                      \
-                  input_data,                                            \
-                  kernel_data,                                           \
-                  output_data,                                           \
-                  nInputPlane,                                           \
-                  nInputRows,                                            \
-                  nInputCols,                                            \
-                  nOutputPlane*fanin,                                    \
-                  nKernelRows,                                           \
-                  nKernelCols,                                           \
-                  stride_x,                                              \
-                  stride_y,                                              \
-                  table_data,                                            \
-                  fanin);
+                   dim3(blocks),                                          \
+                   dim3(threads),                                         \
+                   0,                                                     \
+                   THCState_getCurrentStream(state),                      \
+                   input_data,                                            \
+                   kernel_data,                                           \
+                   output_data,                                           \
+                   nInputPlane,                                           \
+                   nInputRows,                                            \
+                   nInputCols,                                            \
+                   nOutputPlane*fanin,                                    \
+                   nKernelRows,                                           \
+                   nKernelCols,                                           \
+                   stride_x,                                              \
+                   stride_y,                                              \
+                   table_data,                                            \
+                   fanin);
 
   FOR_KERNEL_SPECIALIZED_DIMENSION(nKernelCols, nKernelRows, GENERIC_MAP_KERNEL);
 #undef GENERIC_MAP_KERNEL

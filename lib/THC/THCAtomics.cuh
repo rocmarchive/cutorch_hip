@@ -8,7 +8,10 @@ struct AtomicAddIntegerImpl;
 
 template<typename T>
 struct AtomicAddIntegerImpl<T, 1> {
-  inline __device__ void operator()(T *address, T val) {
+  __device__
+  inline
+  void operator()(T *address, T val)
+  {
     unsigned int * address_as_ui =
         (unsigned int *) (address - ((size_t)address & 3));
     unsigned int old = *address_as_ui;
@@ -27,7 +30,10 @@ struct AtomicAddIntegerImpl<T, 1> {
 
 template<typename T>
 struct AtomicAddIntegerImpl<T, 2> {
-  inline __device__ void operator()(T *address, T val) {
+  __device__
+  inline
+  void operator()(T *address, T val) const
+  {
     unsigned int * address_as_ui =
         (unsigned int *) ((char *)address - ((size_t)address & 2));
     unsigned int old = *address_as_ui;
@@ -46,7 +52,10 @@ struct AtomicAddIntegerImpl<T, 2> {
 
 template<typename T>
 struct AtomicAddIntegerImpl<T, 4> {
-  inline __device__ void operator()(T *address, T val) {
+  __device__
+  inline
+  void operator()(T *address, T val) const
+  {
     unsigned int * address_as_ui = (unsigned int *) (address);
     unsigned int old = *address_as_ui;
     unsigned int newval;
@@ -62,7 +71,10 @@ struct AtomicAddIntegerImpl<T, 4> {
 
 template<typename T>
 struct AtomicAddIntegerImpl<T, 8> {
-  inline __device__ void operator()(T *address, T val) {
+  __device__
+  inline
+  void operator()(T *address, T val) const
+  {
     unsigned long long * address_as_ui = (unsigned long long *) (address);
     unsigned long long old = *address_as_ui;
     unsigned long long newval;
@@ -76,24 +88,44 @@ struct AtomicAddIntegerImpl<T, 8> {
   }
 };
 
-static inline __device__ void atomicAdd(unsigned char *address, unsigned char val) {
+__device__
+static
+inline
+void atomicAdd(unsigned char *address, unsigned char val)
+{
   AtomicAddIntegerImpl<unsigned char, sizeof(unsigned char)>()(address, val);
 }
 
-static inline  __device__ void atomicAdd(char *address, char val) {
+__device__
+static
+inline
+void atomicAdd(char *address, char val)
+{
   AtomicAddIntegerImpl<char, sizeof(char)>()(address, val);
 }
 
-static inline  __device__ void atomicAdd(short *address, short val) {
+__device__
+static
+inline
+void atomicAdd(short *address, short val)
+{
   AtomicAddIntegerImpl<short, sizeof(short)>()(address, val);
 }
 
-static inline __device__ void atomicAdd(long *address, long val) {
+__device__
+static
+inline
+void atomicAdd(long *address, long val)
+{
   AtomicAddIntegerImpl<long, sizeof(long)>()(address, val);
 }
 
 #ifdef CUDA_HALF_TENSOR
-static inline  __device__ void atomicAdd(half *address, half val) {
+__device__
+static
+inline
+void atomicAdd(half *address, half val)
+{
   unsigned int * address_as_ui =
       (unsigned int *) ((char *)address - ((size_t)address & 2));
   unsigned int old = *address_as_ui;
@@ -115,7 +147,11 @@ static inline  __device__ void atomicAdd(half *address, half val) {
 
 #if (defined(__CUDA_ARCH__) && __CUDA_ARCH__ < 600) || defined(__HIP_DEVICE_COMPILE__)
 // from CUDA C Programmic Guide
-static inline  __device__  void atomicAdd(double *address, double val) {
+__device__
+static
+inline
+void atomicAdd(double *address, double val)
+{
   unsigned long long int* address_as_ull = (unsigned long long int*)address;
   unsigned long long int old = *address_as_ull;
   unsigned long long int assumed;

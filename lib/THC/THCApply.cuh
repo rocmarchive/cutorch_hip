@@ -42,9 +42,13 @@ void kernelPointwiseApply1(hipLaunchParm lp,
     // Convert `linearIndex` into an offset of `a`
     const IndexType aOffset =
       IndexToOffset<Ta, IndexType, ADims>::get(linearIndex, Asizes, Astrides, ADims);
-    // TODO: this is broken, applying op causes a Promote pass failure. Identify
-    //       which operations are troublesome.
-    //op(&Adata[aOffset]);
+
+      #if defined(__HIP_PLATFORM_HCC__)
+        // TODO: this is broken, applying op causes a Promote pass failure.
+        //       Identify which operations are troublesome.
+      #else
+        op(&Adata[aOffset]);
+      #endif
   }
 }
 
@@ -78,7 +82,12 @@ void kernelPointwiseApply2(hipLaunchParm lp,
     const IndexType bOffset =
       IndexToOffset<Tb, IndexType, BDims>::get(linearIndex, Bsizes, Bstrides, BDims);
 
-    //op(&Adata[aOffset], &Bdata[bOffset]);
+    #if defined(__HIP_PLATFORM_HCC__)
+      // TODO: this is broken, applying op causes a Promote pass failure.
+      //       Identify which operations are troublesome.
+    #else
+      //op(&Adata[aOffset], &Bdata[bOffset]);
+    #endif
   }
 }
 
@@ -119,7 +128,12 @@ void kernelPointwiseApply3(hipLaunchParm lp,
     const IndexType cOffset =
       IndexToOffset<Tc, IndexType, CDims>::get(linearIndex, Csizes, Cstrides, CDims);
 
-//    op(&Adata[aOffset], &Bdata[bOffset], &Cdata[cOffset]);
+    #if defined(__HIP_PLATFORM_HCC__)
+      // TODO: this is broken, applying op causes a Promote pass failure.
+      //       Identify which operations are troublesome.
+    #else
+      //  op(&Adata[aOffset], &Bdata[bOffset], &Cdata[cOffset]);
+    #endif
   }
 }
 

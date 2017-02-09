@@ -50,7 +50,7 @@ void THCTensor_(indexCopy)(THCState *state, THCTensor *dst, int dim, THCudaLongT
 
   int mpc = THCState_getCurrentDeviceProperties(state)->multiProcessorCount;
 
-#define SMALL_INDEX(TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM) // \
+#define SMALL_INDEX(TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM)  \
   hipLaunchKernel(HIP_KERNEL_NAME(indexCopySmallIndex<TENSOR_TYPE, \
                                                       TYPE,        \
                                                       DST_DIM,     \
@@ -60,15 +60,24 @@ void THCTensor_(indexCopy)(THCState *state, THCTensor *dst, int dim, THCudaLongT
                   dim3{smallIndexBlock},                           \
                   0,                                               \
                   stream,                                          \
-                  dstInfo,                                         \
-                  srcInfo,                                         \
-                  indicesInfo,                                     \
+                  dstInfo.data,                                    \
+                  dstInfo.dSizes,                                  \
+                  dstInfo.dStrides,                                \
+                  dstInfo.dims,                                    \
+                  srcInfo.data,                                    \
+                  srcInfo.dSizes,                                  \
+                  srcInfo.dStrides,                                \
+                  srcInfo.dims,                                    \
+                  indicesInfo.data,                                \
+                  indicesInfo.dSizes,                              \
+                  indicesInfo.dStrides,                            \
+                  indicesInfo.dims,                                \
                   dstCopyDim,                                      \
                   srcCopyDim,                                      \
                   sliceSize,                                       \
                   dstCopyDimSize);
 
-#define LARGE_INDEX(TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM)//  \
+#define LARGE_INDEX(TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM)  \
   hipLaunchKernel(HIP_KERNEL_NAME(indexCopyLargeIndex<TENSOR_TYPE, \
                                                       TYPE,        \
                                                       DST_DIM,     \
@@ -78,9 +87,18 @@ void THCTensor_(indexCopy)(THCState *state, THCTensor *dst, int dim, THCudaLongT
                   dim3{largeIndexBlock},                           \
                   0,                                               \
                   stream,                                          \
-                  dstInfo,                                         \
-                  srcInfo,                                         \
-                  indicesInfo,                                     \
+                  dstInfo.data,                                    \
+                  dstInfo.dSizes,                                  \
+                  dstInfo.dStrides,                                \
+                  dstInfo.dims,                                    \
+                  srcInfo.data,                                    \
+                  srcInfo.dSizes,                                  \
+                  srcInfo.dStrides,                                \
+                  srcInfo.dims,                                    \
+                  indicesInfo.data,                                \
+                  indicesInfo.dSizes,                              \
+                  indicesInfo.dStrides,                            \
+                  indicesInfo.dims,                                \
                   dstCopyDim,                                      \
                   srcCopyDim,                                      \
                   sliceSize,                                       \
@@ -202,7 +220,7 @@ void THCTensor_(indexAdd)(THCState *state, THCTensor *dst, int dim, THCudaLongTe
 
   int mpc = THCState_getCurrentDeviceProperties(state)->multiProcessorCount;
 
-#define SMALL_INDEX(TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM)// \
+#define SMALL_INDEX(TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM) \
   hipLaunchKernel(HIP_KERNEL_NAME(indexAddSmallIndex<TENSOR_TYPE, \
                                                      TYPE,        \
                                                      DST_DIM,     \
@@ -212,15 +230,24 @@ void THCTensor_(indexAdd)(THCState *state, THCTensor *dst, int dim, THCudaLongTe
                   dim3{smallIndexBlock},                          \
                   0,                                              \
                   stream,                                         \
-                  dstInfo,                                        \
-                  srcInfo,                                        \
-                  indicesInfo,                                    \
+                  dstInfo.data,                                   \
+                  dstInfo.dSizes,                                 \
+                  dstInfo.dStrides,                               \
+                  dstInfo.dims,                                   \
+                  srcInfo.data,                                   \
+                  srcInfo.dSizes,                                 \
+                  srcInfo.dStrides,                               \
+                  srcInfo.dims,                                   \
+                  indicesInfo.data,                               \
+                  indicesInfo.dSizes,                             \
+                  indicesInfo.dStrides,                           \
+                  indicesInfo.dims,                               \
                   dstAddDim,                                      \
                   srcAddDim,                                      \
                   sliceSize,                                      \
                   dstAddDimSize);
 
-#define LARGE_INDEX(TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM)// \
+#define LARGE_INDEX(TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM) \
   hipLaunchKernel(HIP_KERNEL_NAME(indexAddLargeIndex<TENSOR_TYPE, \
                                                      TYPE,        \
                                                      DST_DIM,     \
@@ -230,9 +257,18 @@ void THCTensor_(indexAdd)(THCState *state, THCTensor *dst, int dim, THCudaLongTe
                   dim3{largeIndexBlock},                          \
                   0,                                              \
                   stream,                                         \
-                  dstInfo,                                        \
-                  srcInfo,                                        \
-                  indicesInfo,                                    \
+                  dstInfo.data,                                   \
+                  dstInfo.dSizes,                                 \
+                  dstInfo.dStrides,                               \
+                  dstInfo.dims,                                   \
+                  srcInfo.data,                                   \
+                  srcInfo.dSizes,                                 \
+                  srcInfo.dStrides,                               \
+                  srcInfo.dims,                                   \
+                  indicesInfo.data,                               \
+                  indicesInfo.dSizes,                             \
+                  indicesInfo.dStrides,                           \
+                  indicesInfo.dims,                               \
                   dstAddDim,                                      \
                   srcAddDim,                                      \
                   sliceSize,                                      \
@@ -350,7 +386,7 @@ void THCTensor_(indexFill)(THCState *state, THCTensor *dst, int dim, THCudaLongT
 
   int mpc = THCState_getCurrentDeviceProperties(state)->multiProcessorCount;
 
-#define SMALL_INDEX(TENSOR_TYPE, TYPE, DST_DIM, IDX_DIM)        //   \
+#define SMALL_INDEX(TENSOR_TYPE, TYPE, DST_DIM, IDX_DIM)           \
   hipLaunchKernel(HIP_KERNEL_NAME(indexFillSmallIndex<TENSOR_TYPE, \
                                                       TYPE,        \
                                                       DST_DIM,     \
@@ -359,14 +395,20 @@ void THCTensor_(indexFill)(THCState *state, THCTensor *dst, int dim, THCudaLongT
                   dim3{smallIndexBlock},                           \
                   0,                                               \
                   stream,                                          \
-                  dstInfo,                                         \
-                  indicesInfo,                                     \
+                  dstInfo.data,                                    \
+                  dstInfo.dSizes,                                  \
+                  dstInfo.dStrides,                                \
+                  dstInfo.dims,                                    \
+                  indicesInfo.data,                                \
+                  indicesInfo.dSizes,                              \
+                  indicesInfo.dStrides,                            \
+                  indicesInfo.dims,                                \
                   dstFillDim,                                      \
                   sliceSize,                                       \
                   dstFillDimSize,                                  \
                   val);
 
-#define LARGE_INDEX(TENSOR_TYPE, TYPE, DST_DIM, IDX_DIM)        //   \
+#define LARGE_INDEX(TENSOR_TYPE, TYPE, DST_DIM, IDX_DIM)           \
   hipLaunchKernel(HIP_KERNEL_NAME(indexFillLargeIndex<TENSOR_TYPE, \
                                                       TYPE,        \
                                                       DST_DIM,     \
@@ -375,8 +417,14 @@ void THCTensor_(indexFill)(THCState *state, THCTensor *dst, int dim, THCudaLongT
                   dim3{largeIndexBlock},                           \
                   0,                                               \
                   stream,                                          \
-                  dstInfo,                                         \
-                  indicesInfo,                                     \
+                  dstInfo.data,                                    \
+                  dstInfo.dSizes,                                  \
+                  dstInfo.dStrides,                                \
+                  dstInfo.dims,                                    \
+                  indicesInfo.data,                                \
+                  indicesInfo.dSizes,                              \
+                  indicesInfo.dStrides,                            \
+                  indicesInfo.dims,                                \
                   dstFillDim,                                      \
                   sliceSize,                                       \
                   dstFillDimSize,                                  \
@@ -492,7 +540,7 @@ void THCTensor_(indexSelect)(THCState *state, THCTensor *dst, THCTensor *src, in
 
   int mpc = THCState_getCurrentDeviceProperties(state)->multiProcessorCount;
 
-#define SMALL_INDEX(TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM) //   \
+#define SMALL_INDEX(TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM)    \
   hipLaunchKernel(HIP_KERNEL_NAME(indexSelectSmallIndex<TENSOR_TYPE, \
                                                         TYPE,        \
                                                         DST_DIM,     \
@@ -502,15 +550,24 @@ void THCTensor_(indexSelect)(THCState *state, THCTensor *dst, THCTensor *src, in
                   dim3{smallIndexBlock},                             \
                   0,                                                 \
                   stream,                                            \
-                  dstInfo,                                           \
-                  srcInfo,                                           \
-                  indicesInfo,                                       \
+                  dstInfo.data,                                      \
+                  dstInfo.dSizes,                                    \
+                  dstInfo.dStrides,                                  \
+                  dstInfo.dims,                                      \
+                  srcInfo.data,                                      \
+                  srcInfo.dSizes,                                    \
+                  srcInfo.dStrides,                                  \
+                  srcInfo.dims,                                      \
+                  indicesInfo.data,                                  \
+                  indicesInfo.dSizes,                                \
+                  indicesInfo.dStrides,                              \
+                  indicesInfo.dims,                                  \
                   dstSelectDim,                                      \
                   srcSelectDim,                                      \
                   sliceSize,                                         \
                   srcSelectDimSize);
 
-#define LARGE_INDEX(TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM) //   \
+#define LARGE_INDEX(TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM)    \
   hipLaunchKernel(HIP_KERNEL_NAME(indexSelectLargeIndex<TENSOR_TYPE, \
                                                         TYPE,        \
                                                         DST_DIM,     \
@@ -520,9 +577,18 @@ void THCTensor_(indexSelect)(THCState *state, THCTensor *dst, THCTensor *src, in
                   dim3{largeIndexBlock},                             \
                   0,                                                 \
                   stream,                                            \
-                  dstInfo,                                           \
-                  srcInfo,                                           \
-                  indicesInfo,                                       \
+                  dstInfo.data,                                      \
+                  dstInfo.dSizes,                                    \
+                  dstInfo.dStrides,                                  \
+                  dstInfo.dims,                                      \
+                  srcInfo.data,                                      \
+                  srcInfo.dSizes,                                    \
+                  srcInfo.dStrides,                                  \
+                  srcInfo.dims,                                      \
+                  indicesInfo.data,                                  \
+                  indicesInfo.dSizes,                                \
+                  indicesInfo.dStrides,                              \
+                  indicesInfo.dims,                                  \
                   dstSelectDim,                                      \
                   srcSelectDim,                                      \
                   dstTotalSize,                                      \

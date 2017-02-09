@@ -2,20 +2,29 @@
 #define THC_GENERIC_FILE "generic/THCTensorScatterGather.cu"
 #else
 
-#define RUN(TYPE, DIMS, REAL)                       //                           \
+#define RUN(TYPE, DIMS, REAL)                                                  \
   hipLaunchKernel(HIP_KERNEL_NAME(THCudaTensor_gatherKernel<TYPE, REAL, DIMS>),\
                   dim3{grid},                                                  \
                   dim3{block},                                                 \
                   0,                                                           \
                   THCState_getCurrentStream(state),                            \
-                  tensorInfo,                                                  \
-                  srcInfo,                                                     \
-                  indexInfo,                                                   \
+                  tensorInfo.data,                                             \
+                  tensorInfo.dSizes,                                           \
+                  tensorInfo.dStrides,                                         \
+                  tensorInfo.dims,                                             \
+                  srcInfo.data,                                                \
+                  srcInfo.dSizes,                                              \
+                  srcInfo.dStrides,                                            \
+                  srcInfo.dims,                                                \
+                  indexInfo.data,                                              \
+                  indexInfo.dSizes,                                            \
+                  indexInfo.dStrides,                                          \
+                  indexInfo.dims,                                              \
                   dim,                                                         \
                   (TYPE)totalElements);
 
 void THCTensor_(gather)(THCState* state, THCTensor *tensor,
-                         THCTensor *src, int dim, THCudaLongTensor *index) {
+                        THCTensor *src, int dim, THCudaLongTensor *index) {
   THAssert(THCTensor_(checkGPU)(state, 2, tensor, src));
   THAssert(THCudaLongTensor_checkGPU(state, 1, index));
 
@@ -103,15 +112,24 @@ void THCTensor_(gather)(THCState* state, THCTensor *tensor,
 #undef RUN
 
 
-#define RUN(TYPE, DIMS, REAL)           //                                        \
+#define RUN(TYPE, DIMS, REAL)                                                   \
   hipLaunchKernel(HIP_KERNEL_NAME(THCudaTensor_scatterKernel<TYPE, REAL, DIMS>),\
                   dim3{grid},                                                   \
                   dim3{block},                                                  \
                   0,                                                            \
                   THCState_getCurrentStream(state),                             \
-                  tensorInfo,                                                   \
-                  srcInfo,                                                      \
-                  indexInfo,                                                    \
+                  tensorInfo.data,                                              \
+                  tensorInfo.dSizes,                                            \
+                  tensorInfo.dStrides,                                          \
+                  tensorInfo.dims,                                              \
+                  srcInfo.data,                                                 \
+                  srcInfo.dSizes,                                               \
+                  srcInfo.dStrides,                                             \
+                  srcInfo.dims,                                                 \
+                  indexInfo.data,                                               \
+                  indexInfo.dSizes,                                             \
+                  indexInfo.dStrides,                                           \
+                  indexInfo.dims,                                               \
                   dim,                                                          \
                   (TYPE)totalElements);
 
@@ -197,16 +215,22 @@ void THCTensor_(scatter)(THCState* state, THCTensor *tensor, int dim, THCudaLong
 
 #undef RUN
 
-#define RUN(TYPE, DIMS, REAL)           //                                             \
-  hipLaunchKernel(HIP_KERNEL_NAME(THCudaTensor_scatterFillKernel<TYPE, REAL, DIMS>), \
-                  dim3{grid},                                                        \
-                  dim3{block},                                                       \
-                  0,                                                                 \
-                  THCState_getCurrentStream(state),                                  \
-                  tensorInfo,                                                        \
-                  indexInfo,                                                         \
-                  value,                                                             \
-                  dim,                                                               \
+#define RUN(TYPE, DIMS, REAL)                                                       \
+  hipLaunchKernel(HIP_KERNEL_NAME(THCudaTensor_scatterFillKernel<TYPE, REAL, DIMS>),\
+                  dim3{grid},                                                       \
+                  dim3{block},                                                      \
+                  0,                                                                \
+                  THCState_getCurrentStream(state),                                 \
+                  tensorInfo.data,                                                  \
+                  tensorInfo.dSizes,                                                \
+                  tensorInfo.dStrides,                                              \
+                  tensorInfo.dims,                                                  \
+                  indexInfo.data,                                                   \
+                  indexInfo.dSizes,                                                 \
+                  indexInfo.dStrides,                                               \
+                  indexInfo.dims,                                                   \
+                  value,                                                            \
+                  dim,                                                              \
                   (TYPE)totalElements);
 
 void
