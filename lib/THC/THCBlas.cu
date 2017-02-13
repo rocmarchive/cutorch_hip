@@ -298,9 +298,9 @@ void THCudaBlas_Hgemm(THCState *state, char transa, char transb, long m, long n,
 
     // Check for native Hgemm support
     if (THC_fastHalfInstructions(state)) {
-      THCublasCheck(hipblasHgemm(handle, opa, opb,
+     /* THCublasCheck(hipblasHgemm(handle, opa, opb,
 				i_m, i_n, i_k, const_cast<const hiphalf*>((hiphalf*)&alpha), const_cast<hiphalf*>((hiphalf*)a), i_lda, const_cast<hiphalf*>((hiphalf*)b), i_ldb,
-				const_cast<const hiphalf*>((hiphalf*)&beta), const_cast<hiphalf*>((hiphalf*)c), i_ldc));
+				const_cast<const hiphalf*>((hiphalf*)&beta), const_cast<hiphalf*>((hiphalf*)c), i_ldc));*/
     }
 #ifdef HIPBLAS_TODO
     else {
