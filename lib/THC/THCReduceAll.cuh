@@ -117,7 +117,7 @@ kernelReduceAllPass1(hipLaunchParm lp,
   }
 }
 
-template <typename ReduceOp, typename T, typename IndexType>
+/*template <typename ReduceOp, typename T, typename IndexType>
 __global__
 inline
 void
@@ -142,7 +142,7 @@ kernelReduceAllPass2(hipLaunchParm lp,
   if (hipThreadIdx_x == 0) {
     *out = r;
   }
-}
+}*/
 
 // Perform a two-pass reduction if the tensor is large enough to
 // warrant it.
@@ -246,7 +246,7 @@ void callReduceAll(THCState* state,
     int numPass1Blocks = grid.x;
     getPass2ReduceBlockGrid<InT, AccT>(state, totalElements, grid, block);
     smemSize = block.x * sizeof(AccT);
-    hipLaunchKernel(HIP_KERNEL_NAME(kernelReduceAllPass2<ReduceAccOp, AccT, IndexType>),
+    /*hipLaunchKernel(HIP_KERNEL_NAME(kernelReduceAllPass2<ReduceAccOp, AccT, IndexType>),
                     dim3(grid),
                     dim3(block),
                     smemSize,
@@ -255,7 +255,7 @@ void callReduceAll(THCState* state,
                     init,
                     reduceAccOp,
                     (AccT*) scratchSpace,
-                    devOut);
+                    devOut);*/
 
     if (freeScratchSpace) {
       THCudaCheck(THCudaFree(state, scratchSpace));
