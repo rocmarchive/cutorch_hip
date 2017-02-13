@@ -97,14 +97,10 @@ THCTensor_(maskedCopy)(THCState* state,
 
   // update `tensor` where `mask` == 1 but pull from `src` at
   // maskPrefixSum
-  bool status = false;
-  /*status = THC_pointwiseApply3(
-=======
   bool status = THC_pointwiseApply3(
->>>>>>> duct_tape-ext
     state, tensor, mask, maskPrefixSum,
     TensorMaskedCopyOp<real, unsigned char, long>(
-      THCTensor_(data)(state, contigSrc)));*/
+      THCTensor_(data)(state, contigSrc)));
 
   THCTensor_(free)(state, contigSrc);
   THCudaLongTensor_free(state, maskLong);
@@ -177,15 +173,11 @@ THCTensor_(maskedSelect)(THCState* state,
                               maskData + THCudaLongTensor_nElement(state, maskLong),
                               maskPrefixSumData);
 #endif
-  bool status = false;
   // Then copy over the masked elements at their desired output index
-  /*status = THC_pointwiseApply3(
-=======
   bool status = THC_pointwiseApply3(
->>>>>>> duct_tape-ext
     state, mask, maskPrefixSum,
     src, TensorMaskedSelectOp<real, unsigned char, long>(
-      THCTensor_(data)(state, tensor)));*/
+      THCTensor_(data)(state, tensor)));
 
   THCudaLongTensor_free(state, maskLong);
   THCudaLongTensor_free(state, maskPrefixSum);
