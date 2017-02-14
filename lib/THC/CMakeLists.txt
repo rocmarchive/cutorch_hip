@@ -118,6 +118,8 @@ ELSE()
   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${HIP_CXX_FLAGS}")
 ENDIF()
 
+SET(mtgp32_src
+    MTGP/mtgp32-param-fast.cpp MTGP/hiprand_mtgp32.cpp)
 SET(src
     THCCachingAllocator.cpp
     THCGeneral.cc
@@ -187,7 +189,7 @@ IF(${PLATFORM} STREQUAL "hcc")
   LIST(APPEND src-cuda THCHalf.cu)
 ENDIF()
 
-HIP_ADD_LIBRARY(THC SHARED ${src} ${src-cuda})
+HIP_ADD_LIBRARY(THC SHARED ${src} ${src-cuda} ${mtgp32_src})
 
 IF(${PLATFORM} STREQUAL "nvcc")
   CUDA_ADD_CUBLAS_TO_TARGET(THC)
@@ -262,41 +264,46 @@ INSTALL(FILES
           THCTensorTypeUtils.cuh
           DESTINATION "${THC_INSTALL_INCLUDE_SUBDIR}/THC")
 
+
 INSTALL(FILES
-          generic/THCStorage.c
-          generic/THCStorage.cu
-          generic/THCStorage.h
-          generic/THCTensor.c
-          generic/THCTensor.cu
-          generic/THCTensor.h
-          generic/THCStorageCopy.c
-          generic/THCStorageCopy.cu
-          generic/THCStorageCopy.h
-          generic/THCTensorCopy.c
-          generic/THCTensorCopy.cu
-          generic/THCTensorCopy.h
-          generic/THCTensorMasked.h
-          generic/THCTensorMasked.cu
-          generic/THCTensorMath.h
-          generic/THCTensorMath.cu
-          generic/THCThrustAlternate.cu
-          generic/THCTensorMathBlas.cu
-          generic/THCTensorMathBlas.h
-          generic/THCTensorMathCompare.h
-          generic/THCTensorMathCompare.cu
-          generic/THCTensorMathCompareT.h
-          generic/THCTensorMathCompareT.cu
-          generic/THCTensorMathPairwise.h
-          generic/THCTensorMathPairwise.cu
-          generic/THCTensorMathPointwise.h
-          generic/THCTensorMathPointwise.cu
-          generic/THCTensorMathReduce.h
-          generic/THCTensorMathReduce.cu
-          generic/THCTensorScatterGather.h
-          generic/THCTensorScatterGather.cu
-          generic/THCTensorIndex.h
-          generic/THCTensorIndex.cu
-          generic/THCTensorSort.h
-          generic/THCTensorSort.cu
-          generic/THCDeviceTensorUtils.cu
-          DESTINATION "${THC_INSTALL_INCLUDE_SUBDIR}/THC/generic")
+        MTGP/hiprand_mtgp32.h
+        MTGP/mtgp32-fast.h
+        DESTINATION "${Torch_INSTALL_INCLUDE_SUBDIR}/THC/MTGP")
+
+INSTALL(FILES
+        generic/THCStorage.c
+        generic/THCStorage.cu
+        generic/THCStorage.h
+        generic/THCTensor.c
+        generic/THCTensor.cu
+        generic/THCTensor.h
+        generic/THCStorageCopy.c
+        generic/THCStorageCopy.cu
+        generic/THCStorageCopy.h
+        generic/THCTensorCopy.c
+        generic/THCTensorCopy.cu
+        generic/THCTensorCopy.h
+        generic/THCTensorMasked.h
+        generic/THCTensorMasked.cu
+        generic/THCTensorMath.h
+        generic/THCTensorMath.cu
+        generic/THCTensorMathBlas.cu
+        generic/THCTensorMathBlas.h
+        generic/THCTensorMathCompare.h
+        generic/THCTensorMathCompare.cu
+        generic/THCTensorMathCompareT.h
+        generic/THCTensorMathCompareT.cu
+        generic/THCTensorMathPairwise.h
+        generic/THCTensorMathPairwise.cu
+        generic/THCTensorMathPointwise.h
+        generic/THCTensorMathPointwise.cu
+        generic/THCTensorMathReduce.h
+        generic/THCTensorMathReduce.cu
+        generic/THCTensorScatterGather.h
+        generic/THCTensorScatterGather.cu
+        generic/THCTensorIndex.h
+        generic/THCTensorIndex.cu
+        generic/THCTensorSort.h
+        generic/THCTensorSort.cu
+        generic/THCDeviceTensorUtils.cu
+        DESTINATION "${THC_INSTALL_INCLUDE_SUBDIR}/THC/generic")

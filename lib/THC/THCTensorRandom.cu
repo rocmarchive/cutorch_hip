@@ -10,6 +10,8 @@
     #include <curand_kernel.h>
     #include <curand_mtgp32_host.h>
     #include <curand_mtgp32dc_p_11213.h>
+#else
+#include  <MTGP/hiprand_mtgp32.h>
 #endif
 
 #ifdef THRUST_PATH
