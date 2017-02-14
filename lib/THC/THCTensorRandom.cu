@@ -11,6 +11,8 @@
 #include <curand_kernel.h>
 #include <curand_mtgp32_host.h>
 #include <curand_mtgp32dc_p_11213.h>
+#else
+#include "dummy.h"
 #endif
 
 #define MAX_NUM_BLOCKS 64
