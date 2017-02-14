@@ -24,7 +24,7 @@ template <typename Op,
 #if __CUDA_ARCH__ >= 350
 __launch_bounds__(32 * 16, 4)
 #endif
-__global__ inline void
+inline __global__  void
 kernelPointwiseApply1(hipLaunchParm lp, Ta* Adata, IndexType* Asizes, 
                       IndexType* Astrides,
                       IndexType totalElements,
@@ -47,7 +47,7 @@ template <typename Op,
 #if __CUDA_ARCH__ >= 350
 __launch_bounds__(32 * 16, 4)
 #endif
-__global__ inline void
+inline __global__  void
 kernelPointwiseApply2(hipLaunchParm lp, Ta* Adata, IndexType* Asizes,
                       IndexType* Astrides,
                       Tb* Bdata,
@@ -77,7 +77,7 @@ template <typename Op,
 #if __CUDA_ARCH__ >= 350
 __launch_bounds__(32 * 16, 4)
 #endif
-__global__ inline void
+inline __global__  void
 kernelPointwiseApply3(hipLaunchParm lp, Ta* Adata, IndexType* Asizes, IndexType* Astrides,
                       Tb* Bdata, IndexType* Bsizes, IndexType* Bstrides,
                       Tc* Cdata, IndexType* Csizes, IndexType* Cstrides,
@@ -128,7 +128,7 @@ inline bool getApplyGrid(THCState* state, ptrdiff_t totalElements, dim3& grid) {
 
 template <typename TensorTypeA,
           typename Op>
-bool THC_pointwiseApply1(THCState* state,
+inline bool THC_pointwiseApply1(THCState* state,
                          TensorTypeA* a,
                          const Op& op,
                          TensorArgType aType = ReadWrite) {
@@ -252,7 +252,7 @@ bool THC_pointwiseApply1(THCState* state,
 template <typename TensorTypeA,
           typename TensorTypeB,
           typename Op>
-bool THC_pointwiseApply2(THCState* state,
+inline bool THC_pointwiseApply2(THCState* state,
                          TensorTypeA* a,
                          TensorTypeB* b,
                          const Op& op,
@@ -428,7 +428,7 @@ template <typename TensorTypeA,
           typename TensorTypeB,
           typename TensorTypeC,
           typename Op>
-bool THC_pointwiseApply3(THCState* state,
+inline bool THC_pointwiseApply3(THCState* state,
                          TensorTypeA* a,
                          TensorTypeB* b,
                          TensorTypeC* c,

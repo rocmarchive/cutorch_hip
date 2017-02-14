@@ -26,8 +26,8 @@ template <typename ModifyOp,
           typename AccT,
           typename IndexType,
           int ADims>
-__global__
 inline
+__global__
 void
 kernelReduceAll(hipLaunchParm lp,
                 InT* inData,
@@ -82,8 +82,8 @@ template <typename ModifyOp,
           typename AccT,
           typename IndexType,
           int ADims>
-__global__
 inline
+__global__
 void
 kernelReduceAllPass1(hipLaunchParm lp,
                      InT* inData,
@@ -118,8 +118,8 @@ kernelReduceAllPass1(hipLaunchParm lp,
 }
 
 /*template <typename ReduceOp, typename T, typename IndexType>
-__global__
 inline
+__global__
 void
 kernelReduceAllPass2(hipLaunchParm lp,
                      int numPass1Blocks,
@@ -295,7 +295,7 @@ template <typename TensorType,
           typename ReduceOp,
           typename ReduceAccOp,
           typename AccT>
-bool THC_reduceAll(THCState* state,
+inline bool THC_reduceAll(THCState* state,
                    TensorType* in,
                    const ModifyOp& modifyOp,
                    const ReduceOp& reduceOp,
