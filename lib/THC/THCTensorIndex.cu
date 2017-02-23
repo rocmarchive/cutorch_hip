@@ -1,4 +1,4 @@
-#include "hip/hip_runtime.h"
+#include "hip/hip_runtime_api.h"
 #include "THC.h"
 #include "THCTensorMath.h"
 #include "THCGeneral.h"
@@ -12,7 +12,7 @@
 #include "THCNumerics.cuh"
 #include "THCAtomics.cuh"
 
-#include "hip/hip_runtime.h"
+#include "hip/hip_runtime_api.h"
 
 #include <algorithm> // for std::min
 

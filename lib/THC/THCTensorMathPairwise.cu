@@ -5,7 +5,7 @@
 #include "THCApply.cuh"
 #include "THCNumerics.cuh"
 
-#include <hip/hip_runtime.h>
+#include <hip/hip_runtime_api.h>
 
 template <typename T>
 struct TensorAddConstantOp {

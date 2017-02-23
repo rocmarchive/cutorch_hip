@@ -2,7 +2,7 @@
 #define THC_DEVICE_TENSOR_INC
 
 #include <cuda.h>
-#include <hip/hip_runtime.h>
+#include <hip/hip_runtime_api.h>
 
 // A CUDA 6.5 compatible version of static_assert. Remove once on CUDA 7.0.
 template <bool>

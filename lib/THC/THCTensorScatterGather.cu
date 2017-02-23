@@ -1,4 +1,4 @@
-#include "hip/hip_runtime.h"
+#include "hip/hip_runtime_api.h"
 #include "THCTensorMath.h"
 #include "THCGeneral.h"
 #include "THCApply.cuh"

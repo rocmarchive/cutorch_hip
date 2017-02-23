@@ -4,10 +4,10 @@
     #ifdef THRUST_PATH
         // TODO: any includes needed here?
     #else
-        #include <bolt/amp/copy.h>
+    /*    #include <bolt/amp/copy.h>
         #include <bolt/amp/for_each.h>
         #include <bolt/amp/stablesort_by_key.h>
-        #include <bolt/amp/iterator/counting_iterator.h>
+        #include <bolt/amp/iterator/counting_iterator.h>*/
     #endif
 
 // In alignment with default sort on a c++ map, this function
@@ -273,9 +273,9 @@ void sortViaThrust(THCState* state,
     #endif
     countIter, countIter + totalElements, indexIter);
 #else
-  bolt::amp::counting_iterator<long> countIter{0};
+  //bolt::amp::counting_iterator<long> countIter{0};
 
-  bolt::amp::copy(countIter, countIter + totalElements, indexIter);
+  //bolt::amp::copy(countIter, countIter + totalElements, indexIter);
 #endif
 
   // First, we sort globally (across all slices) according to key
@@ -288,10 +288,10 @@ void sortViaThrust(THCState* state,
     #endif
       keyIter, keyIter + totalElements, indexIter, ThrustGTOp<real>());
 #else
-    bolt::amp::stable_sort_by_key(keyIter,
-                                  keyIter + totalElements,
-                                  indexIter,
-                                  ThrustGTOp<real>());
+    //bolt::amp::stable_sort_by_key(keyIter,
+    //                              keyIter + totalElements,
+    //                              indexIter,
+    //                              ThrustGTOp<real>());
 #endif
   } else {
 #if defined(THRUST_PATH)
@@ -301,10 +301,10 @@ void sortViaThrust(THCState* state,
     #endif
       keyIter, keyIter + totalElements, indexIter, ThrustLTOp<real>());
 #else
-  bolt::amp::stable_sort_by_key(keyIter,
-                                keyIter + totalElements,
-                                indexIter,
-                                ThrustLTOp<real>());
+  //bolt::amp::stable_sort_by_key(keyIter,
+  //                              keyIter + totalElements,
+  //                              indexIter,
+  //                              ThrustLTOp<real>());
 #endif
   }
 
@@ -320,10 +320,10 @@ void sortViaThrust(THCState* state,
     indexIter, indexIter + totalElements, keyIter,
     SliceComp(sliceSize));
 #else
-    bolt::amp::stable_sort_by_key(indexIter,
-                                  indexIter + totalElements,
-                                  keyIter,
-                                  SliceComp{sliceSize});
+   // bolt::amp::stable_sort_by_key(indexIter,
+   //                               indexIter + totalElements,
+   //                               keyIter,
+   //                               SliceComp{sliceSize});
 #endif
 
   // Translate the global integer 0-based index to a per-slice real
@@ -336,9 +336,9 @@ void sortViaThrust(THCState* state,
     indexIter, indexIter + totalElements,
     GlobalIndexToPerSliceIndex(sliceSize));
 #else
-  bolt::amp::for_each(indexIter,
-                      indexIter + totalElements,
-                      GlobalIndexToPerSliceIndex{sliceSize});
+  //bolt::amp::for_each(indexIter,
+  //                    indexIter + totalElements,
+  //                    GlobalIndexToPerSliceIndex{sliceSize});
 #endif
 
   // Reverse the transposition as needed

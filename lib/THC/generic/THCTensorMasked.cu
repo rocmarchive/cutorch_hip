@@ -85,9 +85,9 @@ THCTensor_(maskedCopy)(THCState* state,
     auto maskData = THCudaLongTensor_data(state, maskLong);
     auto maskPrefixSumData = THCudaLongTensor_data(state, maskPrefixSum);
 
-    bolt::amp::exclusive_scan(maskData,
-                              maskData + THCudaLongTensor_nElement(state, maskLong),
-                              maskPrefixSumData);
+    //bolt::amp::exclusive_scan(maskData,
+    //                          maskData + THCudaLongTensor_nElement(state, maskLong),
+    //                          maskPrefixSumData);
 #endif
 
 
@@ -169,9 +169,9 @@ THCTensor_(maskedSelect)(THCState* state,
     auto maskData = THCudaLongTensor_data(state, maskLong);
     auto maskPrefixSumData = THCudaLongTensor_data(state, maskPrefixSum);
 
-    bolt::amp::exclusive_scan(maskData,
-                              maskData + THCudaLongTensor_nElement(state, maskLong),
-                              maskPrefixSumData);
+    //bolt::amp::exclusive_scan(maskData,
+    //                          maskData + THCudaLongTensor_nElement(state, maskLong),
+    //                          maskPrefixSumData);
 #endif
   // Then copy over the masked elements at their desired output index
   bool status = THC_pointwiseApply3(

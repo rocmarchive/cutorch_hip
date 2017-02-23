@@ -7,7 +7,7 @@
         #include <thrust/system/cuda/execution_policy.h>
     #endif
 #else
-    #include <bolt/amp/fill.h>
+   // #include <bolt/amp/fill.h>
 #endif
 
 #include "THCHalf.h"

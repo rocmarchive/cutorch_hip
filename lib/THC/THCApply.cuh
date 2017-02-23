@@ -1,4 +1,4 @@
-#include "hip/hip_runtime.h"
+#include "hip/hip_runtime_api.h"
 #ifndef THC_APPLY_INC
 #define THC_APPLY_INC
 

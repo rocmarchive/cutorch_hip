@@ -8,10 +8,11 @@
 #if defined(THRUST_PATH)
     #include <thrust/functional>
 #else
-    #include <bolt/amp/functional.h>
+    //#include <bolt/amp/functional.h>
+    #include "THCThrustAlternate.h"
 #endif
 
-#include <hip/hip_runtime.h>
+#include <hip/hip_runtime_api.h>
 /* Perform an inclusive scan along an outer dimension of a tensor.
  *
  * - num_orows is the size of the flattened outer dimensions;
@@ -243,7 +244,7 @@ void THCudaTensor_cumsum(THCState *state, THCudaTensor *self, THCudaTensor *src,
 #if defined(THRUST_PATH)
                               thrust::plus<float>());
 #else
-                              bolt::amp::plus<float>());
+                              thrust_alternate::plus<float>());
 #endif
 }
 
@@ -258,6 +259,6 @@ void THCudaTensor_cumprod(THCState *state, THCudaTensor *self, THCudaTensor *src
 #if defined(THRUST_PATH)
                               thrust::multiplies<float>());
 #else
-                              bolt::amp::multiplies<float>());
+                              thrust_alternate::multiplies<float>());
 #endif
 }

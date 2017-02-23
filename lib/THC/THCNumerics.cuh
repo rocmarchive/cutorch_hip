@@ -5,7 +5,7 @@
 #include <cuda.h>
 #include <limits.h>
 #endif
-#include "hip/hip_runtime.h"
+#include "hip/hip_runtime_api.h"
 #include "THCHalf.h"
 
 /// Class for numeric limits of the particular data type, which

@@ -11,16 +11,17 @@
     #include <curand_mtgp32_host.h>
     #include <curand_mtgp32dc_p_11213.h>
 #else
-#include  <MTGP/hiprand_mtgp32.h>
+//#include  <MTGP/hiprand_mtgp32.h>
 #endif
 
 #ifdef THRUST_PATH
     #include <thrust/functional>
 #else
-    #include <bolt/amp/functional.h>
+    //#include <bolt/amp/functional.h>
+    #include "THCThrustAlternate.h"
 #endif
 
-#include <hip/hip_runtime.h>
+#include <hip/hip_runtime_api.h>
 
 #define MAX_NUM_BLOCKS 64
 #define BLOCK_SIZE 256
@@ -460,7 +461,7 @@ void renormRowsL1(hipLaunchParm lp, float* dist, long rows, long cols)
     #if defined(THRUST_PATH)
                       thrust::plus<float>(),
     #else
-                      bolt::amp::plus<float>(),
+                      thrust_alternate::plus<float>(),
     #endif
                       0.0f);
     if (hipThreadIdx_x == 0) {
@@ -528,7 +529,7 @@ void sampleMultinomialOnce(hipLaunchParm lp,
     #if defined(THRUST_PATH)
                       thrust::plus<float>(),
     #else
-                      bolt::amp::plus<float>(),
+                      thrust_alternate::plus<float>(),
     #endif
                       0.0f);
 

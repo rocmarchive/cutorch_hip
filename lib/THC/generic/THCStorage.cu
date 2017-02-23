@@ -1,5 +1,5 @@
 #ifndef THC_GENERIC_FILE
-#include <hip/hip_runtime.h>
+#include <hip/hip_runtime_api.h>
 #define THC_GENERIC_FILE "generic/THCStorage.cu"
 #else
 
@@ -9,7 +9,7 @@ void THCStorage_(fill)(THCState *state, THCStorage *self, real value)
   thrust::device_ptr<real> self_data(self->data);
   thrust::fill(self_data, self_data+self->size, value);
 #else
-  bolt::amp::fill(self->data, self->data + self->size, value);
+  //bolt::amp::fill(self->data, self->data + self->size, value);
 #endif
 }
 

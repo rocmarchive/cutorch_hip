@@ -7,7 +7,7 @@
 
 #include "generic/THCThrustAlternate.h"
 #include "THCGenerateAllTypes.h"
-#include "hip/hip_runtime.h"
+#include "hip/hip_runtime_api.h"
 
 namespace thrust_alternate {
 // Common Operators definition
@@ -15,15 +15,15 @@ template <class T> struct identity {
 __device__ __host__  T operator() (const T& x) const  {return x;}
 };
 
-template <class T> struct sum {
+template <class T> struct plus {
  __device__ __host__  T operator() (const T& x, const T& y) const  {return x+y;}
 };
 
-template <class T> struct multiply {
+template <class T> struct multiplies {
  __device__ __host__  T operator() (const T& x, const T& y) const  {return x * y;}
 };
 
-template <class T> struct divide {
+template <class T> struct divides {
  __device__ __host__  T operator() (const T& x, const T& y) const  {return x/y;}
 };
 
@@ -50,7 +50,7 @@ template <class T> struct is_not_equal_to {
 
 // pair holds two objects of arbitrary type.
 template<class _T1, class _T2>
-struct Pair
+struct pair
 {
   typedef _T1 first_type;
   typedef _T2 second_type;
@@ -58,14 +58,14 @@ struct Pair
   _T1 first;
   _T2 second;
 
-  __device__ __host__  Pair() : first(), second() { }
-  __device__ __host__  ~Pair() { }
-  __device__ __host__  Pair(const _T1& __a, const _T2& __b) : first(__a), second(__b) { }
+  __device__ __host__  pair() : first(), second() { }
+  __device__ __host__  ~pair() { }
+  __device__ __host__  pair(const _T1& __a, const _T2& __b) : first(__a), second(__b) { }
 };
 
 template<class _T1, class _T2>
- __device__ __host__ Pair<_T1, _T2> Make_Pair(_T1 src, _T2 col)  {
-  return (Pair<_T1, _T2>(src, col));
+ __device__ __host__ pair<_T1, _T2> make_pair(_T1 src, _T2 col)  {
+  return (pair<_T1, _T2>(src, col));
 }
 
 template <typename UnaryFunction>

@@ -10,7 +10,7 @@
 //
 #include "THCReduceApplyUtils.cuh"
 
-#include <hip/hip_runtime.h>
+#include <hip/hip_runtime_api.h>
 
 // Size per each reduction block
 #define THC_REDUCE_ALL_BLOCK_SIZE 1024L

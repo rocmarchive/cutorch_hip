@@ -118,8 +118,6 @@ ELSE()
   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${HIP_CXX_FLAGS}")
 ENDIF()
 
-SET(mtgp32_src
-    MTGP/mtgp32-param-fast.cpp MTGP/hiprand_mtgp32.cpp)
 SET(src
     THCCachingAllocator.cpp
     THCGeneral.cc
@@ -189,7 +187,7 @@ IF(${PLATFORM} STREQUAL "hcc")
   LIST(APPEND src-cuda THCHalf.cu)
 ENDIF()
 
-HIP_ADD_LIBRARY(THC SHARED ${src} ${src-cuda} ${mtgp32_src})
+HIP_ADD_LIBRARY(THC SHARED ${src} ${src-cuda})
 
 IF(${PLATFORM} STREQUAL "nvcc")
   CUDA_ADD_CUBLAS_TO_TARGET(THC)
@@ -264,11 +262,6 @@ INSTALL(FILES
           THCTensorTypeUtils.cuh
           DESTINATION "${THC_INSTALL_INCLUDE_SUBDIR}/THC")
 
-
-INSTALL(FILES
-        MTGP/hiprand_mtgp32.h
-        MTGP/mtgp32-fast.h
-        DESTINATION "${Torch_INSTALL_INCLUDE_SUBDIR}/THC/MTGP")
 
 INSTALL(FILES
         generic/THCStorage.c

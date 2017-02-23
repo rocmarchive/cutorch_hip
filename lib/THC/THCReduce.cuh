@@ -1,4 +1,4 @@
-#include "hip/hip_runtime.h"
+#include "hip/hip_runtime_api.h"
 #ifndef THC_REDUCE_INC
 #define THC_REDUCE_INC
 //
@@ -11,7 +11,7 @@
 #include "THCTensorTypeUtils.cuh"
 #include "THCReduceApplyUtils.cuh"
 
-#include <hip/hip_runtime.h>
+#include <hip/hip_runtime_api.h>
 
 // Threads per thread block
 #define THC_NONCONTIG_REDUCE_BLOCK_SIZE 32 * 16

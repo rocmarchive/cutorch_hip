@@ -5,7 +5,7 @@
 #include "THCTensorTypeUtils.cuh"
 #include "THCNumerics.cuh"
 
-#include <hip/hip_runtime.h>
+#include <hip/hip_runtime_api.h>
 
 // Collection of kernel sort routines
 template <typename T>

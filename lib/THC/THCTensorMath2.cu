@@ -17,8 +17,8 @@
         #include <thrust/system/cuda/execution_policy.h>
     #endif
 #else
-    #include <bolt/amp/functional.h>
-    #include <bolt/amp/inner_product.h>
+    //#include <bolt/amp/functional.h>
+    //#include <bolt/amp/inner_product.h>
 #endif
 
 
@@ -97,19 +97,19 @@ float THCudaTensor_dist(THCState *state, THCudaTensor *self, THCudaTensor *src, 
 #else
     auto self_data = THCudaTensor_data(state, self);
     auto src_data = THCudaTensor_data(state, src);
-
-    float result = bolt::amp::inner_product(self_data,
-                                            self_data + size,
-                                            src_data,
-                                            0.0f,
-                                            bolt::amp::plus<float>(),
-                                            TensorDistOp<float>(value));
+    // TODO: Thrust Alternate
+    //float result = bolt::amp::inner_product(self_data,
+    //                                        self_data + size,
+    //                                        src_data,
+    //                                        0.0f,
+    //                                        bolt::amp::plus<float>(),
+    //                                        TensorDistOp<float>(value));
 #endif
 
   THCudaTensor_free(state, src);
   THCudaTensor_free(state, self);
 
-  return pow(result, (float)1.0/value);
+  return 0; // pow(result, (float)1.0/value);
 }
 
 void THCudaTensor_rand(THCState *state, THCudaTensor *r_, THLongStorage *size)

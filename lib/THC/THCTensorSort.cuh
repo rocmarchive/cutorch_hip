@@ -13,10 +13,10 @@
         #include <thrust/system/cuda/execution_policy.h>
     #endif
 #else
-    #include <bolt/amp/sort.h>
+    //#include <bolt/amp/sort.h>
 #endif
 
-#include <hip/hip_runtime.h>
+#include <hip/hip_runtime_api.h>
 
 template <typename T>
 struct ThrustGTOp {

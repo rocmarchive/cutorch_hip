@@ -13,7 +13,7 @@
         #include <thrust/system/cuda/execution_policy.h>
     #endif
 #else
-    #include <bolt/amp/scan.h>
+    //#include <bolt/amp/scan.h>
 #endif
 
 template <typename T, typename MaskT>
