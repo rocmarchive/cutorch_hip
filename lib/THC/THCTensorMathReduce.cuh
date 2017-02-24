@@ -14,9 +14,17 @@
 #endif
 #include <hip/hip_runtime.h>
 
+ template <typename ModT>
+ struct IdentityOp{
+   int8_t fred;
+   __device__
+   ModT operator()(ModT a) const {  return a;  }
+ };
+
 // Reduction operators that support `half`, unlike Thrust
 template <typename InT, typename AccT>
 struct ReduceAdd {
+  int8_t fred;
   __device__
   AccT operator()(AccT a, InT b) const {  return a + (AccT) b;  }
 };
@@ -45,6 +53,7 @@ struct ReduceAdd<half, float> {
 
 template <typename InT, typename AccT>
 struct ReduceMultiply {
+  int8_t fred;
   __device__
   AccT operator()(AccT a, InT b) const { return a * (AccT) b; }
 };
@@ -74,6 +83,7 @@ struct ReduceMultiply<half, float> {
 
 template <typename ResT, typename ArgT>
 struct SquareFunctor {
+    int8_t fred;
     //__host__ __device__
     explicit
     SquareFunctor(ResT mean): mean_(mean) {}
@@ -111,6 +121,7 @@ struct SquareFunctor<ResT, half> {
 
 template <typename T>
 struct ReduceMin {
+  int8_t fred;
   template<typename U = T,
            typename std::enable_if<std::is_integral<U>::value>::type* = nullptr>
   __device__
@@ -131,6 +142,7 @@ struct ReduceMin {
 
 template <typename T>
 struct ReduceMax {
+  int8_t fred;
     template<typename U = T,
             typename std::enable_if<std::is_integral<U>::value>::type* = nullptr>
     __device__

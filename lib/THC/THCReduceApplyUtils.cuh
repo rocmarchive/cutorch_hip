@@ -25,11 +25,11 @@ IndexType getLinearBlockId() {
 
 // Block-wide reduction in shared memory helper; only hipThreadIdx_x == 0 will
 // return the reduced value
-template <typename T, typename ReduceOp>
+template <typename T, typename dressedT, typename ReduceOp>
 __device__
 static
 inline
-T reduceBlock(T* smem, int numVals, T threadVal, ReduceOp reduceOp, T init)
+T reduceBlock(dressedT* smem, int numVals, T threadVal, ReduceOp reduceOp, T init)
 {
   if (numVals == 0) {
     return init;

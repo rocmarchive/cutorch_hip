@@ -1,6 +1,8 @@
 #ifndef THC_REDUCEALL_INC
 #define THC_REDUCEALL_INC
 
+#include <iostream>
+
 //
 // This file contains dimension reduction operation functions and
 // kernels that work on both contiguous and non-contiguous tensor
@@ -41,17 +43,18 @@ kernelReduceAll(hipLaunchParm lp,
                 ReduceAccOp reduceAccOp,
                 AccT* out)
 {
-  // With a block-wide stride, have each thread perform its own reduction.
-  AccT r = init;
-  for (IndexType i = hipThreadIdx_x; i < totalElements; i += hipBlockDim_x) {
-    const IndexType inOffset = IndexToOffset<InT, IndexType, ADims>::get(i, inSizes, inStrides, inDims);
-    r = reduceOp(r, modifyOp(inData[inOffset]));
-  }
-
-  // Reduce within the block
-  HIP_DYNAMIC_SHARED(char, smemChar)
-  auto smem = reinterpret_cast<AccT*>(smemChar);
-  r = reduceBlock(smem, hipBlockDim_x, r, reduceAccOp, init);
+   // With a block-wide stride, have each thread perform its own reduction.
+   AccT r = init;
+   for (IndexType i = hipThreadIdx_x; i < totalElements; i += hipBlockDim_x) {
+     const IndexType inOffset = IndexToOffset<InT, IndexType, ADims>::get(i, inSizes, inStrides, inDims);
+     r = reduceOp(r, modifyOp(inData[inOffset]));
+   }
+ 
+   // Reduce within the block
+   HIP_DYNAMIC_SHARED(char, smemChar)
+   __attribute__((address_space(3))) AccT* smem = 
+     reinterpret_cast< __attribute__((address_space(3))) AccT*>(smemChar);
+   r = reduceBlock(smem, hipBlockDim_x, r, reduceAccOp, init);
 
   if (hipThreadIdx_x == 0) {
     // Write out reduced value
@@ -122,8 +125,8 @@ kernelReduceAllPass1(hipLaunchParm lp,
 }
 
 
-namespace
-{
+//namespace
+//{
     template<typename ReduceOp, typename T/*, typename IndexType*/>
     __global__
     inline
@@ -149,7 +152,7 @@ namespace
         *out = r;
       }
     }
-}
+//}
 
 // Perform a two-pass reduction if the tensor is large enough to
 // warrant it.

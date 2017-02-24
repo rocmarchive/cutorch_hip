@@ -306,10 +306,12 @@ accreal THCTensor_(meanall)(THCState *state, THCTensor *self)
 THC_API
 real THCTensor_(minall)(THCState *state, THCTensor *self)
 {
+  printf("THCTensor_(minall)\n");
   THAssert(THCTensor_(checkGPU)(state, 1, self));
   real val;
   if (!THC_reduceAll(state, self,
-                     bolt::amp::identity<real>(),
+  //                 bolt::amp::identity<real>(),
+                     IdentityOp<real>(),
                      ReduceMin<real>(),
                      ReduceMin<real>(),
                      THCNumerics<real>::max(), &val, 0)) {
@@ -323,10 +325,12 @@ real THCTensor_(minall)(THCState *state, THCTensor *self)
 THC_API
 real THCTensor_(maxall)(THCState *state, THCTensor *self)
 {
+  printf("THCTensor_(maxall)\n");
   THAssert(THCTensor_(checkGPU)(state, 1, self));
   real val;
   if (!THC_reduceAll(state, self,
-                     bolt::amp::identity<real>(),
+  //                 bolt::amp::identity<real>(),
+                     IdentityOp<real>(),
                      ReduceMax<real>(),
                      ReduceMax<real>(),
                      THCNumerics<real>::min(), &val, 0)) {
