@@ -112,8 +112,8 @@ void kernelPointwiseApply3(hipLaunchParm lp,
                            Tc* Cdata,
                            IndexType* Csizes,
                            IndexType* Cstrides,
-                           IndexType totalElements/*,
-                           Op op*/)
+                           IndexType totalElements,
+                           Op op)
 {
   for (IndexType linearIndex = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;
        linearIndex < totalElements;
@@ -136,6 +136,7 @@ void kernelPointwiseApply3(hipLaunchParm lp,
     #else
       //  op(&Adata[aOffset], &Bdata[bOffset], &Cdata[cOffset]);
     #endif
+    op(&Adata[aOffset], &Bdata[bOffset], &Cdata[cOffset]);
   }
 }
 
@@ -618,8 +619,8 @@ bool THC_pointwiseApply3(THCState* state,
                   cInfo.data,                                                                       \
                   cInfo.dSizes,                                                                     \
                   cInfo.dStrides,                                                                   \
-                  (TYPE) totalElements/*,*/                                                             \
-                  /*op*/);
+                  (TYPE) totalElements,                                                             \
+                  op);
 
 #define HANDLE_C_CASE(TYPE, A, B, C)            \
   {                                             \
@@ -732,8 +733,8 @@ bool THC_pointwiseApply3(THCState* state,
                       cInfo.data,
                       cInfo.dSizes,
                       cInfo.dStrides,
-                      (unsigned long) totalElements/*,
-                      op*/);
+                      (unsigned long) totalElements,
+                      op);
     } else {
       hipLaunchKernel(HIP_KERNEL_NAME(kernelPointwiseApply3<Op,
                                                             typename TensorUtils<TensorTypeA>::DataType,
@@ -756,8 +757,8 @@ bool THC_pointwiseApply3(THCState* state,
                       cInfo.data,
                       cInfo.dSizes,
                       cInfo.dStrides,
-                      (unsigned long) totalElements/*,
-                      op*/);
+                      (unsigned long) totalElements,
+                      op);
     }
   }
 #undef HANDLE_CASE

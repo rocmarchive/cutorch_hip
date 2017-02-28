@@ -97,17 +97,17 @@ THCTensor_(maskedCopy)(THCState* state,
 
   // update `tensor` where `mask` == 1 but pull from `src` at
   // maskPrefixSum
-  bool status = THC_pointwiseApply3(
-    state, tensor, mask, maskPrefixSum,
-    TensorMaskedCopyOp<real, unsigned char, long>(
-      THCTensor_(data)(state, contigSrc)));
-
-  THCTensor_(free)(state, contigSrc);
-  THCudaLongTensor_free(state, maskLong);
-  THCudaLongTensor_free(state, maskPrefixSum);
-
-  THArgCheck(status, 2, CUTORCH_DIM_WARNING);
-  THCudaCheck(hipGetLastError());
+//  bool status = THC_pointwiseApply3(
+//    state, tensor, mask, maskPrefixSum,
+//    TensorMaskedCopyOp<real, unsigned char, long>(
+//      THCTensor_(data)(state, contigSrc)));
+//
+//  THCTensor_(free)(state, contigSrc);
+//  THCudaLongTensor_free(state, maskLong);
+//  THCudaLongTensor_free(state, maskPrefixSum);
+//
+//  THArgCheck(status, 2, CUTORCH_DIM_WARNING);
+//  THCudaCheck(hipGetLastError());
 }
 
 THC_API void
@@ -174,22 +174,22 @@ THCTensor_(maskedSelect)(THCState* state,
                               maskPrefixSumData);
 #endif
   // Then copy over the masked elements at their desired output index
-  bool status = THC_pointwiseApply3(
-    state, mask, maskPrefixSum,
-    src, TensorMaskedSelectOp<real, unsigned char, long>(
-      THCTensor_(data)(state, tensor)));
-
-  THCudaLongTensor_free(state, maskLong);
-  THCudaLongTensor_free(state, maskPrefixSum);
-
-  if (tensor != tensorContig) {
-    THCTensor_(freeCopyTo)(state, tensorContig, tensor);
-  } else {
-    THCTensor_(free)(state, tensorContig);
-  }
-
-  THArgCheck(status, 2, CUTORCH_DIM_WARNING);
-  THCudaCheck(hipGetLastError());
+//  bool status = THC_pointwiseApply3(
+//    state, mask, maskPrefixSum,
+//    src, TensorMaskedSelectOp<real, unsigned char, long>(
+//      THCTensor_(data)(state, tensor)));
+//
+//  THCudaLongTensor_free(state, maskLong);
+//  THCudaLongTensor_free(state, maskPrefixSum);
+//
+//  if (tensor != tensorContig) {
+//    THCTensor_(freeCopyTo)(state, tensorContig, tensor);
+//  } else {
+//    THCTensor_(free)(state, tensorContig);
+//  }
+//
+//  THArgCheck(status, 2, CUTORCH_DIM_WARNING);
+//  THCudaCheck(hipGetLastError());
 }
 
 // FIXME: remove now that we have THCudaByteTensor?
