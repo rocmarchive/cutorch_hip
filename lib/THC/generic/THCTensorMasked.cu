@@ -7,17 +7,17 @@ THC_API void
 THCTensor_(maskedFill)(THCState* state,
                        THCTensor *tensor, THCudaByteTensor *mask, real value)
 {
-  THAssert(THCTensor_(checkGPU)(state, 2, tensor, mask));
-  THArgCheck(THCTensor_(nElement)(state, tensor) ==
-             THCudaByteTensor_nElement(state, mask),
-             2, "sizes do not match");
-
-  if (!THC_pointwiseApply2(state, tensor, mask,
-                           TensorMaskedFillOp<real, unsigned char>(value))) {
-    THArgCheck(false, 2, CUTORCH_DIM_WARNING);
-  }
-
-  THCudaCheck(hipGetLastError());
+//  THAssert(THCTensor_(checkGPU)(state, 2, tensor, mask));
+//  THArgCheck(THCTensor_(nElement)(state, tensor) ==
+//             THCudaByteTensor_nElement(state, mask),
+//             2, "sizes do not match");
+//
+//  if (!THC_pointwiseApply2(state, tensor, mask,
+//                           TensorMaskedFillOp<real, unsigned char>(value))) {
+//    THArgCheck(false, 2, CUTORCH_DIM_WARNING);
+//  }
+//
+//  THCudaCheck(hipGetLastError());
 }
 
 THC_API void

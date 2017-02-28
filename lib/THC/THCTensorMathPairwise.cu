@@ -383,68 +383,68 @@ struct TensorTriOp {
 
 void THCudaTensor_tril(THCState *state, THCudaTensor *self_, THCudaTensor *src_, long k)
 {
-  THAssert(THCudaTensor_checkGPU(state, 2, self_, src_));
-  THArgCheck(src_->nDimension == 2, 1, "expected a matrix");
-
-  THCudaTensor *src = src_;
-  if (self_ == src_)
-    src = THCudaTensor_newContiguous(state, src_);
-
-  long stride0 = src->stride[0];
-  long stride1 = src->stride[1];
-  float *start = THCudaTensor_data(state, src) + src->storageOffset;
-
-  TensorTriOp<0> op(start, stride0, stride1, k);
-
-  if (self_ == src_) {
-    if (!THC_pointwiseApply1(state, src, op)) {
-      THArgCheck(false, 2, CUTORCH_DIM_WARNING);
-    }
-  } else {
-    THCudaTensor_resizeAs(state, self_, src);
-
-    if (!THC_pointwiseApply2(state, self_, src, op)) {
-      THArgCheck(false, 2, CUTORCH_DIM_WARNING);
-    }
-  }
-
-  if (self_ == src_)
-    THCudaTensor_freeCopyTo(state, src, src_);
-
-  THCudaCheck(hipGetLastError());
+//  THAssert(THCudaTensor_checkGPU(state, 2, self_, src_));
+//  THArgCheck(src_->nDimension == 2, 1, "expected a matrix");
+//
+//  THCudaTensor *src = src_;
+//  if (self_ == src_)
+//    src = THCudaTensor_newContiguous(state, src_);
+//
+//  long stride0 = src->stride[0];
+//  long stride1 = src->stride[1];
+//  float *start = THCudaTensor_data(state, src) + src->storageOffset;
+//
+//  TensorTriOp<0> op(start, stride0, stride1, k);
+//
+//  if (self_ == src_) {
+//    if (!THC_pointwiseApply1(state, src, op)) {
+//      THArgCheck(false, 2, CUTORCH_DIM_WARNING);
+//    }
+//  } else {
+//    THCudaTensor_resizeAs(state, self_, src);
+//
+//    if (!THC_pointwiseApply2(state, self_, src, op)) {
+//      THArgCheck(false, 2, CUTORCH_DIM_WARNING);
+//    }
+//  }
+//
+//  if (self_ == src_)
+//    THCudaTensor_freeCopyTo(state, src, src_);
+//
+//  THCudaCheck(hipGetLastError());
 }
 
 void THCudaTensor_triu(THCState *state, THCudaTensor *self_, THCudaTensor *src_, long k)
 {
-  THAssert(THCudaTensor_checkGPU(state, 2, self_, src_));
-  THArgCheck(src_->nDimension == 2, 1, "expected a matrix");
-
-  THCudaTensor *src = src_;
-  if (self_ == src_)
-    src = THCudaTensor_newContiguous(state, src_);
-
-  long stride0 = src->stride[0];
-  long stride1 = src->stride[1];
-  float *start = THCudaTensor_data(state, src) + src->storageOffset;
-
-  TensorTriOp<1> op(start, stride0, stride1, k);
-
-  if (self_ == src_) {
-    if (!THC_pointwiseApply1(state, src, op)) {
-      THArgCheck(false, 2, CUTORCH_DIM_WARNING);
-    }
-  } else {
-    THCudaTensor_resizeAs(state, self_, src);
-
-    if (!THC_pointwiseApply2(state, self_, src, op)) {
-      THArgCheck(false, 2, CUTORCH_DIM_WARNING);
-    }
-  }
-
-  if (self_ == src_)
-    THCudaTensor_freeCopyTo(state, src, src_);
-
-  THCudaCheck(hipGetLastError());
+//  THAssert(THCudaTensor_checkGPU(state, 2, self_, src_));
+//  THArgCheck(src_->nDimension == 2, 1, "expected a matrix");
+//
+//  THCudaTensor *src = src_;
+//  if (self_ == src_)
+//    src = THCudaTensor_newContiguous(state, src_);
+//
+//  long stride0 = src->stride[0];
+//  long stride1 = src->stride[1];
+//  float *start = THCudaTensor_data(state, src) + src->storageOffset;
+//
+//  TensorTriOp<1> op(start, stride0, stride1, k);
+//
+//  if (self_ == src_) {
+//    if (!THC_pointwiseApply1(state, src, op)) {
+//      THArgCheck(false, 2, CUTORCH_DIM_WARNING);
+//    }
+//  } else {
+//    THCudaTensor_resizeAs(state, self_, src);
+//
+//    if (!THC_pointwiseApply2(state, self_, src, op)) {
+//      THArgCheck(false, 2, CUTORCH_DIM_WARNING);
+//    }
+//  }
+//
+//  if (self_ == src_)
+//    THCudaTensor_freeCopyTo(state, src, src_);
+//
+//  THCudaCheck(hipGetLastError());
 }
 
 #include "generic/THCTensorMathPairwise.cu"

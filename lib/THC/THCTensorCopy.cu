@@ -114,13 +114,13 @@ THC_copyTensor(THCState* state, TensorTypeDst* dst, TensorTypeSrc* src) {
     // A device always has access to itself, so this also handles the
     // case srcDev == dstDev
     if (THCState_getPeerToPeerAccess(state, srcDev, dstDev)) {
-      bool succ =
-        THC_pointwiseApply2(
-          state, dst, src,
-          CopyOp<typename TensorUtils<TensorTypeDst>::DataType,
-                 typename TensorUtils<TensorTypeSrc>::DataType>());
-
-      THArgCheck(succ, 2, CUTORCH_DIM_WARNING);
+//      bool succ =
+//        THC_pointwiseApply2(
+//          state, dst, src,
+//          CopyOp<typename TensorUtils<TensorTypeDst>::DataType,
+//                 typename TensorUtils<TensorTypeSrc>::DataType>());
+//
+//      THArgCheck(succ, 2, CUTORCH_DIM_WARNING);
     } else {
       // GPUs can't access each other directly, but the tensors
       // involved are non-contiguous and/or are different types.
@@ -140,13 +140,13 @@ THC_copyTensor(THCState* state, TensorTypeDst* dst, TensorTypeSrc* src) {
         srcContig = TensorUtils<TensorTypeDst>::newTensor(state);
         TensorUtils<TensorTypeDst>::resizeAs(state, srcContig, dst);
 
-        bool succ =
-          THC_pointwiseApply2(
-            state, srcContig, src,
-            CopyOp<typename TensorUtils<TensorTypeDst>::DataType,
-                   typename TensorUtils<TensorTypeSrc>::DataType>());
-
-        THArgCheck(succ, 2, CUTORCH_DIM_WARNING);
+//        bool succ =
+//          THC_pointwiseApply2(
+//            state, srcContig, src,
+//            CopyOp<typename TensorUtils<TensorTypeDst>::DataType,
+//                   typename TensorUtils<TensorTypeSrc>::DataType>());
+//
+//        THArgCheck(succ, 2, CUTORCH_DIM_WARNING);
       }
 
       // Make sure the dst is contiguous
