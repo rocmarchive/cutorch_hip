@@ -14,7 +14,8 @@ void THCTensor_(sum)(THCState* state,
   if (!THC_reduceDim(state,
                      self,
                      src,
-                     bolt::amp::identity<real>(),
+  //                 bolt::amp::identity<real>(),
+                     IdentityOp<real>(),
                      ReduceAdd<real, real>(),
                      ScalarConvert<int, real>::to(0),
                      dimension)) {
@@ -31,7 +32,8 @@ void THCTensor_(prod)(THCState* state, THCTensor* self, THCTensor* src, long dim
   if (!THC_reduceDim(state,
                      self,
                      src,
-                     bolt::amp::identity<real>(),
+  //                 bolt::amp::identity<real>(),
+                     IdentityOp<real>(),
                      ReduceMultiply<real, real>(),
                      ScalarConvert<int, real>::to(1),
                      dimension)) {
@@ -248,12 +250,10 @@ accreal THCTensor_(sumall)(THCState *state, THCTensor *self)
   THAssert(THCTensor_(checkGPU)(state, 1, self));
   accreal val;
 
-  #if defined(__HIP_PLATFORM_HCC__)
-    // TODO: temporarily disabled due to compiler breakage.
-  #else
       if (!THC_reduceAll(state,
                          self,
-                         bolt::amp::identity<real>(),
+      //                 bolt::amp::identity<real>(),
+                         IdentityOp<real>(),
                          ReduceAdd<real, accreal>(),
                          ReduceAdd<accreal, accreal>(),
                          ScalarConvert<int, accreal>::to(0),
@@ -261,7 +261,6 @@ accreal THCTensor_(sumall)(THCState *state, THCTensor *self)
                          0)) {
         THArgCheck(false, 1, CUTORCH_DIM_WARNING);
       }
-  #endif
 
   THCudaCheck(hipGetLastError());
   return val;
@@ -273,18 +272,15 @@ accreal THCTensor_(prodall)(THCState *state, THCTensor *self)
   THAssert(THCTensor_(checkGPU)(state, 1, self));
   accreal val;
 
-  #if defined(__HIP_PLATFORM_HCC__)
-    // TODO: temporarily disabled due to compiler breakage.
-  #else
       if (!THC_reduceAll(state, self,
-                         bolt::amp::identity<real>(),
+      //                 bolt::amp::identity<real>(),
+                         IdentityOp<real>(),
                          ReduceMultiply<real, accreal>(),
                          ReduceMultiply<accreal, accreal>(),
                          ScalarConvert<int, accreal>::to(1),
                          &val, 0)) {
         THArgCheck(false, 1, CUTORCH_DIM_WARNING);
       }
-  #endif
 
   val = THCNumerics<accreal>::div(
     val,

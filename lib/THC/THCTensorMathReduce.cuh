@@ -162,6 +162,7 @@ struct ReduceMax {
 };
 
 struct LogicalAll {
+  int8_t fred;
   __device__
   unsigned char operator()(unsigned char x, unsigned char y) const
   {
@@ -170,6 +171,7 @@ struct LogicalAll {
 };
 
 struct LogicalAny {
+  int8_t fred;
   __device__
   unsigned char operator()(unsigned char x, unsigned char y) const
   {
