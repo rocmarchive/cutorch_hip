@@ -25,7 +25,7 @@
 template <typename InT, typename AccT>
 struct ReduceAdd {
   int8_t fred;
-  __device__
+  __host__ __device__
   AccT operator()(AccT a, InT b) const {  return a + (AccT) b;  }
 };
 
@@ -84,11 +84,11 @@ struct ReduceMultiply<half, float> {
 template <typename ResT, typename ArgT>
 struct SquareFunctor {
     int8_t fred;
-    //__host__ __device__
+    __host__ __device__
     explicit
-    SquareFunctor(ResT mean): mean_(mean) {}
+    SquareFunctor(ResT mean) : fred(0), mean_(mean) {}
 
-    __device__
+    __host__ __device__
     ResT operator()(ArgT x) const
     {
       return (((ResT) x) - mean_) * (((ResT) x) - mean_);

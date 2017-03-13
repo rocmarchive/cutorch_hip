@@ -137,6 +137,7 @@ struct ScalarInv<half> {
   }
 };
 
+#if !defined(__HIP_PLATFORM_HCC__)
 static
 inline
 bool operator==(half a, half b) {
@@ -148,6 +149,7 @@ inline
 bool operator!=(half a, half b) {
   return a.x != b.x;
 }
+#endif // __HIP_PLATFORM_HCC__
 
 #endif // CUDA_HALF_TENSOR
 

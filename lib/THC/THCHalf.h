@@ -6,6 +6,11 @@
 #include <hip/hip_runtime_api.h>
 #include <hip/hip_fp16.h>
 
+// WSTHORNTON
+#if defined(__HIP_PLATFORM_HCC__)
+  #define half __fp16
+#endif
+
 /* We compile with CudaHalfTensor support if we have this: */
 //#if CUDA_VERSION >= 7050 || CUDA_HAS_FP16
 #define CUDA_HALF_TENSOR 1

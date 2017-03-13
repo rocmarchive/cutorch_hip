@@ -154,7 +154,8 @@ SET(src-cuda
   )
 
 # loop over all types
-foreach(THC_TYPE Byte Char Short Int Float Double) # Long Half
+#foreach(THC_TYPE Byte Char Short Int Float Double) # Long Half
+foreach(THC_TYPE Float Double) # Long Half
    # loop over files which need to be split between types (because of long compile times)
    foreach(THC_FILE TensorMasked TensorMathCompareT TensorMathPointwise TensorMathCompare TensorMathReduce TensorSort)
       if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/generated/THC${THC_FILE}${THC_TYPE}.cu")
