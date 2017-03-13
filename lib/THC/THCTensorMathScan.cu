@@ -57,7 +57,7 @@ void THCudaTensor_scanOuterDim(THCState *state, THCudaTensor *tgt, THCudaTensor 
     num_irows *= THCudaTensor_size(state, src, dim);
   }
 
-  dim3 threads(min(512, num_irows));
+  dim3 threads(min(256, num_irows));
   unsigned maxGridDim = 1024;
   dim3 grid(min(maxGridDim, num_orows), min(maxGridDim, THCCeilDiv(num_irows, threads.x)));
 

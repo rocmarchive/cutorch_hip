@@ -337,7 +337,7 @@ void THCTensor_varOuterDim(THCState *state, TensorTypeK *tgt, TensorTypeK *src, 
     num_irows *= TensorUtils<TensorTypeK>::getSize(state, src, dim);
   }
 
-  dim3 threads(min(512, num_irows));
+  dim3 threads(min(256, num_irows));
   unsigned maxGridDim = 1024;
   dim3 grid(min(maxGridDim, num_orows), min(maxGridDim, THCCeilDiv(num_irows, threads.x)));
 
@@ -496,7 +496,7 @@ THC_transformReduceOuterDimIndex(THCState *state,
     num_irows *= TensorUtils<TensorTypeK>::getSize(state, src, dim);
   }
 
-  dim3 threads(min(512, num_irows));
+  dim3 threads(min(256, num_irows));
   unsigned maxGridDim = 1024;
   dim3 grid(min(maxGridDim, num_orows),
             min(maxGridDim, THCCeilDiv(num_irows, threads.x)));

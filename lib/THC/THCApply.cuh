@@ -15,14 +15,14 @@
 
 // Threads per block for our apply kernel
 // FIXME: use occupancy calculator instead
-#define THC_APPLY_THREADS_PER_BLOCK 32 * 16
+#define THC_APPLY_THREADS_PER_BLOCK 16 * 16
 
 template <typename Op,
           typename Ta,
           typename IndexType,
           int ADims>
 #if __CUDA_ARCH__ >= 350
-__launch_bounds__(32 * 16, 4)
+__launch_bounds__(16 * 16, 4)
 #endif
 __global__ void
 kernelPointwiseApply1(hipLaunchParm lp, Ta* Adata, IndexType* Asizes, 
@@ -45,7 +45,7 @@ template <typename Op,
           typename IndexType,
           int ADims, int BDims>
 #if __CUDA_ARCH__ >= 350
-__launch_bounds__(32 * 16, 4)
+__launch_bounds__(16 * 16, 4)
 #endif
 __global__ void
 kernelPointwiseApply2(hipLaunchParm lp, Ta* Adata, IndexType* Asizes,
@@ -75,7 +75,7 @@ template <typename Op,
           typename IndexType,
           int ADims, int BDims, int CDims>
 #if __CUDA_ARCH__ >= 350
-__launch_bounds__(32 * 16, 4)
+__launch_bounds__(16 * 16, 4)
 #endif
 __global__ void
 kernelPointwiseApply3(hipLaunchParm lp, Ta* Adata, IndexType* Asizes, IndexType* Astrides,
