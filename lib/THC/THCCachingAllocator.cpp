@@ -2,6 +2,8 @@
 
 #include <hip/hip_runtime_api.h>
 
+#include <GGL/grid_launch.hpp>
+
 #include <map>
 #include <memory>
 #include <mutex>

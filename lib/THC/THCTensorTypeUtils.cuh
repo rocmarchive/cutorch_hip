@@ -137,17 +137,19 @@ struct ScalarInv<half> {
   }
 };
 
-static
-inline
-bool operator==(half a, half b) {
-  return a.x == b.x;
-}
+#if !defined(__HIP_PLATFORM_HCC__)
+  static
+  inline
+  bool operator==(half a, half b) {
+    return a.x == b.x;
+  }
 
-static
-inline
-bool operator!=(half a, half b) {
-  return a.x != b.x;
-}
+  static
+  inline
+  bool operator!=(half a, half b) {
+    return a.x != b.x;
+  }
+#endif
 
 #endif // CUDA_HALF_TENSOR
 

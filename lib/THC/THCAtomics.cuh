@@ -135,18 +135,21 @@ void atomicAdd(half *address, half val)
        //       support for FP16 and can simplify significantly.
     assumed = old;
     half hsum;
-    hsum.x = (size_t)address & 2 ? (old >> 16) : (old & 0xffff);
+    #if defined(__HIP_PLATFORM_HCC__)
+      hsum = (size_t)address & 2 ? (old >> 16) : (old & 0xffff);
+    #else
+      hsum.x = (size_t)address & 2 ? (old >> 16) : (old & 0xffff);
+    #endif
     hsum = THCNumerics<half>::add(hsum, val);
-    old = (size_t)address & 2 ? (old & 0xffff) |
-          ((unsigned short)hsum.x << 16) : (old & 0xffff0000) |
-          (unsigned short)hsum.x;
+    old = (size_t)address & 2 ? ((old & 0xffff) | ((unsigned short)hsum << 16))
+                              : ((old & 0xffff0000) | (unsigned short)hsum);
     old = atomicCAS(address_as_ui, assumed, old);
    } while (assumed != old);
 }
 #endif
 
 #if (defined(__CUDA_ARCH__) && __CUDA_ARCH__ < 600) || defined(__HIP_DEVICE_COMPILE__)
-// from CUDA C Programmic Guide
+// from CUDA C Programming Guide
 __device__
 static
 inline

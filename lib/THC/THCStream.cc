@@ -4,6 +4,8 @@
 
 #include <hip/hip_runtime_api.h>
 
+#include <GGL/grid_launch.hpp>
+
 THCStream* THCStream_new(int flags)
 {
   THCStream* self = (THCStream*) malloc(sizeof(THCStream));

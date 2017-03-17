@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 #include "THC.h"
 #include "THCTensorMath.h"
 #include "THCGeneral.h"
@@ -13,6 +12,8 @@
 #include "THCAtomics.cuh"
 
 #include "hip/hip_runtime.h"
+
+#include <GGL/grid_launch.hpp>
 
 #include <algorithm> // for std::min
 

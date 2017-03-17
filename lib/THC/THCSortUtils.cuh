@@ -7,6 +7,8 @@
 
 #include <hip/hip_runtime.h>
 
+#include <GGL/grid_launch.hpp>
+
 // Collection of kernel sort routines
 template <typename T>
 struct LTComp {

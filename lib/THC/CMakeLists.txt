@@ -18,8 +18,8 @@ IF (${PLATFORM} MATCHES "nvcc")
   ENDIF()
 ENDIF() # PLATFORM MATCHES
 
-EXECUTE_PROCESS(COMMAND ${HIP_PATH}/bin/hipconfig --cpp_config OUTPUT_VARIABLE HIP_CXX_FLAGS)
 
+#message(FATAL_ERROR ${HIP_CXX_FLAGS})
 # temporary check with hipcc on AMD stack
 IF (${PLATFORM} MATCHES "hcc")
   SET(CMAKE_CXX_COMPILER ${HIP_HIPCC_EXECUTABLE})
@@ -117,7 +117,7 @@ CONFIGURE_FILE(THCGeneral.h.in "${CMAKE_CURRENT_BINARY_DIR}/THCGeneral.h")
 IF(MSVC)
   LIST(APPEND CUDA_NVCC_FLAGS "-Xcompiler /wd4819")
 ELSE()
-  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${HIP_CXX_FLAGS} -v")
+  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -v")
 ENDIF()
 
 SET(src
@@ -154,9 +154,9 @@ SET(src-cuda
   )
 
 # loop over all types
-foreach(THC_TYPE Byte Char Short Int Float Double) # Long Half
+foreach(THC_TYPE Byte Char Short Int Long Half Float Double)
    # loop over files which need to be split between types (because of long compile times)
-   foreach(THC_FILE TensorMasked TensorMathCompareT TensorMathPointwise TensorMathCompare TensorMathReduce TensorSort)
+   foreach(THC_FILE TensorMasked TensorMathCompareT TensorMathCompare TensorMathPointwise TensorMathReduce TensorSort)
       if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/generated/THC${THC_FILE}${THC_TYPE}.cu")
          FILE(WRITE "${CMAKE_CURRENT_SOURCE_DIR}/generated/THC${THC_FILE}${THC_TYPE}.cu"
               "#include \"../THC${THC_FILE}.cuh\"\n#include \"../generic/THC${THC_FILE}.cu\"\n#include \"../THCGenerate${THC_TYPE}Type.h\"\n")
@@ -165,25 +165,32 @@ foreach(THC_TYPE Byte Char Short Int Float Double) # Long Half
    endforeach()
 endforeach()
 
+if (${PLATFORM} MATCHES "hcc")
+  list(APPEND src-cuda THCHalf.cu)
+  add_definitions(-DCUDA_HAS_FP16)
+  set(CMAKE_C_FLAGS "-DCUDA_HAS_FP16=1 ${CMAKE_CXX_FLAGS}")
+  set(CMAKE_CXX_FLAGS "-DCUDA_HAS_FP16=1 ${CMAKE_CXX_FLAGS}")
+endif()
+
 IF(${PLATFORM} MATCHES "nvcc")
   MESSAGE(STATUS "got cuda version " ${CUDA_VERSION})
 
-IF(CUDA_HAS_FP16 OR NOT ${CUDA_VERSION} LESS 7.5)
-  MESSAGE(STATUS "Found CUDA with FP16 support, compiling with torch.CudaHalfTensor")
-  LIST(APPEND src-cuda THCHalf.cu)
-# TODO: HIP EQUIVALENT: MANEESH
-# the below statement is temporarily commented. Got to have an equivalent FP16 support flag
-#  LIST(APPEND CUDA_NVCC_FLAGS "-DCUDA_HAS_FP16=1")
-#  SET(CMAKE_C_FLAGS "-DCUDA_HAS_FP16=1 ${CMAKE_C_FLAGS}")
-ELSE(CUDA_HAS_FP16 OR NOT ${CUDA_VERSION} LESS 7.5)
-  MESSAGE(STATUS "Could not find CUDA with FP16 support, compiling without torch.CudaHalfTensor")
-ENDIF(CUDA_HAS_FP16 OR NOT ${CUDA_VERSION} LESS 7.5)
+  IF(CUDA_HAS_FP16 OR NOT ${CUDA_VERSION} LESS 7.5)
+    MESSAGE(STATUS "Found CUDA with FP16 support, compiling with torch.CudaHalfTensor")
+    LIST(APPEND src-cuda THCHalf.cu)
+  # TODO: HIP EQUIVALENT: MANEESH
+  # the below statement is temporarily commented. Got to have an equivalent FP16 support flag
+  #  LIST(APPEND CUDA_NVCC_FLAGS "-DCUDA_HAS_FP16=1")
+  #  SET(CMAKE_C_FLAGS "-DCUDA_HAS_FP16=1 ${CMAKE_C_FLAGS}")
+  ELSE(CUDA_HAS_FP16 OR NOT ${CUDA_VERSION} LESS 7.5)
+    MESSAGE(STATUS "Could not find CUDA with FP16 support, compiling without torch.CudaHalfTensor")
+  ENDIF(CUDA_HAS_FP16 OR NOT ${CUDA_VERSION} LESS 7.5)
 
-MESSAGE(STATUS "CUDA_NVCC_FLAGS: ${CUDA_NVCC_FLAGS}")
+  MESSAGE(STATUS "CUDA_NVCC_FLAGS: ${CUDA_NVCC_FLAGS}")
 ENDIF() #PLATFORM
 
-set (CMAKE_SHARED_LINKER_FLAGS "-Wl,-Bsymbolic")
 HIP_ADD_LIBRARY(THC SHARED ${src} ${src-cuda})
+target_compile_options(THC PUBLIC -v)
 
 IF(${PLATFORM} STREQUAL "nvcc")
   CUDA_ADD_CUBLAS_TO_TARGET(THC)
@@ -191,17 +198,17 @@ IF(${PLATFORM} STREQUAL "nvcc")
 ENDIF()
 
 IF(${PLATFORM} STREQUAL "hcc")
-  FIND_LIBRARY(HIPBLAS_LIBRARY hipblas HINTS ${HIPBLAS_PATH}/lib)
-  TARGET_LINK_LIBRARIES(THC TH hip_hcc ${HIPBLAS_LIBRARY})
+  FIND_LIBRARY(HIPBLAS_LIBRARY hipblas_hcc HINTS ${HIPBLAS_PATH}/lib)
+  TARGET_LINK_LIBRARIES(THC TH -v hip_hcc ${HIPBLAS_LIBRARY})
 ENDIF()
 
 IF(${PLATFORM} STREQUAL "nvcc")
 IF(USE_MAGMA)
-  FIND_LIBRARY(HIPBLAS_LIBRARY hipblas HINTS ${HIPBLAS_PATH}/lib)
+  FIND_LIBRARY(HIPBLAS_LIBRARY hipblas_hcc HINTS ${HIPBLAS_PATH}/lib)
   FIND_LIBRARY(CUDART_LIBRARY cudart HINTS ${CUDA_SDK_ROOT_DIR}/lib64)
   TARGET_LINK_LIBRARIES(THC ${MAGMA_LIBRARIES} ${CUDA_cusparse_LIBRARY} ${HIPBLAS_LIBRARY} ${CUDART_LIBRARY})
 ELSE()
-  FIND_LIBRARY(HIPBLAS_LIBRARY hipblas HINTS ${HIPBLAS_PATH}/lib)
+  FIND_LIBRARY(HIPBLAS_LIBRARY hipblas_hcc HINTS ${HIPBLAS_PATH}/lib)
   FIND_LIBRARY(CUDART_LIBRARY cudart HINTS /usr/local/cuda/lib64)
   TARGET_LINK_LIBRARIES(THC ${CUDA_cusparse_LIBRARY}
                             ${HIPBLAS_LIBRARY}

@@ -9,8 +9,10 @@
 
 template <typename T, typename TOut>
 struct TensorLTValueOp {
-  TensorLTValueOp() = default;
-  TensorLTValueOp(const TensorLTValueOp&) = default;
+  __host__ __device__
+  TensorLTValueOp() : value{} {}
+  __host__ __device__
+  TensorLTValueOp(const TensorLTValueOp& x) : value{x.value} {}
   TensorLTValueOp(TensorLTValueOp&&) = default;
 
   __host__ __device__
@@ -30,8 +32,10 @@ struct TensorLTValueOp {
 
 template <typename T, typename TOut>
 struct TensorGTValueOp {
-  TensorGTValueOp() = default;
-  TensorGTValueOp(const TensorGTValueOp&) = default;
+  __host__ __device__
+  TensorGTValueOp() : value{} {}
+  __host__ __device__
+  TensorGTValueOp(const TensorGTValueOp& x) : value{x.value} {}
   TensorGTValueOp(TensorGTValueOp&&) = default;
 
   __host__ __device__
@@ -52,8 +56,10 @@ struct TensorGTValueOp {
 
 template <typename T, typename TOut>
 struct TensorLEValueOp {
-  TensorLEValueOp() = default;
-  TensorLEValueOp(const TensorLEValueOp&) = default;
+  __host__ __device__
+  TensorLEValueOp() : value{} {}
+  __host__ __device__
+  TensorLEValueOp(const TensorLEValueOp& x) : value{x.value} {}
   TensorLEValueOp(TensorLEValueOp&&) = default;
 
   __host__ __device__
@@ -73,8 +79,10 @@ struct TensorLEValueOp {
 
 template <typename T, typename TOut>
 struct TensorGEValueOp {
-  TensorGEValueOp() = default;
-  TensorGEValueOp(const TensorGEValueOp&) = default;
+  __host__ __device__
+  TensorGEValueOp() : value{} {}
+  __host__ __device__
+  TensorGEValueOp(const TensorGEValueOp& x) : value{x.value} {}
   TensorGEValueOp(TensorGEValueOp&&) = default;
 
   __host__ __device__
@@ -94,8 +102,10 @@ struct TensorGEValueOp {
 
 template <typename T, typename TOut>
 struct TensorEQValueOp {
-  TensorEQValueOp() = default;
-  TensorEQValueOp(const TensorEQValueOp&) = default;
+  __host__ __device__
+  TensorEQValueOp() : value{} {}
+  __host__ __device__
+  TensorEQValueOp(const TensorEQValueOp& x) : value{x.value} {}
   TensorEQValueOp(TensorEQValueOp&&) = default;
 
   __host__ __device__
@@ -115,8 +125,10 @@ struct TensorEQValueOp {
 
 template <typename T, typename TOut>
 struct TensorNEValueOp {
-  TensorNEValueOp() = default;
-  TensorNEValueOp(const TensorNEValueOp&) = default;
+  __host__ __device__
+  TensorNEValueOp() : value{} {}
+  __host__ __device__
+  TensorNEValueOp(const TensorNEValueOp& x) : value{x.value} {}
   TensorNEValueOp(TensorNEValueOp&&) = default;
 
   __host__ __device__
@@ -135,10 +147,12 @@ struct TensorNEValueOp {
 };
 
 template<typename TensorType, typename TensorTypeOut, class Op>
-void THC_logicalValue(THCState *state,
-                      TensorTypeOut *self_,
-                      TensorType *src,
-                      Op op) {
+void THC_logicalValue(
+    THCState *state,
+    TensorTypeOut *self_,
+    TensorType *src,
+    Op op)
+{
   THLongStorage* st = TensorUtils<TensorType>::newSizeOf(state, src);
   TensorUtils<TensorTypeOut>::resize(state, self_, st, NULL);
   THLongStorage_free(st);

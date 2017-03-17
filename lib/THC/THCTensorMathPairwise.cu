@@ -7,6 +7,8 @@
 
 #include <hip/hip_runtime.h>
 
+#include <GGL/grid_launch.hpp>
+
 template <typename T>
 struct TensorAddConstantOp {
   TensorAddConstantOp() = default;
@@ -487,7 +489,7 @@ void THCudaTensor_diag(THCState *state, THCudaTensor *self_, THCudaTensor *src_,
     const dim3 threads(min((long long)THCState_getCurrentDeviceProperties(state)->maxThreadsPerBlock, (long long)size));
     dim3 grid(min((long long)1024, (long long)THCCeilDiv(size, (long)threads.x)));
     long start = (k >= 0 ? k * stride1 : -k * stride0);
-    hipLaunchKernel(HIP_KERNEL_NAME(THCudaTensor_copyFromDiagonal),
+    hipLaunchKernelV2(HIP_KERNEL_NAME(THCudaTensor_copyFromDiagonal),
                     dim3(grid),
                     dim3(threads),
                     0,
@@ -509,7 +511,7 @@ void THCudaTensor_diag(THCState *state, THCudaTensor *self_, THCudaTensor *src_,
     const dim3 threads(min((long long)THCState_getCurrentDeviceProperties(state)->maxThreadsPerBlock, (long long)size));
     dim3 grid(min((long long)1024, (long long)THCCeilDiv(size, (ptrdiff_t)threads.x)));
     ptrdiff_t start = (k >= 0 ? k * stride1 : -k * stride0);
-    hipLaunchKernel(HIP_KERNEL_NAME(THCudaTensor_copyToDiagonal),
+    hipLaunchKernelV2(HIP_KERNEL_NAME(THCudaTensor_copyToDiagonal),
                     dim3(grid),
                     dim3(threads),
                     0,

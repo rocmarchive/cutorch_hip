@@ -18,6 +18,8 @@
 
 #include <hip/hip_runtime.h>
 
+#include <GGL/grid_launch.hpp>
+
 template <typename T>
 struct ThrustGTOp {
   __device__

@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 #include "THC.h"
 #include "THCReduceApplyUtils.cuh"
 #include "THCTensorCopy.h"
@@ -12,6 +11,10 @@
         #include <thrust/system/cuda/execution_policy.h>
     #endif
 #endif
+
+#include <hip/hip_runtime.h>
+
+#include <GGL/grid_launch.hpp>
 
 #include <algorithm> // for std::min
 
@@ -448,7 +451,7 @@ THC_API void THCudaTensor_topk(THCState* state,
   THLongStorage_free(topKSize);
 
 #define RUN_K(INDEX_T, DIM, DIR)                                               \
-  hipLaunchKernel(HIP_KERNEL_NAME(gatherTopK<INDEX_T, DIM, DIR>),              \
+  hipLaunchKernelV2(HIP_KERNEL_NAME(gatherTopK<INDEX_T, DIM, DIR>),              \
                   dim3{grid},                                                  \
                   dim3{block},                                                 \
                   0,                                                           \

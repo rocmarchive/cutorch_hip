@@ -1,5 +1,5 @@
 /***************************************************************************
-*   © 2012,2014 Advanced Micro Devices, Inc. All rights reserved.
+*   ï¿½ 2012,2014 Advanced Micro Devices, Inc. All rights reserved.
 *
 *   Licensed under the Apache License, Version 2.0 (the "License");
 *   you may not use this file except in compliance with the License.
@@ -56,7 +56,7 @@ namespace serial{
 
 	}
 
-	//TODO use create_mapped_itr for mapping/unmapping 
+	//TODO use create_mapped_itr for mapping/unmapping
 	template<typename InputIterator, typename Predicate>
     typename bolt::amp::iterator_traits<InputIterator>::difference_type
         count(bolt::amp::control &ctl,
@@ -158,7 +158,7 @@ namespace amp{
         const Predicate& predicate,
 		bolt::amp::device_vector_tag)
     {
-		typedef typename std::iterator_traits< DVInputIterator >::value_type iType;				
+		typedef typename std::iterator_traits< DVInputIterator >::value_type iType;
 		const int szElements = static_cast< int >(std::distance(first, last));
 
 		int max_ComputeUnits = 32;
@@ -169,7 +169,7 @@ namespace amp{
 		length = residual ? (length + COUNT_WAVEFRONT_SIZE - residual): length ;
 		numTiles = static_cast< int >((szElements/COUNT_WAVEFRONT_SIZE)>= numTiles?(numTiles):
 							(std::ceil( static_cast< float >( szElements ) / COUNT_WAVEFRONT_SIZE) ));
-				
+
 		concurrency::array<unsigned int, 1> result(numTiles);
 		concurrency::extent< 1 > inputExtent(length);
 		concurrency::tiled_extent< COUNT_WAVEFRONT_SIZE > tiledExtentReduce = inputExtent.tile< COUNT_WAVEFRONT_SIZE >();
@@ -248,7 +248,7 @@ namespace amp{
             });
 
 			std::vector<unsigned int> *cpuPointerReduce = new std::vector<unsigned int>(numTiles);
-			concurrency::copy(result, (*cpuPointerReduce).begin());                  
+			concurrency::copy(result, (*cpuPointerReduce).begin());
 			unsigned int count = (*cpuPointerReduce)[0];
 			for (int i = 1; i < numTiles; ++i)
 			{
@@ -267,7 +267,7 @@ namespace amp{
         }
     }
 
-	
+
 	template<typename InputIterator, typename Predicate>
     typename bolt::amp::iterator_traits<InputIterator>::difference_type
         count(bolt::amp::control &ctl,
@@ -280,7 +280,7 @@ namespace amp{
 		 int sz = static_cast<int>(last - first);
 
          typedef typename std::iterator_traits<InputIterator>::value_type  iType;
-       	 
+
          device_vector< iType, concurrency::array_view > dvInput( first, last, false, ctl );
          return count( ctl, dvInput.begin(), dvInput.end(), predicate, bolt::amp::device_vector_tag() );
 
@@ -298,13 +298,13 @@ namespace amp{
 		 return count(ctl, first, last, predicate, bolt::amp::device_vector_tag());
 
 	}
-			
+
 } // end of namespace amp
 
     template<typename InputIterator, typename Predicate>
-    typename std::enable_if< 
-           !(std::is_same< typename std::iterator_traits< InputIterator>::iterator_category, 
-                         std::input_iterator_tag 
+    typename std::enable_if<
+           !(std::is_same< typename std::iterator_traits< InputIterator>::iterator_category,
+                         std::input_iterator_tag
                        >::value), typename bolt::amp::iterator_traits<InputIterator>::difference_type
                        >::type
     count( bolt::amp::control &ctl,
@@ -314,52 +314,52 @@ namespace amp{
     {
 
         typedef typename bolt::amp::iterator_traits<InputIterator>::difference_type rType;
-	    
+
         size_t szElements = (size_t)(last - first);
         if (szElements == 0)
             return 0;
-	    
+
         bolt::amp::control::e_RunMode runMode = ctl.getForceRunMode();  // could be dynamic choice some day.
         if(runMode == bolt::amp::control::Automatic)
         {
             runMode = ctl.getDefaultPathToRun();
         }
         switch(runMode)
-        {	    
+        {
         case bolt::amp::control::MultiCoreCpu:
         #ifdef ENABLE_TBB
         {
-              return btbb::count( ctl, first, last,  predicate, 
+              return btbb::count( ctl, first, last,  predicate,
 				  typename std::iterator_traits< InputIterator >::iterator_category( ) );
-	    
+
         }
         #else
         {
               throw std::runtime_error( "The MultiCoreCpu version of reduce is not enabled to be built! \n" );
         }
         #endif
-	    
+
         case bolt::amp::control::SerialCpu:
         {
-              return  serial::count( ctl, first, last,  predicate, 
+              return  serial::count( ctl, first, last,  predicate,
 				  typename std::iterator_traits< InputIterator >::iterator_category( ) );
-	    
+
         }
 
         default: /* Incase of runMode not set/corrupted */
-        {           
-             return  amp::count( ctl, first, last,  predicate, 
+        {
+             return  amp::count( ctl, first, last,  predicate,
 				  typename std::iterator_traits< InputIterator >::iterator_category( ) );
         }
-	   
+
        }
 
     }
 
     template<typename InputIterator, typename Predicate>
-    typename std::enable_if< 
-           (std::is_same< typename std::iterator_traits< InputIterator>::iterator_category, 
-                         std::input_iterator_tag 
+    typename std::enable_if<
+           (std::is_same< typename std::iterator_traits< InputIterator>::iterator_category,
+                         std::input_iterator_tag
                        >::value), typename bolt::amp::iterator_traits<InputIterator>::difference_type
                        >::type
     count( bolt::amp::control &ctl,
@@ -369,8 +369,8 @@ namespace amp{
     {
 		      //  TODO:  It should be possible to support non-random_access_iterator_tag iterators, if we copied
               //   the data to a temporary buffer.  Should we?
-              static_assert( std::is_same< typename std::iterator_traits< InputIterator>::iterator_category, 
-                                           std::input_iterator_tag >::value , 
+              static_assert( std::is_same< typename std::iterator_traits< InputIterator>::iterator_category,
+                                           std::input_iterator_tag >::value ,
                              "Input vector cannot be of the type input_iterator_tag" );
     }
 

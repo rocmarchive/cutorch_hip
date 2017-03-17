@@ -7,6 +7,8 @@
 
 #include <hip/hip_runtime_api.h>
 
+#include <GGL/grid_launch.hpp>
+
 extern void cutorch_CudaByteStorage_init(lua_State* L);
 extern void cutorch_CudaCharStorage_init(lua_State* L);
 extern void cutorch_CudaShortStorage_init(lua_State* L);

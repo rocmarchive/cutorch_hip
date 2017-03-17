@@ -63,7 +63,7 @@ THC_API void THCTensor_(sortKeyValueInplace)(THCState* state,
     dim3 block(blockSize);                                              \
                                                                         \
     if (dir) {                                                          \
-      hipLaunchKernel(HIP_KERNEL_NAME(bitonicSortKVInPlace<real,        \
+      hipLaunchKernelV2(HIP_KERNEL_NAME(bitonicSortKVInPlace<real,        \
                                                            long,        \
                                                            A,           \
                                                            -1,          \
@@ -88,7 +88,7 @@ THC_API void THCTensor_(sortKeyValueInplace)(THCState* state,
                       (TYPE) valueInfo.strides[collapseValueDim],       \
                       GTComp<real>());                                  \
     } else {                                                            \
-     hipLaunchKernel(HIP_KERNEL_NAME(bitonicSortKVInPlace<real,         \
+     hipLaunchKernelV2(HIP_KERNEL_NAME(bitonicSortKVInPlace<real,         \
                                                           long,         \
                                                           A,            \
                                                           -1,           \

@@ -1,5 +1,6 @@
 #ifndef THC_GENERIC_FILE
 #include <hip/hip_runtime.h>
+#include <GGL/grid_launch.hpp>
 #define THC_GENERIC_FILE "generic/THCStorage.cu"
 #else
 

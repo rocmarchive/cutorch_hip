@@ -5,6 +5,8 @@
 
 #include <hip/hip_runtime.h>
 
+#include <GGL/grid_launch.hpp>
+
 // Collection of in-kernel scan / prefix sum utilities
 
 // Inclusive prefix sum using shared memory

@@ -1,14 +1,18 @@
-#include "hip/hip_runtime.h"
 #include "THCGeneral.h"
 #include "THCTensorMath.h"
 #include "THCTensorCopy.h"
-#include <algorithm>
 
 #ifdef USE_MAGMA
-#include <magma.h>
+  #include <magma.h>
 #else
-#include "THCBlas.h"
+  #include "THCBlas.h"
 #endif
+
+#include "hip/hip_runtime.h"
+
+#include <GGL/grid_launch.hpp>
+
+#include <algorithm>
 
 #ifndef DIVUP
 #define DIVUP(x, y) (((x) + (y) - 1) / (y))
@@ -475,7 +479,7 @@ void THCudaTensor_potri(THCState *state, THCudaTensor *ra_, THCudaTensor *a)
   const int len = n*n;
   dim3 blocks(std::min(DIVUP(len, 128), 65535));
   dim3 threads(128);
-  hipLaunchKernel(HIP_KERNEL_NAME(THCudaTensor_copyUpperSymmetric),
+  hipLaunchKernelV2(HIP_KERNEL_NAME(THCudaTensor_copyUpperSymmetric),
                   dim3(blocks),
                   dim3(threads),
                   0,

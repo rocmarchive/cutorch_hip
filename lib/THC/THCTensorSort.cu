@@ -41,7 +41,7 @@ void THCudaLongTensor_fillSliceWithIndex(THCState* state,
   dim3 block(numThreads);
 
 #define FILL_INDEX(T, DIM)                                    \
-  hipLaunchKernel(HIP_KERNEL_NAME(fillSliceWithIndex<T, DIM>),\
+  hipLaunchKernelV2(HIP_KERNEL_NAME(fillSliceWithIndex<T, DIM>),\
                   dim3{grid},                                 \
                   dim3{block},                                \
                   0,                                          \

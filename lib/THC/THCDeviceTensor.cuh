@@ -4,6 +4,8 @@
 #include <cuda.h>
 #include <hip/hip_runtime.h>
 
+#include <GGL/grid_launch.hpp>
+
 // A CUDA 6.5 compatible version of static_assert. Remove once on CUDA 7.0.
 template <bool>
 struct THCStaticAssert;

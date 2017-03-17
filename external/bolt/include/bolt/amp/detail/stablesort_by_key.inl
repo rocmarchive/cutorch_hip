@@ -69,8 +69,8 @@ namespace detail
         }
     };
 
-    //The serial CPU implementation of stable_sort_by_key routine. This routines zips the key value pair and then sorts
-    //using the std::stable_sort routine.
+    //The serial CPU implementation of stable_sort_by_key routine. This routines
+    //zips the key value pair and then sorts using the std::stable_sort routine.
     template< typename RandomAccessIterator1, typename RandomAccessIterator2, typename StrictWeakOrdering >
     static
     inline
@@ -512,8 +512,10 @@ namespace detail
 
 
     //Non Device Vector specialization.
-    //This implementation creates a Buffer and passes the buffer to the sort specialization whichtakes the AMP buffer as a parameter.
-    //In the future, Each input buffer should be mapped to the device_vector and the specialization specific to device_vector should be called.
+    //This implementation creates a Buffer and passes the buffer to the sort
+    //specialization which takes the AMP buffer as a parameter.
+    //In the future, Each input buffer should be mapped to the device_vector and
+    //the specialization specific to device_vector should be called.
     template< typename RandomAccessIterator1, typename RandomAccessIterator2, typename StrictWeakOrdering >
     static
     inline

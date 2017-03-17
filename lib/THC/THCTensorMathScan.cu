@@ -12,6 +12,9 @@
 #endif
 
 #include <hip/hip_runtime.h>
+
+#include <GGL/grid_launch.hpp>
+
 /* Perform an inclusive scan along an outer dimension of a tensor.
  *
  * - num_orows is the size of the flattened outer dimensions;
@@ -76,18 +79,19 @@ void THCudaTensor_scanOuterDim(THCState *state,
   unsigned maxGridDim = 1024;
   dim3 grid(min(maxGridDim, num_orows), min(maxGridDim, THCCeilDiv(num_irows, threads.x)));
 
-  hipLaunchKernel(HIP_KERNEL_NAME(THCudaTensor_kernel_scanOuterDim),
-                  dim3(grid),
-                  dim3(threads),
-                  0,
-                  THCState_getCurrentStream(state),
-                  THCudaTensor_data(state, tgt),
-                  THCudaTensor_data(state, src),
-                  num_orows,
-                  num_irows,
-                  row_size,
-                  init,
-                  binary_op);
+  hipLaunchKernelV2(
+      HIP_KERNEL_NAME(THCudaTensor_kernel_scanOuterDim<BinaryOp>),
+      dim3(grid),
+      dim3(threads),
+      0,
+      THCState_getCurrentStream(state),
+      THCudaTensor_data(state, tgt),
+      THCudaTensor_data(state, src),
+      num_orows,
+      num_irows,
+      row_size,
+      init,
+      binary_op);
   hipError_t errcode = hipGetLastError();
   if (errcode != hipSuccess) {
     THError(hipGetErrorString(errcode));
@@ -184,7 +188,12 @@ void THCudaTensor_kernel_scanInnermostDim(hipLaunchParm lp,
 }
 
 template<class BinaryFunction>
-void THCudaTensor_scanInnermostDim(THCState *state, THCudaTensor *tgt, THCudaTensor *src, float init, BinaryFunction binary_op)
+void THCudaTensor_scanInnermostDim(
+    THCState *state,
+    THCudaTensor *tgt,
+    THCudaTensor *src,
+    float init,
+    BinaryFunction binary_op)
 {
   unsigned ndim = THCudaTensor_nDimension(state, src);
   // Treat all outer dimensions as a single dimension.
@@ -197,17 +206,21 @@ void THCudaTensor_scanInnermostDim(THCState *state, THCudaTensor *tgt, THCudaTen
   dim3 threads(16, 32);
   dim3 grid(min(1024, THCCeilDiv(num_rows, threads.y)));
 
-  hipLaunchKernel(HIP_KERNEL_NAME(THCudaTensor_kernel_scanInnermostDim<16, 32>),
-                  dim3(grid),
-                  dim3(threads),
-                  0,
-                  THCState_getCurrentStream(state),
-                  THCudaTensor_data(state, tgt),
-                  THCudaTensor_data(state, src),
-                  num_rows,
-                  row_size,
-                  init,
-                  binary_op);
+  hipLaunchKernelV2(
+      HIP_KERNEL_NAME(THCudaTensor_kernel_scanInnermostDim<
+          16,
+          32,
+          BinaryFunction>),
+      dim3(grid),
+      dim3(threads),
+      0,
+      THCState_getCurrentStream(state),
+      THCudaTensor_data(state, tgt),
+      THCudaTensor_data(state, src),
+      num_rows,
+      row_size,
+      init,
+      binary_op);
   hipError_t errcode = hipGetLastError();
   if (errcode != hipSuccess) {
     THError(hipGetErrorString(errcode));

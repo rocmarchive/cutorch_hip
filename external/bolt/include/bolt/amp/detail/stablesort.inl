@@ -422,8 +422,8 @@ stablesort_enqueue(control& ctrl, const DVRandomAccessIterator& first, const DVR
 
 
 //Non Device Vector specialization.
-//This implementation creates a cl::Buffer and passes the cl buffer to the sort specialization whichtakes the
-//cl buffer as a parameter.
+//This implementation creates a cl::Buffer and passes the cl buffer to the sort
+// specialization which takes the cl buffer as a parameter.
 //In the future, Each input buffer should be mapped to the device_vector and the specialization specific to
 //device_vector should be called.
 template< typename RandomAccessIterator, typename StrictWeakOrdering >

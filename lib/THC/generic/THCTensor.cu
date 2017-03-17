@@ -1,6 +1,7 @@
 #ifndef THC_GENERIC_FILE
     #define THC_GENERIC_FILE "generic/THCTensor.cu"
     #include "hip/hip_runtime.h"
+    #include <GGL/grid_launch.hpp>
 #else
     #ifdef CUDA_TEXTURE
         cudaTextureObject_t THCTensor_(getTextureObject)(THCState *state, THCTensor *self)

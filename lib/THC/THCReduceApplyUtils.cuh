@@ -8,6 +8,8 @@
 
 #include <hip/hip_runtime.h>
 
+#include <GGL/grid_launch.hpp>
+
 #include <assert.h>
 
 // Enum that indicates whether tensor arguments are read/write or

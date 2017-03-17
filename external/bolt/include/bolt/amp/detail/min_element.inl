@@ -1,5 +1,5 @@
 /***************************************************************************
-*   © 2012,2014 Advanced Micro Devices, Inc. All rights reserved.
+*   ï¿½ 2012,2014 Advanced Micro Devices, Inc. All rights reserved.
 *
 *   Licensed under the Apache License, Version 2.0 (the "License");
 *   you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 #if !defined( BOLT_AMP_MINELEMENT_INL )
 #define BOLT_AMP_MINELEMENT_INL
 
-#define MIN_MAX_WAVEFRONT_SIZE 256 
+#define MIN_MAX_WAVEFRONT_SIZE 256
 #define _REDUCE_STEP_MIN(_LENGTH, _IDX, _W) \
     if ((_IDX < _W) && ((_IDX + _W) < _LENGTH)) {\
       iType mine = scratch[_IDX];\
@@ -59,8 +59,9 @@ namespace bolt {
     namespace amp {
         namespace detail {
 
-            // This is the base implementation of reduction that is called by all of the convenience wrappers below.
-            // first and last must be iterators from a DeviceVector
+            // This is the base implementation of reduction that is called by
+            // all of the convenience wrappers below. first and last must be
+            // iterators from a DeviceVector
             template<typename DVInputIterator, typename BinaryPredicate>
             int min_element_enqueue(bolt::amp::control &ctl,
                 const DVInputIterator& first,
@@ -84,7 +85,7 @@ namespace bolt {
 				concurrency::array<unsigned int, 1> result(numTiles);
 				concurrency::extent< 1 > inputExtent(length);
 				concurrency::tiled_extent< MIN_MAX_WAVEFRONT_SIZE > tiledExtentReduce = inputExtent.tile< MIN_MAX_WAVEFRONT_SIZE >();
-                
+
                 const char * str = "MAX_KERNEL";
 
                 if(std::strcmp(min_max,str) != 0)
@@ -125,9 +126,9 @@ namespace bolt {
 						  // length into a length related to the number of workgroups
 						  while (gx < szElements)
 						  {
-							  iType element = first[gx];						  
+							  iType element = first[gx];
 							  bool stat = binary_op(scratch[tileIndex], element);
-							  scratch[tileIndex] = stat ? scratch[tileIndex] : element;						
+							  scratch[tileIndex] = stat ? scratch[tileIndex] : element;
 							  scratch_index[tileIndex] = stat ? scratch_index[tileIndex] : gx;
 							  gx += length;
 						  }
@@ -169,7 +170,7 @@ namespace bolt {
 						iType minele =  first[(*cpuPointerReduce)[0]];
 						unsigned int minele_indx = (*cpuPointerReduce)[0];
 
-                
+
 						for (int i = 0; i < numTiles; ++i)
 						{
 							bool stat = binary_op( minele, first[(*cpuPointerReduce)[i]]);
@@ -185,7 +186,7 @@ namespace bolt {
 						  std::cout << "Exception while calling bolt::amp::min_element parallel_for_each " ;
 						  std::cout<< e.what() << std::endl;
 						  throw std::exception();
-					}		
+					}
 
                 }
 
@@ -267,14 +268,14 @@ namespace bolt {
 
 						});
 
-                    
+
 						std::vector<unsigned int> *cpuPointerReduce = new std::vector<unsigned int>(numTiles);
 						concurrency::copy(result, (*cpuPointerReduce).begin());
 
 						iType minele =  first[(*cpuPointerReduce)[0]];
 						unsigned int minele_indx = (*cpuPointerReduce)[0];
 
-                
+
 						for (int i = 0; i < numTiles; ++i)
 						{
 							bool stat = binary_op(first[(*cpuPointerReduce)[i]], minele);
@@ -291,8 +292,8 @@ namespace bolt {
 						  std::cout << "Exception while calling bolt::amp::max_element parallel_for_each " ;
 						  std::cout<< e.what() << std::endl;
 						  throw std::exception();
-					}							    
-             
+					}
+
                 }
             }
 
@@ -324,14 +325,14 @@ namespace bolt {
                 {
                     runMode = ctl.getDefaultPathToRun();
                 }
-            
+
                 const char * str = "MAX_KERNEL";
 
                 switch(runMode)
                 {
 
                 case bolt::amp::control::MultiCoreCpu:
-                    #ifdef ENABLE_TBB   
+                    #ifdef ENABLE_TBB
                         if(std::strcmp(min_max,str) == 0)
                               return bolt::btbb::max_element(first, last, binary_op);
                         else
@@ -341,14 +342,14 @@ namespace bolt {
                     #endif
 
                 case bolt::amp::control::SerialCpu:
-                  {	
+                  {
                     if(std::strcmp(min_max,str) == 0)
                        return std::max_element(first, last, binary_op);
                     else
                        return std::min_element(first, last, binary_op);
                   }
                 default:
-                  { 
+                  {
                     {
                     device_vector< iType, concurrency::array_view > dvInput( first, last, false, ctl );
                     int  dvminele  =  min_element_enqueue( ctl, dvInput.begin(), dvInput.end(),  binary_op, min_max);
@@ -379,15 +380,15 @@ namespace bolt {
                 {
                     runMode = ctl.getDefaultPathToRun();
                 }
-         
+
                 const char * str = "MAX_KERNEL";
-            
+
                 switch(runMode)
                 {
 
                 case bolt::amp::control::MultiCoreCpu:
 					{
-                    #ifdef ENABLE_TBB   
+                    #ifdef ENABLE_TBB
 						typename bolt::amp::device_vector< iType >::pointer InputBuffer =  first.getContainer( ).data( );
 						iType* stlPtr;
                         if(std::strcmp(min_max,str) == 0)
@@ -440,14 +441,14 @@ namespace bolt {
                 {
                     runMode = ctl.getDefaultPathToRun();
                 }
-         
+
                 const char * str = "MAX_KERNEL";
-            
+
                 switch(runMode)
                 {
 
                 case bolt::amp::control::MultiCoreCpu:
-                    #ifdef ENABLE_TBB   
+                    #ifdef ENABLE_TBB
                         if(std::strcmp(min_max,str) == 0)
                               return bolt::btbb::max_element(first, last, binary_op);
                         else
@@ -531,7 +532,7 @@ namespace bolt {
             ForwardIterator last)
         {
             typedef typename std::iterator_traits<ForwardIterator>::value_type T;
-            return detail::max_element_detect_random_access(bolt::amp::control::getDefault(), first, last, bolt::amp::less<T>(),  
+            return detail::max_element_detect_random_access(bolt::amp::control::getDefault(), first, last, bolt::amp::less<T>(),
                 std::iterator_traits< ForwardIterator >::iterator_category( ) );
         };
 
@@ -565,7 +566,7 @@ namespace bolt {
             ForwardIterator last,
             BinaryPredicate binary_op)
             {
-                    return detail::max_element_detect_random_access(ctl, first, last, binary_op, 
+                    return detail::max_element_detect_random_access(ctl, first, last, binary_op,
                         std::iterator_traits< ForwardIterator >::iterator_category( ));
             }
 

@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 #ifndef THC_REDUCE_INC
 #define THC_REDUCE_INC
 //
@@ -12,6 +11,8 @@
 #include "THCReduceApplyUtils.cuh"
 
 #include <hip/hip_runtime.h>
+
+#include <GGL/grid_launch.hpp>
 
 // Threads per thread block
 #define THC_NONCONTIG_REDUCE_BLOCK_SIZE 32 * 16
@@ -142,8 +143,9 @@ kernelReduceContigDim(hipLaunchParm lp,
 
   // Reduce within the block
   // FIXME: extern name
-  HIP_DYNAMIC_SHARED(char, smemChar)
-  auto smem = reinterpret_cast<T*>(smemChar);
+  //HIP_DYNAMIC_SHARED(char, smemChar)
+  //auto smem = static_cast<T*>(static_cast<void*>(smemChar));
+  __shared__ T smem[1024]; // TODO: temporary workaround.
   r = reduceBlock(smem, hipBlockDim_x, r, reduceOp, init);
 
   if (hipThreadIdx_x == 0) {
@@ -152,7 +154,9 @@ kernelReduceContigDim(hipLaunchParm lp,
   }
 }
 
-inline dim3 getNoncontigReduceBlock() {
+inline
+dim3 getNoncontigReduceBlock()
+{
   return dim3(THC_NONCONTIG_REDUCE_BLOCK_SIZE);
 }
 
@@ -258,7 +262,7 @@ bool THC_reduceDim(THCState* state,
   // index can be similarly collapsed. That is what this unrolling is for.
 #define HANDLE_CASE(TYPE, OUT, IN)                                                                     \
   if (contigReduction) {                                                                                 \
-    hipLaunchKernel(HIP_KERNEL_NAME(kernelReduceContigDim<ModifyOp,                                      \
+    hipLaunchKernelV2(HIP_KERNEL_NAME(kernelReduceContigDim<ModifyOp,                                      \
                                                           ReduceOp,                                      \
                                                           typename TensorUtils<TensorType>::DataType,    \
                                                           TYPE,                                          \
@@ -282,7 +286,7 @@ bool THC_reduceDim(THCState* state,
                     modifyOp,                                                                            \
                     reduceOp);                                                                           \
   } else {                                                                                               \
-    hipLaunchKernel(HIP_KERNEL_NAME(kernelReduceNoncontigDim<ModifyOp,                                   \
+    hipLaunchKernelV2(HIP_KERNEL_NAME(kernelReduceNoncontigDim<ModifyOp,                                   \
                                                              ReduceOp,                                   \
                                                              typename TensorUtils<TensorType>::DataType, \
                                                              TYPE,                                       \

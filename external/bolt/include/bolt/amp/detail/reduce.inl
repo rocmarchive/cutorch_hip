@@ -157,8 +157,9 @@ namespace btbb{
 
 namespace amp{
 
-    // This is the base implementation of reduction that is called by all of the convenience wrappers below.
-    // first and last must be iterators from a DeviceVector
+    // This is the base implementation of reduction that is called by all of the
+    // convenience wrappers below. first and last must be iterators from a
+    // DeviceVector
 	template<typename T, typename DVInputIterator, typename BinaryFunction>
     static
     inline

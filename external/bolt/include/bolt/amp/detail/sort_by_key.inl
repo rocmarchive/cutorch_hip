@@ -88,78 +88,89 @@ namespace amp {
 namespace detail {
 	static
 	inline
-	uint_4 SELECT_UINT4_FOR_KEY(const uint_4 &a,
-								const uint_4 &b,
-								const uint_4& condition)  restrict(amp)
+	uint_4 SELECT_UINT4_FOR_KEY(
+        const uint_4& a,
+		const uint_4& b,
+		const uint_4& condition)  restrict(amp)
 	{
 		uint_4 res;
-		res.x = (condition.x )? b.x : a.x;
-		res.y = (condition.y )? b.y : a.y;
-		res.z = (condition.z )? b.z : a.z;
-		res.w = (condition.w )? b.w : a.w;
+		res.x = (condition.x) ? b.x : a.x;
+		res.y = (condition.y) ? b.y : a.y;
+		res.z = (condition.z) ? b.z : a.z;
+		res.w = (condition.w) ? b.w : a.w;
 		return res;
-
 	}
-    //Serial CPU code path implementation.
-    //Class to hold the key value pair. This will be used to zip th ekey and value together in a vector.
-    template <typename keyType, typename valueType>
-    class std_sort
-    {
-    public:
+
+    // Serial CPU code path implementation.
+    // Class to hold the key value pair. This will be used to zip the key and
+    // value together in a vector.
+    template<typename keyType, typename valueType>
+    struct std_sort {
         keyType   key;
         valueType value;
     };
 
     //This is the functor which will sort the std_sort vector.
-    template <typename keyType, typename valueType, typename StrictWeakOrdering>
-    class std_sort_comp
-    {
-    public:
+    template<typename keyType, typename valueType, typename StrictWeakOrdering>
+    struct std_sort_comp {
         typedef std_sort<keyType, valueType> KeyValueType;
-        std_sort_comp(const StrictWeakOrdering &_swo):swo(_swo)
-        {}
+
         StrictWeakOrdering swo;
-        bool operator() (const KeyValueType &lhs, const KeyValueType &rhs) const
+
+        std_sort_comp(const StrictWeakOrdering& _swo) : swo(_swo) {}
+
+        bool operator()(const KeyValueType& lhs, const KeyValueType& rhs) const
         {
             return swo(lhs.key, rhs.key);
         }
     };
 
-    //The serial CPU implementation of sort_by_key routine. This routines zips the key value pair and then sorts
-    //using the std::sort routine.
-    template< typename RandomAccessIterator1, typename RandomAccessIterator2, typename StrictWeakOrdering >
+    // The serial CPU implementation of sort_by_key routine. This routines zips
+    // the key value pair and then sorts using the std::sort routine.
+    template<
+        typename RandomAccessIterator1,
+        typename RandomAccessIterator2,
+        typename StrictWeakOrdering>
     static
     inline
-    void serialCPU_sort_by_key( const RandomAccessIterator1 keys_first, const RandomAccessIterator1 keys_last,
-                                const RandomAccessIterator2 values_first,
-                                const StrictWeakOrdering& comp)
+    void serialCPU_sort_by_key(
+        const RandomAccessIterator1 keys_first,
+        const RandomAccessIterator1 keys_last,
+        const RandomAccessIterator2 values_first,
+        const StrictWeakOrdering& comp)
     {
-        typedef typename std::iterator_traits< RandomAccessIterator1 >::value_type keyType;
-        typedef typename std::iterator_traits< RandomAccessIterator2 >::value_type valType;
+        typedef typename std::iterator_traits<RandomAccessIterator1>::value_type keyType;
+        typedef typename std::iterator_traits<RandomAccessIterator2>::value_type valType;
         typedef std_sort<keyType, valType> KeyValuePair;
-        typedef std_sort_comp<keyType, valType, StrictWeakOrdering> KeyValuePairFunctor;
+        typedef std_sort_comp<
+            keyType, valType, StrictWeakOrdering> KeyValuePairFunctor;
 
-        int vecSize = static_cast< int >(std::distance( keys_first, keys_last ));
+        int vecSize = static_cast<int>(std::distance( keys_first, keys_last));
         std::vector<KeyValuePair> KeyValuePairVector(vecSize);
         KeyValuePairFunctor functor(comp);
         //Zip the key and values iterators into a std_sort vector.
         for (int i=0; i< vecSize; i++)
         {
-            KeyValuePairVector[i].key   = *(keys_first + i);
-            KeyValuePairVector[i].value = *(values_first + i);
+            KeyValuePairVector[i].key   = keys_first[i];
+            KeyValuePairVector[i].value = values_first[i];
         }
         //Sort the std_sort vector using std::sort
         std::sort(KeyValuePairVector.begin(), KeyValuePairVector.end(), functor);
-        //Extract the keys and values from the KeyValuePair and fill the respective iterators.
-        for (int i=0; i< vecSize; i++)
-        {
-            *(keys_first + i)   = KeyValuePairVector[i].key;
-            *(values_first + i) = KeyValuePairVector[i].value;
+        // Extract the keys and values from the KeyValuePair and fill the
+        // respective iterators.
+        for (int i = 0; i != vecSize; ++i) {
+            keys_first[i]   = KeyValuePairVector[i].key;
+            values_first[i] = KeyValuePairVector[i].value;
         }
     }
 	static
-        inline
-        unsigned int scanLocalMemAndTotal_for_key(unsigned int val, unsigned int* lmem, unsigned int *totalSum, int exclusive, concurrency::tiled_index< WG_SIZE > t_idx) restrict(amp)
+    inline
+    unsigned int scanLocalMemAndTotal_for_key(
+        unsigned int val,
+        unsigned int* lmem,
+        unsigned int* totalSum,
+        int exclusive,
+        const concurrency::tiled_index<WG_SIZE>& t_idx) restrict(amp)
 	{
 		// Set first half of local memory to zero to make room for scanning
 		int l_id = t_idx.local[ 0 ];
@@ -171,8 +182,7 @@ namespace detail {
 		t_idx.barrier.wait();
 
 		unsigned int t;
-		for (int i = 1; i < l_size; i *= 2)
-		{
+		for (int i = 1; i < l_size; i *= 2) {
 			t = lmem[l_id -  i];
 			t_idx.barrier.wait();
 			lmem[l_id] += t;
@@ -202,11 +212,12 @@ namespace detail {
 	}
 	static
     inline
-    uint_4 localPrefixSum256V_for_key(uint_4 pData,
-															 unsigned int lIdx,
-															 unsigned int* totalSum,
-															 unsigned int* sorterSharedMemory,
-															 const concurrency::tiled_index<WG_SIZE>& t_idx) restrict(amp)
+    uint_4 localPrefixSum256V_for_key(
+        uint_4 pData,
+		unsigned int lIdx,
+		unsigned int* totalSum,
+		unsigned int* sorterSharedMemory,
+		const concurrency::tiled_index<WG_SIZE>& t_idx) restrict(amp)
 	{
 		unsigned int s4 = prefixScanVectorEx_for_key(&pData);
 		unsigned int rank = scanLocalMemAndTotal_for_key(s4,
@@ -219,34 +230,33 @@ namespace detail {
 	template<typename Values>
 	static
     inline
-    void sort4BitsKeyValueAscending_for_key(unsigned int (&sortData)[4],
-											Values (&sortVal)[4],
-											int startBit,
-											int lIdx,
-											unsigned int* ldsSortData,
-											Values* ldsSortVal,
-											bool Asc_sort,
-											const concurrency::tiled_index<WG_SIZE>& t_idx) restrict(amp)
+    void sort4BitsKeyValueAscending_for_key(
+        unsigned int (&sortData)[4],
+		Values (&sortVal)[4],
+		int startBit,
+		int lIdx,
+		unsigned int* ldsSortData,
+		Values* ldsSortVal,
+		bool Asc_sort,
+		const concurrency::tiled_index<WG_SIZE>& t_idx) restrict(amp)
 	{
-		for(int bitIdx=0; bitIdx<BITS_PER_PASS; bitIdx++)
-		{
+		for(int bitIdx = 0; bitIdx != BITS_PER_PASS; ++bitIdx) {
 			unsigned int mask = (1<<bitIdx);
 			uint_4 prefixSum;
-			uint_4 cmpResult((sortData[0]>>startBit) & mask,
-													(sortData[1]>>startBit) & mask,
-													(sortData[2]>>startBit) & mask,
-													(sortData[3]>>startBit) & mask);
+			uint_4 cmpResult(
+                (sortData[0]>>startBit) & mask,
+				(sortData[1]>>startBit) & mask,
+				(sortData[2]>>startBit) & mask,
+				(sortData[3]>>startBit) & mask);
 			uint_4 temp;
 
-			if(!Asc_sort)
-			{
+			if(!Asc_sort) {
 				temp.x = (cmpResult.x != mask);
 				temp.y = (cmpResult.y != mask);
 				temp.z = (cmpResult.z != mask);
 				temp.w = (cmpResult.w != mask);
 			}
-			else
-			{
+			else {
 				temp.x = (cmpResult.x != 0);
 				temp.y = (cmpResult.y != 0);
 				temp.z = (cmpResult.z != 0);
@@ -257,19 +267,23 @@ namespace detail {
 											 temp);//(cmpResult != make_uint4(mask,mask,mask,mask)));
 
 			unsigned int total = 0;
-			prefixSum = localPrefixSum256V_for_key( prefixSum, lIdx, &total, ldsSortData, t_idx);
+			prefixSum = localPrefixSum256V_for_key(
+                prefixSum,
+                lIdx,
+                &total,
+                ldsSortData,
+                t_idx);
 			{
 				uint_4 localAddr(lIdx*4+0,lIdx*4+1,lIdx*4+2,lIdx*4+3);
-				uint_4 dstAddr = localAddr - prefixSum + uint_4{total, total, total, total};
-				if(!Asc_sort)
-				{
+				uint_4 dstAddr =
+                    localAddr - prefixSum + uint_4{total, total, total, total};
+				if(!Asc_sort) {
 					temp.x = (cmpResult.x != mask);
 					temp.y = (cmpResult.y != mask);
 					temp.z = (cmpResult.z != mask);
 					temp.w = (cmpResult.w != mask);
-					}
-				else
-				{
+				}
+				else {
 					temp.x = (cmpResult.x != 0);
 					temp.y = (cmpResult.y != 0);
 					temp.z = (cmpResult.z != 0);
@@ -308,37 +322,47 @@ namespace detail {
 	template<typename Values>
 	static
     inline
-    void sort4BitsSignedKeyValueAscending_for_key(unsigned int (&sortData)[4],
-												  Values (&sortVal)[4],
-												  int startBit,
-												  int lIdx,
-												  unsigned int* ldsSortData,
-												  Values *ldsSortVal,
-												  bool Asc_sort,
-												  const concurrency::tiled_index<WG_SIZE>& t_idx) restrict(amp)
+    void sort4BitsSignedKeyValueAscending_for_key(
+        unsigned int (&sortData)[4],
+		Values (&sortVal)[4],
+		int startBit,
+		int lIdx,
+		unsigned int* ldsSortData,
+		Values* ldsSortVal,
+		bool Asc_sort,
+		const concurrency::tiled_index<WG_SIZE>& t_idx) restrict(amp)
 	{
 		unsigned int signedints[4];
-	    signedints[0] = ( ( ( (sortData[0] >> startBit) & 0x7 ) ^ 0x7 ) & 0x7 ) | ((sortData[0] >> startBit) & (1<<3));
-	    signedints[1] = ( ( ( (sortData[1] >> startBit) & 0x7 ) ^ 0x7 ) & 0x7 ) | ((sortData[1] >> startBit) & (1<<3));
-	    signedints[2] = ( ( ( (sortData[2] >> startBit) & 0x7 ) ^ 0x7 ) & 0x7 ) | ((sortData[2] >> startBit) & (1<<3));
-	    signedints[3] = ( ( ( (sortData[3] >> startBit) & 0x7 ) ^ 0x7 ) & 0x7 ) | ((sortData[3] >> startBit) & (1<<3));
+	    signedints[0] =
+            ((((sortData[0] >> startBit) & 0x7) ^ 0x7) & 0x7) |
+            ((sortData[0] >> startBit) & (1<<3));
+	    signedints[1] =
+            ((((sortData[1] >> startBit) & 0x7) ^ 0x7) & 0x7) |
+            ((sortData[1] >> startBit) & (1<<3));
+	    signedints[2] =
+            ((((sortData[2] >> startBit) & 0x7) ^ 0x7) & 0x7) |
+            ((sortData[2] >> startBit) & (1<<3));
+	    signedints[3] =
+            ((((sortData[3] >> startBit) & 0x7) ^ 0x7) & 0x7) |
+            ((sortData[3] >> startBit) & (1<<3));
 
-		for(int bitIdx=0; bitIdx<BITS_PER_PASS; bitIdx++)
-		{
+		for(int bitIdx = 0; bitIdx != BITS_PER_PASS; ++bitIdx) {
 			unsigned int mask = (1<<bitIdx);
 			uint_4 prefixSum;
-			uint_4 cmpResult( signedints[0] & mask, signedints[1] & mask, signedints[2] & mask, signedints[3] & mask );
+			uint_4 cmpResult(
+                signedints[0] & mask,
+                signedints[1] & mask,
+                signedints[2] & mask,
+                signedints[3] & mask);
 			uint_4 temp;
 
-			if(!Asc_sort)
-			{
+			if(!Asc_sort) {
 				temp.x = (cmpResult.x != 0);
 				temp.y = (cmpResult.y != 0);
 				temp.z = (cmpResult.z != 0);
 				temp.w = (cmpResult.w != 0);
 			}
-			else
-			{
+			else {
 				temp.x = (cmpResult.x != mask);
 				temp.y = (cmpResult.y != mask);
 				temp.z = (cmpResult.z != mask);
@@ -349,19 +373,19 @@ namespace detail {
 											 temp);//(cmpResult != make_uint4(mask,mask,mask,mask)));
 
 			unsigned int total = 0;
-			prefixSum = localPrefixSum256V_for_key( prefixSum, lIdx, &total, ldsSortData, t_idx);
+			prefixSum = localPrefixSum256V_for_key(
+                prefixSum, lIdx, &total, ldsSortData, t_idx);
 			{
 				uint_4 localAddr(lIdx*4+0,lIdx*4+1,lIdx*4+2,lIdx*4+3);
-				uint_4 dstAddr = localAddr - prefixSum + uint_4{total, total, total, total};
-				if(!Asc_sort)
-				{
+				uint_4 dstAddr =
+                    localAddr - prefixSum + uint_4{total, total, total, total};
+				if(!Asc_sort) {
 					temp.x = (cmpResult.x != 0);
 					temp.y = (cmpResult.y != 0);
 					temp.z = (cmpResult.z != 0);
 					temp.w = (cmpResult.w != 0);
-					}
-				else
-				{
+				}
+				else {
 					temp.x = (cmpResult.x != mask);
 					temp.y = (cmpResult.y != mask);
 					temp.z = (cmpResult.z != mask);
@@ -413,10 +437,11 @@ namespace detail {
 
 	static
     inline
-    unsigned int scanlMemPrivData_for_key(unsigned int val,
-										  unsigned int* lmem,
-										  int exclusive,
-	                            		  const concurrency::tiled_index<WG_SIZE>& t_idx) restrict (amp)
+    unsigned int scanlMemPrivData_for_key(
+        unsigned int val,
+		unsigned int* lmem,
+		int exclusive,
+	    const concurrency::tiled_index<WG_SIZE>& t_idx) restrict (amp)
 	{
 		// Set first half of local memory to zero to make room for scanning
 		unsigned int lIdx = t_idx.local[ 0 ];
@@ -442,11 +467,13 @@ namespace detail {
 template<typename DVKeys, typename DVValues, typename StrictWeakOrdering>
 static
 inline
-void sort_by_key_enqueue_int_uint( control &ctl,
-                         DVKeys keys_first, DVKeys keys_last,
-                         DVValues values_first,
-                         StrictWeakOrdering comp,
-						 bool int_flag)
+void sort_by_key_enqueue_int_uint(
+	control &ctl,
+	DVKeys keys_first,
+	DVKeys keys_last,
+	DVValues values_first,
+	StrictWeakOrdering comp,
+	bool int_flag)
 {
 
 	typedef typename std::iterator_traits< DVKeys >::value_type Keys;
@@ -458,26 +485,32 @@ void sort_by_key_enqueue_int_uint( control &ctl,
 
 	unsigned int szElements = (unsigned int)orig_szElements;
     unsigned int modWgSize = (szElements & ((localSize)-1));
-    if( modWgSize )
-    {
+    if (modWgSize) {
         szElements &= ~modWgSize;
         szElements += (localSize);
     }
-	unsigned int numGroups = (szElements/localSize)>= 32?(32*8):(szElements/localSize); // 32 is no of compute units for Tahiti
+	unsigned int numGroups =
+		((szElements/localSize) >= 32) ? (32 * 8) : (szElements / localSize); // 32 is no of compute units for Tahiti
 	concurrency::accelerator_view av = ctl.getAccelerator().get_default_view();
 
-	device_vector< Keys, concurrency::array_view > dvSwapInputKeys(static_cast<int>(orig_szElements), 0, false, ctl);
-    device_vector< Values, concurrency::array_view > dvSwapInputValues(static_cast<int>(orig_szElements), 0, false, ctl);
+	device_vector<Keys, concurrency::array_view> dvSwapInputKeys(
+		static_cast<int>(orig_szElements),
+		0,
+		false,
+		ctl);
+    device_vector<Values, concurrency::array_view> dvSwapInputValues(
+		static_cast<int>(orig_szElements),
+		0,
+		false,
+		ctl);
 
 	bool Asc_sort = 0;
-	if(comp(2,3))
-       Asc_sort = 1;
+	if (comp(2,3)) Asc_sort = 1;
 	int swap = 0;
     unsigned int blockSize = (int)(ELEMENTS_PER_WORK_ITEM*localSize);//set at 1024
     unsigned int nBlocks = (int)(orig_szElements + blockSize-1)/(blockSize);
-    struct b3ConstData
-    {
-       b3ConstData() = default;
+    struct b3ConstData {
+       //b3ConstData() = default;
        int m_n;
        int m_nWGs;
        int m_startBit;
@@ -487,115 +520,98 @@ void sort_by_key_enqueue_int_uint( control &ctl,
 	cdata.m_n = (int)orig_szElements;
 	cdata.m_nWGs = (int)numGroups;
 	cdata.m_nBlocksPerWG = (int)(nBlocks + numGroups - 1)/numGroups;
-    if(nBlocks < numGroups)
-    {
+    if(nBlocks < numGroups) {
 		cdata.m_nBlocksPerWG = 1;
 		numGroups = nBlocks;
         cdata.m_nWGs = numGroups;
 	}
-	device_vector< int, concurrency::array_view > dvHistogramBins(static_cast<int>(numGroups * RADICES), 0, false, ctl );
+	device_vector<int, concurrency::array_view> dvHistogramBins(
+		static_cast<int>(numGroups * RADICES),
+		0,
+		false,
+		ctl);
 
-	concurrency::extent< 1 > inputExtent( numGroups*localSize );
-	concurrency::tiled_extent< localSize > tileK0 = inputExtent.tile< localSize >();
+	concurrency::extent<1> inputExtent( numGroups*localSize );
+	concurrency::tiled_extent<localSize> tileK0 = inputExtent.tile<localSize>();
 	int bits;
-	for(bits = 0; bits < (sizeof(Keys) * 8); bits += RADIX)
-    {
+	for(bits = 0; bits < sizeof(Keys) * 8; bits += RADIX) {
           cdata.m_startBit = bits;
-		  concurrency::parallel_for_each( av, tileK0,
-				[
-					keys_first,
-					dvSwapInputKeys,
-					dvHistogramBins,
-					cdata,
-					swap,
-					Asc_sort,
-					int_flag,
-					tileK0
-				] ( concurrency::tiled_index< localSize > t_idx ) restrict(amp)
-		  {
-			tile_static unsigned int lmem[WG_SIZE*RADICES];
+		  concurrency::parallel_for_each(
+			  av,
+			  tileK0,
+			  [=](concurrency::tiled_index<localSize> t_idx) restrict(amp) {
+			tile_static unsigned int lmem[WG_SIZE * RADICES];
 			//unsigned int gIdx = t_idx.global[ 0 ];
-			unsigned int lIdx = t_idx.local[ 0 ];
-			unsigned int wgIdx = t_idx.tile[ 0 ];
-			unsigned int localSize = tileK0.tile_dim0;
-			unsigned int numGroups = tileK0[0]/tileK0.tile_dim0;
+			unsigned int lIdx = t_idx.local[0];
+			unsigned int wgIdx = t_idx.tile[0];
+			constexpr unsigned int localSize = tileK0.tile_dim0;
+			unsigned int numGroups = tileK0[0] / tileK0.tile_dim0;
 
 			const int shift = cdata.m_startBit;
-			const int dataAlignment = 1024;
+			constexpr int dataAlignment = 1024;
 			const int n = cdata.m_n;
-			const int w_n = n + dataAlignment-(n%dataAlignment);
+			const int w_n = n + dataAlignment-(n % dataAlignment);
 			//const int nWGs = cdata.m_nWGs;
 			const int nBlocksPerWG = cdata.m_nBlocksPerWG;
 
-			for(int i=0; i<RADICES; i++)
-			{
-				lmem[i*localSize+ lIdx] = 0;
+			for(int i=0; i<RADICES; i++) {
+				lmem[i * localSize + lIdx] = 0;
 			}
 			t_idx.barrier.wait();
-			const int blockSize = ELEMENTS_PER_WORK_ITEM*localSize;
+			constexpr int blockSize = ELEMENTS_PER_WORK_ITEM * localSize;
 			int nBlocks = (w_n)/blockSize - nBlocksPerWG*wgIdx;
-			int addr = blockSize*nBlocksPerWG*wgIdx + lIdx;
+			int addr = blockSize * nBlocksPerWG * wgIdx + lIdx;
 			unsigned int local_key;
-			for(int iblock=0; iblock<min(nBlocksPerWG, nBlocks); iblock++)
-			{
-				for(int i=0; i<ELEMENTS_PER_WORK_ITEM; i++, addr+=localSize )
-				{
-					if( (addr) < n)
-					{
-						if(int_flag && (shift >= sizeof(Keys) * 7))
-						{
+			for(int iblock=0; iblock<min(nBlocksPerWG, nBlocks); iblock++) {
+				for(int i=0; i < ELEMENTS_PER_WORK_ITEM; i++, addr+=localSize) {
+					if(addr < n) {
+						if(int_flag && (shift >= sizeof(Keys) * 7))	{
 							 if(swap == 0)
 								local_key = (keys_first[addr] >> shift);
 							 else
 								local_key = (dvSwapInputKeys[addr] >> shift);
-				             unsigned int signBit   = local_key & (1<<3);
+				             unsigned int signBit = local_key & (1<<3);
 							 if(!Asc_sort)
-									local_key = 0xF - (( ( ( local_key & 0x7 ) ^ 0x7 ) & 0x7 ) | signBit);
+                                 local_key = 0xF - ((((local_key & 0x7) ^ 0x7) & 0x7) | signBit);
 							 else
-									local_key = 0xF - (( ( ( local_key & 0x7 ) ^ 0x7 ) & 0x7 ) | signBit);
+                                 local_key = 0xF - ((((local_key & 0x7) ^ 0x7) & 0x7) | signBit);
 						}
-						else
-						{
+						else {
 							if(swap == 0)
 								local_key = (keys_first[addr] >> shift) & 0xFU;
 							else
 								local_key = (dvSwapInputKeys[addr] >> shift) & 0xFU;
 						}
 						if(!Asc_sort)
-							lmem[(RADICES - local_key -1)*localSize+ lIdx]++;
+							lmem[(RADICES - local_key - 1) * localSize + lIdx]++;
 						else
-							lmem[local_key*localSize+ lIdx]++;
+							lmem[local_key * localSize + lIdx]++;
 					}
 				}
 			}
 			t_idx.barrier.wait();
-			if( lIdx < RADICES )
-			{
+			if(lIdx < RADICES) {
 				unsigned int sum = 0;
-				for(unsigned int i=0; i<localSize; i++)
-				{
+				for(unsigned int i=0; i < localSize; i++) {
 					sum += lmem[lIdx*localSize+ i];
 				}
 				dvHistogramBins[lIdx * numGroups + wgIdx] = sum;
 			}
 		});
 
-
-        concurrency::extent< 1 > scaninputExtent( localSize );
-		concurrency::tiled_extent< localSize > tileK1 = scaninputExtent.tile< localSize >();
-		concurrency::parallel_for_each( av, tileK1,
-				[
-					dvHistogramBins,
-					numGroups,
-					tileK1
-				] ( concurrency::tiled_index< localSize > t_idx ) restrict(amp)
-		  {
+        concurrency::extent<1> scaninputExtent(localSize);
+		concurrency::tiled_extent<localSize> tileK1 =
+			scaninputExtent.tile<localSize>();
+		concurrency::parallel_for_each(
+			av,
+			tileK1,
+			[=](concurrency::tiled_index<localSize> t_idx) restrict(amp) {
 
 			unsigned int lIdx = t_idx.local[ 0 ];
 			//unsigned int llIdx = lIdx;
 			//unsigned int wgSize = tileK1.tile_dim0;
 
-			tile_static unsigned int lmem[WG_SIZE*8];
+			tile_static unsigned int lmem[WG_SIZE * 8];
 			tile_static int s_seed;
 			s_seed = 0;
 			t_idx.barrier.wait();
@@ -622,23 +638,13 @@ void sort_by_key_enqueue_int_uint( control &ctl,
 				}
 				t_idx.barrier.wait();
 			}
-
 		});
 		if((bits >= sizeof(Keys) * 7) && int_flag)
 			break;
-		concurrency::parallel_for_each( av, tileK0,
-				[
-					keys_first,
-					values_first,
-					dvSwapInputKeys,
-					dvSwapInputValues,
-					dvHistogramBins,
-					cdata,
-					swap,
-					Asc_sort,
-					tileK0
-				] ( concurrency::tiled_index< localSize > t_idx ) restrict(amp)
-		  {
+		concurrency::parallel_for_each(
+			av,
+			tileK0,
+			[=](concurrency::tiled_index<localSize> t_idx) restrict(amp) {
 
 			tile_static unsigned int ldsSortData[WG_SIZE*ELEMENTS_PER_WORK_ITEM+16];
 			tile_static Values ldsSortVal[WG_SIZE*ELEMENTS_PER_WORK_ITEM+16];
@@ -820,19 +826,10 @@ void sort_by_key_enqueue_int_uint( control &ctl,
 	if(int_flag)
 	{
 		cdata.m_startBit = bits;
-		concurrency::parallel_for_each( av, tileK0,
-				[
-					keys_first,
-					values_first,
-					dvSwapInputKeys,
-					dvSwapInputValues,
-					dvHistogramBins,
-					cdata,
-					swap,
-					Asc_sort,
-					tileK0
-				] ( concurrency::tiled_index< localSize > t_idx ) restrict(amp)
-		  {
+		concurrency::parallel_for_each(
+			av,
+			tileK0,
+			[=](concurrency::tiled_index<localSize> t_idx) restrict(amp) {
 
 			tile_static unsigned int ldsSortData[WG_SIZE*ELEMENTS_PER_WORK_ITEM+WG_SIZE];
 			tile_static Values ldsSortVal[WG_SIZE*ELEMENTS_PER_WORK_ITEM+16];
@@ -992,76 +989,122 @@ void sort_by_key_enqueue_int_uint( control &ctl,
     template<typename DVKeys, typename DVValues, typename StrictWeakOrdering>
     static
     inline
-    typename std::enable_if< std::is_same< typename std::iterator_traits<DVKeys >::value_type,
-                                           int
-                                         >::value
-                           >::type  /*If enabled then this typename will be evaluated to void*/
-    sort_by_key_enqueue( control &ctl,
-                         DVKeys keys_first, DVKeys keys_last,
-                         DVValues values_first,
-							 StrictWeakOrdering comp)
+    typename std::enable_if<
+        std::is_same<
+            typename std::iterator_traits<DVKeys>::value_type, int>::value
+    >::type  /*If enabled then this typename will be evaluated to void*/
+    sort_by_key_enqueue(
+        control &ctl,
+        DVKeys keys_first,
+        DVKeys keys_last,
+        DVValues values_first,
+        StrictWeakOrdering comp)
 	{
 		bool int_flag = 1;
-		sort_by_key_enqueue_int_uint(ctl, keys_first, keys_last, values_first, comp, int_flag);
-		return;
-	}
-    template<typename DVKeys, typename DVValues, typename StrictWeakOrdering>
-    static
-    inline
-    typename std::enable_if< std::is_same< typename std::iterator_traits<DVKeys >::value_type,
-                                           unsigned int
-                                         >::value
-                           >::type  /*If enabled then this typename will be evaluated to void*/
-    sort_by_key_enqueue( control &ctl,
-                         DVKeys keys_first, DVKeys keys_last,
-                         DVValues values_first,
-                         StrictWeakOrdering comp)
-	{
-		bool int_flag = 0;
-		sort_by_key_enqueue_int_uint(ctl, keys_first, keys_last, values_first, comp, int_flag);
+		sort_by_key_enqueue_int_uint(
+            ctl,
+            keys_first,
+            keys_last,
+            values_first,
+            comp,
+            int_flag);
 		return;
 	}
 
-	template< typename DVKeys, typename DVValues, typename StrictWeakOrdering>
-        static
-        inline
+    template<typename DVKeys, typename DVValues, typename StrictWeakOrdering>
+    static
+    inline
     typename std::enable_if<
-        !( std::is_same< typename std::iterator_traits<DVKeys >::value_type, unsigned int >::value ||
-           std::is_same< typename std::iterator_traits<DVKeys >::value_type, int >::value
-         )
-                           >::type
-    sort_by_key_enqueue(control &ctl, const DVKeys& keys_first,
-                        const DVKeys& keys_last, const DVValues& values_first,
-                        const StrictWeakOrdering& comp)
+        std::is_same<
+            typename std::iterator_traits<DVKeys>::value_type, unsigned int
+            >::value
+        >::type  /*If enabled then this typename will be evaluated to void*/
+    sort_by_key_enqueue(
+        control& ctl,
+        DVKeys keys_first,
+        DVKeys keys_last,
+        DVValues values_first,
+        StrictWeakOrdering comp)
+	{
+		bool int_flag = 0;
+		sort_by_key_enqueue_int_uint(
+            ctl,
+            keys_first,
+            keys_last,
+            values_first,
+            comp,
+            int_flag);
+		return;
+	}
+
+	template<typename DVKeys, typename DVValues, typename StrictWeakOrdering>
+    static
+    inline
+    typename std::enable_if<
+        !(std::is_same<
+            typename std::iterator_traits<DVKeys>::value_type, unsigned int
+          >::value ||
+          std::is_same<typename std::iterator_traits<DVKeys>::value_type, int
+          >::value)
+    >::type
+    sort_by_key_enqueue(
+        control& ctl,
+        const DVKeys& keys_first,
+        const DVKeys& keys_last,
+        const DVValues& values_first,
+        const StrictWeakOrdering& comp)
     {
-        stablesort_by_key_enqueue(ctl, keys_first, keys_last, values_first, comp);
+        stablesort_by_key_enqueue(
+            ctl,
+            keys_first,
+            keys_last,
+            values_first,
+            comp);
         return;
     }// END of sort_by_key_enqueue
 
 
 
     //Fancy iterator specialization
-    template<typename DVRandomAccessIterator1, typename DVRandomAccessIterator2, typename StrictWeakOrdering>
+    template<
+        typename DVRandomAccessIterator1,
+        typename DVRandomAccessIterator2,
+        typename StrictWeakOrdering>
     static
     inline
-    void sort_by_key_pick_iterator(control &ctl, DVRandomAccessIterator1 keys_first,
-                                   DVRandomAccessIterator1 keys_last, DVRandomAccessIterator2 values_first,
-                                   StrictWeakOrdering comp,  bolt::amp::fancy_iterator_tag )
+    void sort_by_key_pick_iterator(
+        control &ctl,
+        DVRandomAccessIterator1 keys_first,
+        DVRandomAccessIterator1 keys_last,
+        DVRandomAccessIterator2 values_first,
+        StrictWeakOrdering comp,
+        bolt::amp::fancy_iterator_tag)
     {
-        static_assert( std::is_same<DVRandomAccessIterator1, bolt::amp::fancy_iterator_tag  >::value, "It is not possible to output to fancy iterators; they are not mutable! " );
+        static_assert(
+            std::is_same<
+                DVRandomAccessIterator1, bolt::amp::fancy_iterator_tag>::value,
+            "It is not possible to output to fancy iterators; they are not "
+            "mutable!");
     }
 
     //Device Vector specialization
-    template<typename DVRandomAccessIterator1, typename DVRandomAccessIterator2, typename StrictWeakOrdering>
+    template<
+        typename DVRandomAccessIterator1,
+        typename DVRandomAccessIterator2,
+        typename StrictWeakOrdering>
     static
     inline
-    void sort_by_key_pick_iterator(control &ctl, DVRandomAccessIterator1 keys_first,
-                                   DVRandomAccessIterator1 keys_last, DVRandomAccessIterator2 values_first,
-                                   StrictWeakOrdering comp,
-                                   bolt::amp::device_vector_tag, bolt::amp::device_vector_tag )
+    void sort_by_key_pick_iterator(
+        control &ctl,
+        DVRandomAccessIterator1 keys_first,
+        DVRandomAccessIterator1 keys_last,
+        DVRandomAccessIterator2 values_first,
+        StrictWeakOrdering comp,
+        bolt::amp::device_vector_tag,
+        bolt::amp::device_vector_tag)
     {
-        typedef typename std::iterator_traits< DVRandomAccessIterator1 >::value_type keyType;
-        typedef typename std::iterator_traits< DVRandomAccessIterator2 >::value_type valueType;
+        typedef typename std::iterator_traits<DVRandomAccessIterator1>::value_type keyType;
+        typedef typename std::iterator_traits<DVRandomAccessIterator2>::value_type valueType;
         // User defined Data types are not supported with device_vector. Hence we have a static assert here.
         // The code here should be in compliant with the routine following this routine.
         unsigned int szElements = (unsigned int)(keys_last - keys_first);
@@ -1092,7 +1135,9 @@ void sort_by_key_enqueue_int_uint( control &ctl,
                                                 &valuesPtr[values_first.m_Index], comp);
                 return;
             #else
-               throw std::runtime_error( "The MultiCoreCpu version of Sort_by_key is not enabled to be built with TBB!\n");
+               throw std::runtime_error{
+                   "The MultiCoreCpu version of Sort_by_key is not enabled to "
+                   "be built with TBB!\n"};
             #endif
         }
 
@@ -1106,15 +1151,22 @@ void sort_by_key_enqueue_int_uint( control &ctl,
     //Non Device Vector specialization.
     //This implementation creates a Buffer and passes the AMP buffer to the
     //sort specialization whichtakes the AMP buffer as a parameter.
-    //In the future, Each input buffer should be mapped to the device_vector and the
-    //specialization specific to device_vector should be called.
-    template<typename RandomAccessIterator1, typename RandomAccessIterator2, typename StrictWeakOrdering>
+    //In the future, Each input buffer should be mapped to the device_vector and
+    //the specialization specific to device_vector should be called.
+    template<
+        typename RandomAccessIterator1,
+        typename RandomAccessIterator2,
+        typename StrictWeakOrdering>
     static
     inline
-    void sort_by_key_pick_iterator(control &ctl, RandomAccessIterator1 keys_first,
-                                   RandomAccessIterator1 keys_last, RandomAccessIterator2 values_first,
-                                   StrictWeakOrdering comp,
-                                   std::random_access_iterator_tag, std::random_access_iterator_tag )
+    void sort_by_key_pick_iterator(
+        control& ctl,
+        RandomAccessIterator1 keys_first,
+        RandomAccessIterator1 keys_last,
+        RandomAccessIterator2 values_first,
+        StrictWeakOrdering comp,
+        std::random_access_iterator_tag,
+        std::random_access_iterator_tag)
     {
 
         typedef typename std::iterator_traits<RandomAccessIterator1>::value_type T_keys;
@@ -1134,26 +1186,38 @@ void sort_by_key_enqueue_int_uint( control &ctl,
             serialCPU_sort_by_key(keys_first, keys_last, values_first, comp);
             return;
         }
-		else if (runMode == bolt::amp::control::MultiCoreCpu)
-		{
+		else if (runMode == bolt::amp::control::MultiCoreCpu) {
             #ifdef ENABLE_TBB
                 serialCPU_sort_by_key(keys_first, keys_last, values_first, comp);
                 return;
             #else
-                throw std::runtime_error("The MultiCoreCpu Version of Sort_by_key is not enabled to be built with TBB!\n");
+                throw std::runtime_error{
+                    "The MultiCoreCpu Version of Sort_by_key is not enabled to "
+                    "be built with TBB!\n"};
             #endif
         }
-		else
-		{
-
-			device_vector< T_keys, concurrency::array_view > dvInputKeys(   keys_first, keys_last, false, ctl );
-			device_vector<  T_values, concurrency::array_view > dvInputValues(  values_first, szElements, false, ctl );
+		else {
+			device_vector<T_keys, concurrency::array_view> dvInputKeys{
+                keys_first,
+                keys_last,
+                false,
+                ctl};
+			device_vector<T_values, concurrency::array_view> dvInputValues{
+                values_first,
+                szElements,
+                false,
+                ctl};
 
             //Now call the actual AMP algorithm
-            sort_by_key_enqueue(ctl,dvInputKeys.begin(),dvInputKeys.end(), dvInputValues.begin(), comp);
+            sort_by_key_enqueue(
+                ctl,
+                dvInputKeys.begin(),
+                dvInputKeys.end(),
+                dvInputValues.begin(),
+                comp);
             //Map the buffer back to the host
-            dvInputValues.data( );
-            dvInputKeys.data( );
+            dvInputValues.data();
+            dvInputKeys.data();
             return;
         }
     }
@@ -1189,150 +1253,196 @@ void sort_by_key_enqueue_int_uint( control &ctl,
         static_assert(std::is_same< RandomAccessIterator2, std::input_iterator_tag >::value , "Bolt only supports random access iterator types" );
     };
 
-    template< typename RandomAccessIterator1, typename RandomAccessIterator2, typename StrictWeakOrdering >
+    template<
+        typename RandomAccessIterator1,
+        typename RandomAccessIterator2,
+        typename StrictWeakOrdering>
     static
     inline
-    void sort_by_key_detect_random_access( control &ctl,
-                                    const RandomAccessIterator1 keys_first, const RandomAccessIterator1 keys_last,
-                                    const RandomAccessIterator2 values_first,
-                                    const StrictWeakOrdering& comp,
-                                    bolt::amp::fancy_iterator_tag, std::input_iterator_tag )
+    void sort_by_key_detect_random_access(
+        control& ctl,
+        const RandomAccessIterator1 keys_first,
+        const RandomAccessIterator1 keys_last,
+        const RandomAccessIterator2 values_first,
+        const StrictWeakOrdering& comp,
+        bolt::amp::fancy_iterator_tag,
+        std::input_iterator_tag )
     {
-        static_assert( std::is_same< RandomAccessIterator1, bolt::amp::fancy_iterator_tag >::value , "It is not possible to sort fancy iterators. They are not mutable" );
-        static_assert( std::is_same< RandomAccessIterator2, std::input_iterator_tag >::value , "It is not possible to sort fancy iterators. They are not mutable" );
+        static_assert(
+            std::is_same<
+                RandomAccessIterator1, bolt::amp::fancy_iterator_tag>::value,
+            "It is not possible to sort fancy iterators. They are not mutable");
+        static_assert(
+            std::is_same<RandomAccessIterator2, std::input_iterator_tag>::value,
+            "It is not possible to sort fancy iterators. They are not mutable");
     }
 
-    template< typename RandomAccessIterator1, typename RandomAccessIterator2, typename StrictWeakOrdering >
+    template<
+        typename RandomAccessIterator1,
+        typename RandomAccessIterator2,
+        typename StrictWeakOrdering>
     static
     inline
-    void sort_by_key_detect_random_access( control &ctl,
-                                    const RandomAccessIterator1 keys_first, const RandomAccessIterator1 keys_last,
-                                    const RandomAccessIterator2 values_first,
-                                    const StrictWeakOrdering& comp,
-                                    std::input_iterator_tag, bolt::amp::fancy_iterator_tag )
+    void sort_by_key_detect_random_access(
+        control& ctl,
+        const RandomAccessIterator1 keys_first,
+        const RandomAccessIterator1 keys_last,
+        const RandomAccessIterator2 values_first,
+        const StrictWeakOrdering& comp,
+        std::input_iterator_tag,
+        bolt::amp::fancy_iterator_tag)
     {
-
-
-        static_assert( std::is_same< RandomAccessIterator2, bolt::amp::fancy_iterator_tag >::value , "It is not possible to sort fancy iterators. They are not mutable" );
-        static_assert( std::is_same< RandomAccessIterator1, std::input_iterator_tag >::value , "It is not possible to sort fancy iterators. They are not mutable" );
+        static_assert(
+            std::is_same<
+                RandomAccessIterator2, bolt::amp::fancy_iterator_tag>::value,
+            "It is not possible to sort fancy iterators. They are not mutable");
+        static_assert(
+            std::is_same<RandomAccessIterator1, std::input_iterator_tag>::value,
+            "It is not possible to sort fancy iterators. They are not mutable");
 
     }
-
-
 }//namespace bolt::amp::detail
 
 
-        template<typename RandomAccessIterator1,
-				 typename RandomAccessIterator2,
-				 typename std::enable_if<sizeof(typename std::iterator_traits<RandomAccessIterator1>::value_type) % sizeof(int) == 0 &&
-				                         sizeof(typename std::iterator_traits<RandomAccessIterator2>::value_type) % sizeof(int) == 0>::type* = nullptr>
+        template<
+            typename RandomAccessIterator1,
+			typename RandomAccessIterator2,
+			typename std::enable_if<
+                sizeof(typename std::iterator_traits<RandomAccessIterator1>::value_type) % sizeof(int) == 0 &&
+				sizeof(typename std::iterator_traits<RandomAccessIterator2>::value_type) % sizeof(int) == 0>::type* = nullptr>
         static
         inline
-        void sort_by_key(RandomAccessIterator1 keys_first,
-                         RandomAccessIterator1 keys_last,
-                         RandomAccessIterator2 values_first)
+        void sort_by_key(
+            RandomAccessIterator1 keys_first,
+            RandomAccessIterator1 keys_last,
+            RandomAccessIterator2 values_first)
         {
             typedef typename std::iterator_traits< RandomAccessIterator1 >::value_type keys_T;
 
-            detail::sort_by_key_detect_random_access( control::getDefault( ),
-                                       keys_first, keys_last,
-                                       values_first,
-                                       less< keys_T >( ),
-                                       typename std::iterator_traits< RandomAccessIterator1 >::iterator_category( ),
-                                       typename std::iterator_traits< RandomAccessIterator2 >::iterator_category( ) );
+            detail::sort_by_key_detect_random_access(
+                control::getDefault(),
+                keys_first,
+                keys_last,
+                values_first,
+                less<keys_T>{},
+                typename std::iterator_traits<RandomAccessIterator1>::iterator_category(),
+                typename std::iterator_traits<RandomAccessIterator2>::iterator_category());
             return;
         }
 
-		template<typename RandomAccessIterator1,
-				 typename RandomAccessIterator2,
-				 typename std::enable_if<sizeof(typename std::iterator_traits<RandomAccessIterator1>::value_type) % sizeof(int) != 0 ||
-						                 sizeof(typename std::iterator_traits<RandomAccessIterator2>::value_type) % sizeof(int) != 0>::type* = nullptr>
+		template<
+            typename RandomAccessIterator1,
+			typename RandomAccessIterator2,
+			typename std::enable_if<
+                sizeof(typename std::iterator_traits<RandomAccessIterator1>::value_type) % sizeof(int) != 0 ||
+				sizeof(typename std::iterator_traits<RandomAccessIterator2>::value_type) % sizeof(int) != 0>::type* = nullptr>
 		static
 		inline
-		void sort_by_key(RandomAccessIterator1 keys_first,
-				RandomAccessIterator1 keys_last,
-				RandomAccessIterator2 values_first)
+		void sort_by_key(
+            RandomAccessIterator1 keys_first,
+			RandomAccessIterator1 keys_last,
+			RandomAccessIterator2 values_first)
 		{
 			detail::serialCPU_sort_by_key(keys_first, keys_last, values_first);
 		}
 
-        template<typename RandomAccessIterator1,
-				 typename RandomAccessIterator2,
-				 typename StrictWeakOrdering,
-				 typename std::enable_if<sizeof(typename std::iterator_traits<RandomAccessIterator1>::value_type) % sizeof(int) == 0 &&
-				                         sizeof(typename std::iterator_traits<RandomAccessIterator2>::value_type) % sizeof(int) == 0>::type* = nullptr>
+        template<
+            typename RandomAccessIterator1,
+			typename RandomAccessIterator2,
+			typename StrictWeakOrdering,
+			typename std::enable_if<
+                sizeof(typename std::iterator_traits<RandomAccessIterator1>::value_type) % sizeof(int) == 0 &&
+			    sizeof(typename std::iterator_traits<RandomAccessIterator2>::value_type) % sizeof(int) == 0>::type* = nullptr>
         static
         inline
-        void sort_by_key(RandomAccessIterator1 keys_first,
-                         RandomAccessIterator1 keys_last,
-                         RandomAccessIterator2 values_first,
-                         StrictWeakOrdering comp)
+        void sort_by_key(
+            RandomAccessIterator1 keys_first,
+            RandomAccessIterator1 keys_last,
+            RandomAccessIterator2 values_first,
+            StrictWeakOrdering comp)
         {
 //            typedef typename std::iterator_traits< RandomAccessIterator1 >::value_type keys_T;
 
-            detail::sort_by_key_detect_random_access( control::getDefault( ),
-                                       keys_first, keys_last,
-                                       values_first,
-                                       comp,
-                                       typename std::iterator_traits< RandomAccessIterator1 >::iterator_category( ),
-                                       typename std::iterator_traits< RandomAccessIterator2 >::iterator_category( ) );
+            detail::sort_by_key_detect_random_access(
+                control::getDefault(),
+                keys_first,
+                keys_last,
+                values_first,
+                comp,
+                typename std::iterator_traits<RandomAccessIterator1>::iterator_category{},
+                typename std::iterator_traits<RandomAccessIterator2>::iterator_category{});
             return;
         }
 
-		template<typename RandomAccessIterator1,
-				 typename RandomAccessIterator2,
-				 typename StrictWeakOrdering,
-				 typename std::enable_if<sizeof(typename std::iterator_traits<RandomAccessIterator1>::value_type) % sizeof(int) != 0 ||
-				                         sizeof(typename std::iterator_traits<RandomAccessIterator2>::value_type) % sizeof(int) != 0>::type* = nullptr>
+		template<
+            typename RandomAccessIterator1,
+			typename RandomAccessIterator2,
+			typename StrictWeakOrdering,
+			typename std::enable_if<
+                sizeof(typename std::iterator_traits<RandomAccessIterator1>::value_type) % sizeof(int) != 0 ||
+				sizeof(typename std::iterator_traits<RandomAccessIterator2>::value_type) % sizeof(int) != 0>::type* = nullptr>
 		static
 		inline
-		void sort_by_key(RandomAccessIterator1 keys_first,
-				RandomAccessIterator1 keys_last,
-				RandomAccessIterator2 values_first,
-				StrictWeakOrdering comp)
+		void sort_by_key(
+            RandomAccessIterator1 keys_first,
+			RandomAccessIterator1 keys_last,
+			RandomAccessIterator2 values_first,
+			StrictWeakOrdering comp)
 		{
-			detail::serialCPU_sort_by_key(keys_first, keys_last, values_first, comp);
+			detail::serialCPU_sort_by_key(
+                keys_first,
+                keys_last,
+                values_first,
+                comp);
 		}
 
-        template<typename RandomAccessIterator1 , typename RandomAccessIterator2>
+        template<typename RandomAccessIterator1, typename RandomAccessIterator2>
         static
         inline
-        void sort_by_key(control &ctl,
-                         RandomAccessIterator1 keys_first,
-                         RandomAccessIterator1 keys_last,
-                         RandomAccessIterator2 values_first)
+        void sort_by_key(
+            control &ctl,
+            RandomAccessIterator1 keys_first,
+            RandomAccessIterator1 keys_last,
+            RandomAccessIterator2 values_first)
         {
-            typedef typename std::iterator_traits< RandomAccessIterator1 >::value_type keys_T;
+            typedef typename std::iterator_traits<RandomAccessIterator1>::value_type keys_T;
 
-            detail::sort_by_key_detect_random_access( ctl,
-                                       keys_first, keys_last,
-                                       values_first,
-                                       less< keys_T >( ),
-                                       typename std::iterator_traits< RandomAccessIterator1 >::iterator_category( ),
-                                       typename std::iterator_traits< RandomAccessIterator2 >::iterator_category( ) );
+            detail::sort_by_key_detect_random_access(
+                ctl,
+                keys_first,
+                keys_last,
+                values_first,
+                less<keys_T>{},
+                typename std::iterator_traits<RandomAccessIterator1>::iterator_category{},
+                typename std::iterator_traits<RandomAccessIterator2>::iterator_category{});
             return;
         }
 
-        template<typename RandomAccessIterator1 , typename RandomAccessIterator2, typename StrictWeakOrdering>
+        template<
+            typename RandomAccessIterator1,
+            typename RandomAccessIterator2,
+            typename StrictWeakOrdering>
         static
         inline
-        void sort_by_key(control &ctl,
-                         RandomAccessIterator1 keys_first,
-                         RandomAccessIterator1 keys_last,
-                         RandomAccessIterator2 values_first,
-                         StrictWeakOrdering comp)
+        void sort_by_key(
+            control &ctl,
+            RandomAccessIterator1 keys_first,
+            RandomAccessIterator1 keys_last,
+            RandomAccessIterator2 values_first,
+            StrictWeakOrdering comp)
         {
 //            typedef typename std::iterator_traits< RandomAccessIterator1 >::value_type keys_T;
 
-            detail::sort_by_key_detect_random_access( ctl,
-                                       keys_first, keys_last,
-                                       values_first,
-                                       comp,
-                                       typename std::iterator_traits< RandomAccessIterator1 >::iterator_category( ),
-                                       typename std::iterator_traits< RandomAccessIterator2 >::iterator_category( ) );
+            detail::sort_by_key_detect_random_access(
+                ctl,
+                keys_first,
+                keys_last,
+                values_first,
+                comp,
+                typename std::iterator_traits<RandomAccessIterator1>::iterator_category{},
+                typename std::iterator_traits<RandomAccessIterator2>::iterator_category{});
             return;
         }
-
     }
 };
 

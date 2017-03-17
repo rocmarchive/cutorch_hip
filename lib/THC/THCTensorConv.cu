@@ -1,8 +1,12 @@
-#include "hip/hip_runtime.h"
 #include "THCTensorConv.h"
 #include "THCTensorMath.h"
 #include "THCTensorCopy.h"
 #include "THCGeneral.h"
+
+#include "hip/hip_runtime.h"
+
+#include <GGL/grid_launch.hpp>
+
 #include <stdio.h>
 
 /*
@@ -381,7 +385,7 @@ THC_API void THCudaTensor_conv2Dmv(THCState *state, THCudaTensor *output, float 
   // convolution: xcorr2 or conv2
   if (type[1] == 'x') {
 #define X_CONV_KERNEL(dim)                                              \
-    hipLaunchKernel(HIP_KERNEL_NAME(conv2generic<false, (dim), (dim)>), \
+    hipLaunchKernelV2(HIP_KERNEL_NAME(conv2generic<false, (dim), (dim)>), \
                     dim3(blocks),                                       \
                     dim3(threads),                                      \
                     0,                                                  \
@@ -402,7 +406,7 @@ THC_API void THCudaTensor_conv2Dmv(THCState *state, THCudaTensor *output, float 
 #undef X_CONV_KERNEL
   } else { // 'c'
 #define C_CONV_KERNEL(dim)                                             \
-    hipLaunchKernel(HIP_KERNEL_NAME(conv2generic<true, (dim), (dim)>), \
+    hipLaunchKernelV2(HIP_KERNEL_NAME(conv2generic<true, (dim), (dim)>), \
                     dim3(blocks),                                      \
                     dim3(threads),                                     \
                     0,                                                 \
@@ -524,7 +528,7 @@ THC_API void THCudaTensor_conv2Dmm(THCState *state, THCudaTensor *output, float 
   // convolution: xcorr2 or conv2
   if (type[1] == 'x') {
 #define X_CONV_KERNEL(dim)                                              \
-    hipLaunchKernel(HIP_KERNEL_NAME(conv2generic<false, (dim), (dim)>), \
+    hipLaunchKernelV2(HIP_KERNEL_NAME(conv2generic<false, (dim), (dim)>), \
                     dim3(blocks),                                       \
                     dim3(threads),                                      \
                     0,                                                  \
@@ -545,7 +549,7 @@ THC_API void THCudaTensor_conv2Dmm(THCState *state, THCudaTensor *output, float 
 #undef X_CONV_KERNEL
   } else { // 'c'
 #define C_CONV_KERNEL(dim)                                             \
-    hipLaunchKernel(HIP_KERNEL_NAME(conv2generic<true, (dim), (dim)>), \
+    hipLaunchKernelV2(HIP_KERNEL_NAME(conv2generic<true, (dim), (dim)>), \
                     dim3(blocks),                                      \
                     dim3(threads),                                     \
                     0,                                                 \
@@ -643,7 +647,7 @@ THC_API void THCudaTensor_conv2DRevger(THCState *state, THCudaTensor *output, fl
   dim3 threads(128/nOutputRows, nOutputRows);
 
   // compute rev conv
-  hipLaunchKernel(HIP_KERNEL_NAME(conv2genericrev),
+  hipLaunchKernelV2(HIP_KERNEL_NAME(conv2genericrev),
                   dim3(blocks),
                   dim3(threads),
                   0,
@@ -734,7 +738,7 @@ THC_API void THCudaTensor_conv2DRevgerm(THCState *state, THCudaTensor *output, f
     dim3 threads(cst, nOutputRows, subbatch);
 
     // compute rev conv
-    hipLaunchKernel(HIP_KERNEL_NAME(conv2genericrev),
+    hipLaunchKernelV2(HIP_KERNEL_NAME(conv2genericrev),
                     dim3(blocks),
                     dim3(threads),
                     0,
@@ -1003,7 +1007,7 @@ THC_API void THCudaTensor_conv2Dmap(THCState *state, THCudaTensor *output, THCud
   dim3 threads(nthreads_x,nthreads_y);
 
 #define GENERIC_MAP_KERNEL(dim)                                           \
-   hipLaunchKernel(HIP_KERNEL_NAME(conv2mapgeneric<false, (dim), (dim)>), \
+   hipLaunchKernelV2(HIP_KERNEL_NAME(conv2mapgeneric<false, (dim), (dim)>), \
                    dim3(blocks),                                          \
                    dim3(threads),                                         \
                    0,                                                     \

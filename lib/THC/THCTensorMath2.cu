@@ -33,6 +33,7 @@ struct TensorTPowOp {
   __device__ __forceinline__
   void operator()(float* v) const { *v = powf(val, *v); }
 
+
   __host__ __device__
   ~TensorTPowOp() {}
 

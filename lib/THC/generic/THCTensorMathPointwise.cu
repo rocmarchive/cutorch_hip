@@ -5,7 +5,7 @@
 #define IMPLEMENT_CUDA_TENSOR_BASIC_FUNC_(NAME, CFUNC, REAL)                       \
   struct Tensor_##NAME##_##REAL##_Op {                                             \
     __device__ __forceinline__                                                     \
-    void operator()(real* out, real* in) const { *out = CFUNC(*in); }              \
+    void operator()(real* out, const real* in) const { *out = CFUNC(*in); }        \
                                                                                    \
     __device__ __forceinline__                                                     \
     void operator()(real* v) const { *v = CFUNC(*v); }                             \
@@ -98,8 +98,13 @@ void THCTensor_(clamp)(THCState *state, THCTensor *self_, THCTensor *src, real m
   THCudaCheck(hipGetLastError());
 }
 
-THC_API void
-THCTensor_(cross)(THCState *state, THCTensor *self, THCTensor *x, THCTensor *y, int dimension)
+THC_API
+void THCTensor_(cross)(
+    THCState* state,
+    THCTensor* self,
+    THCTensor* x,
+    THCTensor* y,
+    int dimension)
 {
   THAssert(THCTensor_(checkGPU)(state, 3, self, x, y));
 
@@ -183,8 +188,8 @@ THCTensor_(lerp)(THCState *state, THCTensor *result, THCTensor *a, THCTensor *b,
 
 #endif
 
-THC_API void
-THCTensor_(cadd)(THCState *state, THCTensor *self_, THCTensor* src1, real value, THCTensor *src2)
+THC_API
+void THCTensor_(cadd)(THCState *state, THCTensor *self_, THCTensor* src1, real value, THCTensor *src2)
 {
   THAssert(THCTensor_(checkGPU)(state, 3, self_, src1, src2));
   THArgCheck(THCTensor_(nElement)(state, src1) ==
@@ -425,8 +430,14 @@ THCTensor_(addcmul)(THCState *state, THCTensor *self_, THCTensor *t, real value,
   THCudaCheck(hipGetLastError());
 }
 
-THC_API void
-THCTensor_(addcdiv)(THCState *state, THCTensor *self_, THCTensor *t, real value, THCTensor *src1, THCTensor *src2)
+THC_API
+void THCTensor_(addcdiv)(
+    THCState *state,
+    THCTensor *self_,
+    THCTensor *t,
+    real value,
+    THCTensor *src1,
+    THCTensor *src2)
 {
   THAssert(THCTensor_(checkGPU)(state, 4, self_, t, src1, src2));
   if(self_ != t)

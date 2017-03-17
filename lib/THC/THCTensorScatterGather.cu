@@ -1,7 +1,10 @@
-#include "hip/hip_runtime.h"
 #include "THCTensorMath.h"
 #include "THCGeneral.h"
 #include "THCApply.cuh"
+
+#include <hip/hip_runtime.h>
+
+#include <GGL/grid_launch.hpp>
 
 // Compute the offsets into the given tensors for a linear index. For the 't2'
 // tensor, dimension 'dim' is skipped. The tensors are assumed to have the same

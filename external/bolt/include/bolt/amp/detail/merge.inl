@@ -1,5 +1,5 @@
 /***************************************************************************
-*   © 2012,2014 Advanced Micro Devices, Inc. All rights reserved.
+*   ï¿½ 2012,2014 Advanced Micro Devices, Inc. All rights reserved.
 *
 *   Licensed under the Apache License, Version 2.0 (the "License");
 *   you may not use this file except in compliance with the License.
@@ -75,14 +75,19 @@ namespace bolt {
 
 
 
-    
-            //----
-            // This is the base implementation of reduction that is called by all of the convenience wrappers below.
-            // first and last must be iterators from a DeviceVector
 
-            template<typename DVInputIterator1,typename DVInputIterator2,typename DVOutputIterator, 
-            typename StrictWeakCompare>
-            DVOutputIterator  merge_enqueue(bolt::amp::control &ctl,
+            //----
+            // This is the base implementation of reduction that is called by
+            // all of the convenience wrappers below. first and last must be
+            // iterators from a DeviceVector
+
+            template<
+                typename DVInputIterator1,
+                typename DVInputIterator2,
+                typename DVOutputIterator,
+                typename StrictWeakCompare>
+            DVOutputIterator merge_enqueue(
+                bolt::amp::control &ctl,
                 const DVInputIterator1& first1,
                 const DVInputIterator1& last1,
                 const DVInputIterator2& first2,
@@ -93,7 +98,7 @@ namespace bolt {
                 typedef typename std::iterator_traits< DVInputIterator1 >::value_type iType1;
                 typedef typename std::iterator_traits< DVInputIterator2 >::value_type iType2;
                 typedef typename std::iterator_traits< DVOutputIterator >::value_type rType;
-                
+
 				const int length1 = static_cast< int >(std::distance(first1, last1));
 				const int length2 = static_cast< int >(std::distance(first2, last2));
 
@@ -106,7 +111,7 @@ namespace bolt {
 				{
 				concurrency::parallel_for_each(ctl.getAccelerator().default_view, inputExtent, [=](concurrency::index<1> idx) restrict(amp)
 				{
-					
+
 					int gx = idx[0];
 					int pos1, pos2;
 
@@ -135,16 +140,16 @@ namespace bolt {
                        std::cout << "Exception while calling bolt::amp::merge parallel_for_each " ;
                        std::cout<< e.what() << std::endl;
                        throw std::exception();
-                }	
+                }
 
 				return result + (last1 - first1) + (last2 - first2);;
 
             }
-  
+
 
             // This template is called after we detect random access iterators
             // This is called strictly for any non-device_vector iterator
-            template<typename InputIterator1,typename InputIterator2,typename OutputIterator, 
+            template<typename InputIterator1,typename InputIterator2,typename OutputIterator,
             typename StrictWeakCompare>
             OutputIterator merge_pick_iterator(bolt::amp::control &ctl,
                 const InputIterator1& first1,
@@ -172,7 +177,7 @@ namespace bolt {
 				#if defined(BOLT_DEBUG_LOG)
                 BOLTLOG::CaptureLog *dblog = BOLTLOG::CaptureLog::getInstance();
                 #endif
-				
+
                 switch(runMode)
                 {
                 case bolt::amp::control::Gpu :
@@ -192,8 +197,8 @@ namespace bolt {
                         dvresult.data( );
                         return result + (last1 - first1) + (last2 - first2);
                     }
-              
-                case bolt::amp::control::MultiCoreCpu: 
+
+                case bolt::amp::control::MultiCoreCpu:
                     #ifdef ENABLE_TBB
 					    #if defined(BOLT_DEBUG_LOG)
                         dblog->CodePathTaken(BOLTLOG::BOLT_MERGE,BOLTLOG::BOLT_MULTICORE_CPU,"::Merge::MULTICORE_CPU");
@@ -203,7 +208,7 @@ namespace bolt {
                         throw std::runtime_error( "The MultiCoreCpu version of merge is not enabled to be built! \n" );
                     #endif
 
-                case bolt::amp::control::SerialCpu: 
+                case bolt::amp::control::SerialCpu:
 				    #if defined(BOLT_DEBUG_LOG)
                     dblog->CodePathTaken(BOLTLOG::BOLT_MERGE,BOLTLOG::BOLT_SERIAL_CPU,"::Merge::SERIAL_CPU");
                     #endif
@@ -221,7 +226,7 @@ namespace bolt {
 
             // This template is called after we detect random access iterators
             // This is called strictly for iterators that are derived from device_vector< T >::iterator
-            template<typename DVInputIterator1,typename DVInputIterator2,typename DVOutputIterator, 
+            template<typename DVInputIterator1,typename DVInputIterator2,typename DVOutputIterator,
             typename StrictWeakCompare>
             DVOutputIterator merge_pick_iterator(bolt::amp::control &ctl,
                 const DVInputIterator1& first1,
@@ -245,7 +250,7 @@ namespace bolt {
                 #if defined(BOLT_DEBUG_LOG)
                 BOLTLOG::CaptureLog *dblog = BOLTLOG::CaptureLog::getInstance();
                 #endif
-				
+
                 switch(runMode)
                 {
                 case bolt::amp::control::Gpu :
@@ -253,8 +258,8 @@ namespace bolt {
                         dblog->CodePathTaken(BOLTLOG::BOLT_MERGE,BOLTLOG::BOLT_GPU,"::Merge::GPU");
                         #endif
                         return detail::merge_enqueue( ctl, first1, last1,first2, last2, result, comp);
-              
-                case bolt::amp::control::MultiCoreCpu: 
+
+                case bolt::amp::control::MultiCoreCpu:
                     #ifdef ENABLE_TBB
                     {
 					  #if defined(BOLT_DEBUG_LOG)
@@ -285,7 +290,7 @@ namespace bolt {
                     }
                     #endif
 
-                case bolt::amp::control::SerialCpu: 
+                case bolt::amp::control::SerialCpu:
                     {
 					  #if defined(BOLT_DEBUG_LOG)
                       dblog->CodePathTaken(BOLTLOG::BOLT_REDUCE,BOLTLOG::BOLT_SERIAL_CPU,"::Merge::SERIAL_CPU");
@@ -313,7 +318,7 @@ namespace bolt {
 					  #if defined(BOLT_DEBUG_LOG)
                       dblog->CodePathTaken(BOLTLOG::BOLT_REDUCE,BOLTLOG::BOLT_SERIAL_CPU,"::Merge::SERIAL_CPU");
                       #endif
-					  
+
                       typename  bolt::amp::device_vector< iType1 >::pointer mergeInputBuffer1 =  first1.getContainer( ).data( );
                       typename  bolt::amp::device_vector< iType2 >::pointer mergeInputBuffer2 =  first2.getContainer( ).data( );
                       typename  bolt::amp::device_vector< oType >::pointer mergeResBuffer =  result.getContainer( ).data( );
@@ -343,7 +348,7 @@ namespace bolt {
 
 
 
-            template<typename DVInputIterator1,typename DVInputIterator2,typename DVOutputIterator, 
+            template<typename DVInputIterator1,typename DVInputIterator2,typename DVOutputIterator,
             typename StrictWeakCompare>
             DVOutputIterator merge_detect_random_access(bolt::amp::control &ctl,
                 const DVInputIterator1& first1,
@@ -358,7 +363,7 @@ namespace bolt {
                     typename std::iterator_traits< DVInputIterator1 >::iterator_category( ) );
             }
 
-            template<typename DVInputIterator1,typename DVInputIterator2,typename DVOutputIterator, 
+            template<typename DVInputIterator1,typename DVInputIterator2,typename DVOutputIterator,
             typename StrictWeakCompare>
             DVOutputIterator merge_detect_random_access(bolt::amp::control &ctl,
                 const DVInputIterator1& first1,
@@ -374,20 +379,20 @@ namespace bolt {
                 static_assert( std::is_same< DVInputIterator1, bolt::amp::input_iterator_tag  >::value,
                     "Bolt only supports random access iterator types" );
             }
-            
+
       }
-        template<typename InputIterator1 , typename InputIterator2 , typename OutputIterator > 
-        OutputIterator merge (InputIterator1 first1, InputIterator1 last1, InputIterator2 first2, 
+        template<typename InputIterator1 , typename InputIterator2 , typename OutputIterator >
+        OutputIterator merge (InputIterator1 first1, InputIterator1 last1, InputIterator2 first2,
         InputIterator2 last2, OutputIterator result)
         {
 
            typedef typename std::iterator_traits<InputIterator1>::value_type iType1;
-            return merge(bolt::amp::control::getDefault(), first1, last1, first2,last2,result, 
+            return merge(bolt::amp::control::getDefault(), first1, last1, first2,last2,result,
                 bolt::amp::less<iType1>());
         };
 
 
-        template<typename InputIterator1 , typename InputIterator2 , typename OutputIterator > 
+        template<typename InputIterator1 , typename InputIterator2 , typename OutputIterator >
         OutputIterator merge (bolt::amp::control &ctl,InputIterator1 first1, InputIterator1 last1,
             InputIterator2 first2, InputIterator2 last2, OutputIterator result)
         {
@@ -398,16 +403,16 @@ namespace bolt {
 
 
         template<typename InputIterator1 , typename InputIterator2 , typename OutputIterator,
-            typename StrictWeakCompare > 
-        OutputIterator merge (InputIterator1 first1, InputIterator1 last1, InputIterator2 first2, 
+            typename StrictWeakCompare >
+        OutputIterator merge (InputIterator1 first1, InputIterator1 last1, InputIterator2 first2,
         InputIterator2 last2, OutputIterator result,StrictWeakCompare comp)
         {
             return merge(bolt::amp::control::getDefault(), first1, last1, first2,last2,result, comp);
         };
 
 
-        template<typename InputIterator1 , typename InputIterator2 , typename OutputIterator, 
-         typename StrictWeakCompare >  
+        template<typename InputIterator1 , typename InputIterator2 , typename OutputIterator,
+         typename StrictWeakCompare >
         OutputIterator merge (bolt::amp::control &ctl,InputIterator1 first1, InputIterator1 last1,
         InputIterator2 first2,InputIterator2 last2, OutputIterator result,StrictWeakCompare comp)
         {
@@ -416,7 +421,7 @@ namespace bolt {
                                typename std::iterator_traits< InputIterator1 >::iterator_category( ));
 
         };
- 
+
     }
 
 };

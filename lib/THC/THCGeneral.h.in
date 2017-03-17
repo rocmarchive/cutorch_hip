@@ -15,6 +15,8 @@
 #include "hip/hip_runtime_api.h"
 #include "hipblas.h"
 
+#include <GGL/grid_launch.hpp>
+
 //#define USE_MAGMA
 
 #ifdef __cplusplus

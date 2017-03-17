@@ -10,7 +10,8 @@
 template <typename T>
 __host__ __device__ __forceinline__
 static
-T THCCeilDiv(T a, T b) {
+T THCCeilDiv(T a, T b)
+{
   return (a + b - 1) / b;
 }
 

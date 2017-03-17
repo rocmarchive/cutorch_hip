@@ -46,75 +46,104 @@
 
 namespace bolt
 {
-namespace amp
-{
-namespace detail
-{
-
-namespace serial{
-
-
-
-	template<typename InputIterator1, typename InputIterator2, typename Stencil, typename OutputIterator, typename BinaryFunction, typename Predicate>
-    static
-    inline
-    typename std::enable_if<
-               std::is_same< typename std::iterator_traits< OutputIterator >::iterator_category ,
-                                       bolt::amp::device_vector_tag
-                           >::value
-                           >::type
-    binary_transform_if( bolt::amp::control &ctl,  InputIterator1 first1,  InputIterator1 last1,
-                         InputIterator2 first2,  Stencil& s,  OutputIterator result,  BinaryFunction f,  Predicate p)
+    namespace amp
     {
-            typename std::iterator_traits<InputIterator1>::difference_type sz = (last1 - first1);
-            if (sz == 0)
-                return;
-
-
-            auto mapped_first1_itr = create_mapped_iterator(typename std::iterator_traits<InputIterator1>::iterator_category(),
-                                                           ctl, first1);
-            auto mapped_first2_itr = create_mapped_iterator(typename std::iterator_traits<InputIterator2>::iterator_category(),
-                                                           ctl, first2);
-			auto mapped_first3_itr = create_mapped_iterator(typename std::iterator_traits<Stencil>::iterator_category(),
-                                                           ctl, s);
-            auto mapped_result_itr = create_mapped_iterator(typename std::iterator_traits<OutputIterator>::iterator_category(),
-                                                           ctl, result);
-
-
-            for(int index=0; index < (int)(sz); index++)
+        namespace detail
+        {
+            namespace serial
             {
-				if(p(mapped_first3_itr[index]))
-                   *(mapped_result_itr + index) = f( *(mapped_first1_itr+index), *(mapped_first2_itr+index) );
-				else
-				   *(mapped_result_itr + index) = *(mapped_first1_itr+index);
+                template<
+                    typename InputIterator1,
+                    typename InputIterator2,
+                    typename Stencil,
+                    typename OutputIterator,
+                    typename BinaryFunction,
+                    typename Predicate>
+                static
+                inline
+                typename std::enable_if<std::is_same<
+                    typename std::iterator_traits<OutputIterator>::iterator_category,
+                    bolt::amp::device_vector_tag
+                    >::value
+                >::type
+                binary_transform_if(
+                    bolt::amp::control &ctl,
+                    InputIterator1 first1,
+                    InputIterator1 last1,
+                    InputIterator2 first2,
+                    Stencil& s,
+                    OutputIterator result,
+                    BinaryFunction f,
+                    Predicate p)
+            {
+                typename std::iterator_traits<InputIterator1>::difference_type sz = (last1 - first1);
+                if (sz == 0) return;
+
+                auto mapped_first1_itr = create_mapped_iterator(
+                    typename std::iterator_traits<InputIterator1>::iterator_category{},
+                    ctl,
+                    first1);
+                auto mapped_first2_itr = create_mapped_iterator(
+                    typename std::iterator_traits<InputIterator2>::iterator_category{},
+                    ctl,
+                    first2);
+			    auto mapped_first3_itr = create_mapped_iterator(
+                    typename std::iterator_traits<Stencil>::iterator_category{},
+                    ctl,
+                    s);
+                auto mapped_result_itr = create_mapped_iterator(
+                    typename std::iterator_traits<OutputIterator>::iterator_category{},
+                    ctl,
+                    result);
+
+
+                for(decltype(sz) index=0; index != sz; ++index) {
+                    if(p(mapped_first3_itr[index]))
+                       mapped_result_itr[index] =
+                           f(mapped_first1_itr[index], mapped_first2_itr[index]);
+                    else
+                       mapped_result_itr[index] = mapped_first1_itr[index];
+                }
+
+                return;
             }
 
-            return;
-    }
 
+            template<
+                typename InputIterator1,
+                typename InputIterator2,
+                typename Stencil,
+                typename OutputIterator,
+                typename BinaryFunction,
+                typename Predicate>
+            static
+            inline
+            typename std::enable_if<std::is_same<
+                typename std::iterator_traits<OutputIterator>::iterator_category,
+                std::random_access_iterator_tag
+                >::value
+            >::type
+            binary_transform_if(
+                bolt::amp::control &ctl,
+                InputIterator1 first1,
+                InputIterator1 last1,
+                InputIterator2 first2,
+                Stencil& s,
+                OutputIterator result,
+                BinaryFunction f,
+                Predicate p)
+            {
+                size_t sz = (last1 - first1);
 
-	template<typename InputIterator1, typename InputIterator2, typename Stencil, typename OutputIterator, typename BinaryFunction, typename Predicate>
-    static
-    inline
-    typename std::enable_if<
-               std::is_same< typename std::iterator_traits< OutputIterator >::iterator_category ,
-                                       std::random_access_iterator_tag
-                           >::value
-                           >::type
-    binary_transform_if( bolt::amp::control &ctl,  InputIterator1 first1,  InputIterator1 last1,
-                         InputIterator2 first2,   Stencil& s,  OutputIterator result,  BinaryFunction f,  Predicate p)
-    {
-        size_t sz = (last1 - first1);
-        if (sz == 0)
-            return;
-        for(int index=0; index < (int)(sz); index++)
-        {
-			if(p(s[index]))
-             *(result + index) = f( *(first1+index), *(first2+index) );
-			else
-              *(result + index) = *(first1+index);
-        }
-    }
+                if (sz == 0) return;
+
+                for(decltype(sz) index=0; index != sz; ++index) {
+                    if(p(s[index]))
+                     result[index] = f(first1[index], first2[index]);
+                    else
+                      result[index] = first1[index];
+                }
+            }
 
 
 
@@ -869,57 +898,72 @@ namespace amp{
         //  Transform overloads
         //////////////////////////////////////////
         // default control, two-input transform, std:: iterator
-        template<typename InputIterator1, typename InputIterator2, typename OutputIterator, typename BinaryFunction>
+        template<
+            typename InputIterator1,
+            typename InputIterator2,
+            typename OutputIterator,
+            typename BinaryFunction>
         static
         inline
-        void transform( bolt::amp::control& ctl,
-                       InputIterator1 first1,
-                       InputIterator1 last1,
-                       InputIterator2 first2,
-                       OutputIterator result,
-                       BinaryFunction f )
+        void transform(
+            bolt::amp::control& ctl,
+            InputIterator1 first1,
+            InputIterator1 last1,
+            InputIterator2 first2,
+            OutputIterator result,
+            BinaryFunction f)
         {
-			  using bolt::amp::detail::binary_transform;
-              binary_transform( ctl, first1, last1, first2, result, f );
-
+            using bolt::amp::detail::binary_transform;
+            binary_transform(ctl, first1, last1, first2, result, f);
         }
-
 
         // default control, two-input transform, std:: iterator
-        template<typename InputIterator1,
-                 typename InputIterator2,
-                 typename OutputIterator,
-                 typename BinaryFunction,
-                 typename std::enable_if<sizeof(typename std::iterator_traits<InputIterator1>::value_type) % sizeof(int) == 0 &&
-                                         sizeof(typename std::iterator_traits<InputIterator2>::value_type) % sizeof(int) == 0 &&
-                                         sizeof(typename std::iterator_traits<OutputIterator>::value_type) % sizeof(int) == 0>::type* = nullptr>
+        template<
+            typename InputIterator1,
+            typename InputIterator2,
+            typename OutputIterator,
+            typename BinaryFunction,
+            typename std::enable_if<
+                sizeof(typename std::iterator_traits<InputIterator1>::value_type) % sizeof(int) == 0 &&
+                sizeof(typename std::iterator_traits<InputIterator2>::value_type) % sizeof(int) == 0 &&
+                sizeof(typename std::iterator_traits<OutputIterator>::value_type) % sizeof(int) == 0>::type* = nullptr>
         static
         inline
-        void transform( InputIterator1 first1,
-                        InputIterator1 last1,
-                        InputIterator2 first2,
-                        OutputIterator result,
-                        BinaryFunction f )
+        void transform(
+            InputIterator1 first1,
+            InputIterator1 last1,
+            InputIterator2 first2,
+            OutputIterator result,
+            BinaryFunction f)
         {
-              bolt::amp::transform( control::getDefault(), first1, last1, first2, result, f);
+            bolt::amp::transform(
+                control::getDefault(),
+                first1,
+                last1,
+                first2,
+                result,
+                f);
         }
 
-	template<typename InputIterator1,
-                 typename InputIterator2,
-                 typename OutputIterator,
-                 typename BinaryFunction,
-                 typename std::enable_if<sizeof(typename std::iterator_traits<InputIterator1>::value_type) % sizeof(int) != 0 ||
-                                         sizeof(typename std::iterator_traits<InputIterator2>::value_type) % sizeof(int) != 0 ||
-                                         sizeof(typename std::iterator_traits<OutputIterator>::value_type) % sizeof(int) != 0>::type* = nullptr>
+	    template<
+            typename InputIterator1,
+            typename InputIterator2,
+            typename OutputIterator,
+            typename BinaryFunction,
+            typename std::enable_if<
+                sizeof(typename std::iterator_traits<InputIterator1>::value_type) % sizeof(int) != 0 ||
+                sizeof(typename std::iterator_traits<InputIterator2>::value_type) % sizeof(int) != 0 ||
+                sizeof(typename std::iterator_traits<OutputIterator>::value_type) % sizeof(int) != 0>::type* = nullptr>
         static
         inline
-        void transform( InputIterator1 first1,
-                        InputIterator1 last1,
-                        InputIterator2 first2,
-                        OutputIterator result,
-                        BinaryFunction f )
+        void transform(
+            InputIterator1 first1,
+            InputIterator1 last1,
+            InputIterator2 first2,
+            OutputIterator result,
+            BinaryFunction f)
         {
-              std::transform(first1, last1, first2, result, f);
+            std::transform(first1, last1, first2, result, f);
         }
 
         // default control, two-input transform, std:: iterator
@@ -932,55 +976,69 @@ namespace amp{
                         OutputIterator result,
                         UnaryFunction f )
         {
-              //using ::bolt::amp::detail::unary_transform;
-              ::bolt::amp::detail::unary_transform( ctl, first1, last1, result, f);
+            //using ::bolt::amp::detail::unary_transform;
+            ::bolt::amp::detail::unary_transform( ctl, first1, last1, result, f);
         }
 
         // default control, two-input transform, std:: iterator
-        template<typename InputIterator,
-                 typename OutputIterator,
-                 typename UnaryFunction,
-                 typename std::enable_if<sizeof(typename std::iterator_traits<InputIterator>::value_type) % sizeof(int) == 0 &&
-                                         sizeof(typename std::iterator_traits<OutputIterator>::value_type) % sizeof(int) == 0>::type* = nullptr>
+        template<
+            typename InputIterator,
+            typename OutputIterator,
+            typename UnaryFunction,
+            typename std::enable_if<
+                sizeof(typename std::iterator_traits<InputIterator>::value_type) % sizeof(int) == 0 &&
+                sizeof(typename std::iterator_traits<OutputIterator>::value_type) % sizeof(int) == 0>::type* = nullptr>
         static
         inline
-        void transform( InputIterator first1,
-                        InputIterator last1,
-                        OutputIterator result,
-                        UnaryFunction f )
+        void transform(
+            InputIterator first1,
+            InputIterator last1,
+            OutputIterator result,
+            UnaryFunction f)
         {
-              bolt::amp::transform( control::getDefault(), first1, last1, result, f );
+            bolt::amp::transform(
+                control::getDefault(),
+                first1,
+                last1,
+                result,
+                f);
         }
 
-        template<typename InputIterator,
-                 typename OutputIterator,
-                 typename UnaryFunction,
-                 typename std::enable_if<sizeof(typename std::iterator_traits<InputIterator>::value_type) % sizeof(int) != 0 ||
-                                         sizeof(typename std::iterator_traits<OutputIterator>::value_type) % sizeof(int) != 0>::type* = nullptr>
+        template<
+            typename InputIterator,
+            typename OutputIterator,
+            typename UnaryFunction,
+            typename std::enable_if<
+                sizeof(typename std::iterator_traits<InputIterator>::value_type) % sizeof(int) != 0 ||
+                sizeof(typename std::iterator_traits<OutputIterator>::value_type) % sizeof(int) != 0>::type* = nullptr>
         static
         inline
-        void transform( InputIterator first1,
-                        InputIterator last1,
-                        OutputIterator result,
-                        UnaryFunction f )
+        void transform(
+            InputIterator first1,
+            InputIterator last1,
+            OutputIterator result,
+            UnaryFunction f)
         {
-              std::transform( control::getDefault(), first1, last1, result, f );
+            std::transform(first1, last1, result, f);
         }
 
 
 		//////////////////////////////////////////
         //  TransformIf overloads
         //////////////////////////////////////////
-
-
-		template<typename UnaryFunction, typename Predicate, typename iType, typename oType, typename S>
-        struct unary_transform_if_functor
-        {
+		template<
+            typename UnaryFunction,
+            typename Predicate,
+            typename iType,
+            typename oType,
+            typename S>
+        struct unary_transform_if_functor {
           alignas(int) UnaryFunction unary_op;
           alignas(int) Predicate pred;
 
-          unary_transform_if_functor(UnaryFunction unary_op, Predicate pred) restrict(cpu, amp)
-            : unary_op(unary_op), pred(pred)
+          unary_transform_if_functor(
+              UnaryFunction unary_op, Predicate pred) restrict(cpu, amp)
+            : unary_op{unary_op}, pred{pred}
           {}
 
 
@@ -998,87 +1056,152 @@ namespace amp{
 
         }; // end unary_transform_if_functor
 
-
-		template<typename InputIterator1, typename InputIterator2, typename InputIterator3, typename OutputIterator, typename BinaryFunction, typename Predicate>
+		template<
+            typename InputIterator1,
+            typename InputIterator2,
+            typename InputIterator3,
+            typename OutputIterator,
+            typename BinaryFunction,
+            typename Predicate>
         static
         inline
-        OutputIterator transform_if( bolt::amp::control& ctl,
-                       InputIterator1 first1,
-                       InputIterator1 last1,
-                       InputIterator2 first2,
-					   InputIterator3 stencil,
-                       OutputIterator result,
-                       BinaryFunction f,
-					   Predicate  	pred)
+        OutputIterator transform_if(
+            bolt::amp::control& ctl,
+            InputIterator1 first1,
+            InputIterator1 last1,
+            InputIterator2 first2,
+			InputIterator3 stencil,
+            OutputIterator result,
+            BinaryFunction f,
+			Predicate pred)
         {
-              bolt::amp::detail::binary_transform_if( ctl, first1, last1, first2, stencil, result, f, pred );
-			  return result;
-
-        }
-
-
-        // default control, two-input transform, std:: iterator
-        template<typename InputIterator1, typename InputIterator2, typename InputIterator3, typename OutputIterator, typename BinaryFunction, typename Predicate>
-        static
-        inline
-        OutputIterator transform_if( InputIterator1 first1,
-                        InputIterator1 last1,
-                        InputIterator2 first2,
-						InputIterator3 stencil,
-                        OutputIterator result,
-                        BinaryFunction f,
-						Predicate  	pred)
-        {
-              return transform_if( control::getDefault(), first1, last1, first2, stencil, result, f, pred);
+            bolt::amp::detail::binary_transform_if(
+                ctl,
+                first1,
+                last1,
+                first2,
+                stencil,
+                result,
+                f,
+                pred);
+			return result;
         }
 
         // default control, two-input transform, std:: iterator
-        template<typename InputIterator, typename OutputIterator, typename UnaryFunction, typename Predicate>
+        template<
+            typename InputIterator1,
+            typename InputIterator2,
+            typename InputIterator3,
+            typename OutputIterator,
+            typename BinaryFunction,
+            typename Predicate>
         static
         inline
-        OutputIterator transform_if( bolt::amp::control& ctl,
-                        InputIterator first1,
-                        InputIterator last1,
-                        OutputIterator result,
-                        UnaryFunction f,
-						Predicate  	pred)
+        OutputIterator transform_if(
+            InputIterator1 first1,
+            InputIterator1 last1,
+            InputIterator2 first2,
+			InputIterator3 stencil,
+            OutputIterator result,
+            BinaryFunction f,
+			Predicate pred)
         {
-			  typedef typename std::iterator_traits<OutputIterator>::value_type  oType;
-			  typedef typename std::iterator_traits<InputIterator>::value_type  iType;
-			  typedef unary_transform_if_functor<UnaryFunction,Predicate, iType, oType, iType> UnaryTransformIfFunctor;
-
-			  bolt::amp::transform(ctl,
-                     first1,
-                     last1,
-					 first1,
-					 result,
-                     UnaryTransformIfFunctor(f, pred));
-			  return result;
+            return transform_if(
+                control::getDefault(),
+                first1,
+                last1,
+                first2,
+                stencil,
+                result,
+                f,
+                pred);
         }
 
         // default control, two-input transform, std:: iterator
-        template<typename InputIterator, typename OutputIterator, typename UnaryFunction, typename Predicate>
+        template<
+            typename InputIterator,
+            typename OutputIterator,
+            typename UnaryFunction,
+            typename Predicate>
         static
         inline
-        OutputIterator transform_if( InputIterator first1,
-                        InputIterator last1,
-                        OutputIterator result,
-                        UnaryFunction f,
-						Predicate  	pred)
+        OutputIterator transform_if(
+            bolt::amp::control& ctl,
+            InputIterator first1,
+            InputIterator last1,
+            OutputIterator result,
+            UnaryFunction f,
+			Predicate pred)
         {
-              return transform_if( control::getDefault(), first1, last1, result, f, pred );
+            typedef typename std::iterator_traits<OutputIterator>::value_type oType;
+			typedef typename std::iterator_traits<InputIterator>::value_type iType;
+			typedef unary_transform_if_functor<
+                UnaryFunction,
+                Predicate,
+                iType,
+                oType,
+                iType> UnaryTransformIfFunctor;
+
+			bolt::amp::transform(
+                ctl,
+                first1,
+                last1,
+                first1,
+                result,
+                UnaryTransformIfFunctor{f, pred});
+			return result;
         }
 
+        // default control, two-input transform, std:: iterator
+        template<
+            typename InputIterator,
+            typename OutputIterator,
+            typename UnaryFunction,
+            typename Predicate>
+        static
+        inline
+        OutputIterator transform_if(
+            InputIterator first1,
+            InputIterator last1,
+            OutputIterator result,
+            UnaryFunction f,
+            Predicate pred)
+        {
+            return transform_if(
+                control::getDefault(),
+                first1,
+                last1,
+                result,
+                f,
+                pred);
+        }
 
-		template<typename InputIterator1, typename InputIterator2, typename OutputIterator, typename UnaryFunction, typename Predicate>
+		template<
+            typename InputIterator1,
+            typename InputIterator2,
+            typename OutputIterator,
+            typename UnaryFunction,
+            typename Predicate>
 		static
         inline
-        OutputIterator  transform_if (bolt::amp::control& ctl, InputIterator1 first, InputIterator1 last, InputIterator2 stencil, OutputIterator result, UnaryFunction op, Predicate pred)
+        OutputIterator transform_if(
+            bolt::amp::control& ctl,
+            InputIterator1 first,
+            InputIterator1 last,
+            InputIterator2 stencil,
+            OutputIterator result,
+            UnaryFunction op,
+            Predicate pred)
 		{
-			 typedef typename std::iterator_traits<OutputIterator>::value_type  oType;
-			 typedef typename std::iterator_traits<InputIterator1>::value_type  iType;
-		     typedef typename std::iterator_traits<InputIterator2>::value_type  sType;
-		     typedef unary_transform_if_functor<UnaryFunction,Predicate, iType, oType, sType> UnaryTransformIfFunctor;
+			 typedef typename std::iterator_traits<OutputIterator>::value_type oType;
+			 typedef typename std::iterator_traits<InputIterator1>::value_type iType;
+		     typedef typename std::iterator_traits<InputIterator2>::value_type sType;
+		     typedef unary_transform_if_functor<
+                 UnaryFunction,
+                 Predicate,
+                 iType,
+                 oType,
+                 sType> UnaryTransformIfFunctor;
 
 			 bolt::amp::transform(ctl,
                      first,
@@ -1089,17 +1212,31 @@ namespace amp{
 			 return result;
 		}
 
-		template<typename InputIterator1, typename InputIterator2, typename OutputIterator, typename UnaryFunction, typename Predicate>
+		template<
+            typename InputIterator1,
+            typename InputIterator2,
+            typename OutputIterator,
+            typename UnaryFunction,
+            typename Predicate>
 		static
         inline
-        OutputIterator  transform_if (InputIterator1 first, InputIterator1 last, InputIterator2 stencil, OutputIterator result, UnaryFunction op, Predicate pred)
+        OutputIterator transform_if(
+            InputIterator1 first,
+            InputIterator1 last,
+            InputIterator2 stencil,
+            OutputIterator result,
+            UnaryFunction op,
+            Predicate pred)
 		{
-			 return transform_if (control::getDefault(), first, last, stencil, result, op, pred);
+            return transform_if(
+                control::getDefault(),
+                first,
+                last,
+                stencil,
+                result,
+                op,
+                pred);
 		}
-
-
-
-
     } //end of namespace amp
 } //end of namespace bolt
 
