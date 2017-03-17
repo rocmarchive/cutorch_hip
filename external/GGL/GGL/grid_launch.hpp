@@ -8,10 +8,7 @@
 
 #include <hc.hpp>
 
-//#define __HIP_PLATFORM_HCC__
-//    #include <hip/hcc.h>
-//    #include <hip/hip_runtime.h>
-//#undef __HIP_PLATFORM_HCC__
+#include <hip/hcc.h>
 
 #include <stdexcept>
 #include <type_traits>
