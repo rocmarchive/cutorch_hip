@@ -400,7 +400,6 @@ accreal THCTensor_(meanall)(THCState *state, THCTensor *self)
 THC_API
 real THCTensor_(minall)(THCState *state, THCTensor *self)
 {
-  printf("THCTensor_(minall)\n");
   THAssert(THCTensor_(checkGPU)(state, 1, self));
   real val;
   if (!THC_reduceAll(
@@ -423,7 +422,6 @@ real THCTensor_(minall)(THCState *state, THCTensor *self)
 THC_API
 real THCTensor_(maxall)(THCState *state, THCTensor *self)
 {
-  printf("THCTensor_(maxall)\n");
   THAssert(THCTensor_(checkGPU)(state, 1, self));
   real val;
   if (!THC_reduceAll(

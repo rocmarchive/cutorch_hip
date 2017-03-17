@@ -12,7 +12,7 @@
 /* We compile with CudaHalfTensor support if we have this: */
 #if CUDA_VERSION >= 7050 || defined(CUDA_HAS_FP16)
     #define CUDA_HALF_TENSOR 1
-    using half = __half;
+    //using half = __half;
 #endif
 
 #ifdef CUDA_HALF_TENSOR

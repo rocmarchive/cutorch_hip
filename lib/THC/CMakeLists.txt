@@ -19,7 +19,6 @@ IF (${PLATFORM} MATCHES "nvcc")
 ENDIF() # PLATFORM MATCHES
 
 
-#message(FATAL_ERROR ${HIP_CXX_FLAGS})
 # temporary check with hipcc on AMD stack
 IF (${PLATFORM} MATCHES "hcc")
   SET(CMAKE_CXX_COMPILER ${HIP_HIPCC_EXECUTABLE})
