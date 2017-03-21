@@ -1142,7 +1142,7 @@ function test.allAndAny()
    end
 end
 
---[[function test.sum()
+function test.sum()
    local minsize = 10
    local maxsize = 20
    local sz1 = chooseInt(minsize, maxsize)
@@ -1155,7 +1155,7 @@ end
    test_tolerance = 1e-5
    checkMultiDevice(x, 'sum')
    checkMultiDevice(x, 'sum', 1)
-end]]--
+end
 
 function test.cumsum()
    local minsize = 10
@@ -2250,12 +2250,12 @@ end
 
 --TODO: Fix the ERROR status caused for this particular test
 -- Lack of support for sgetrfBatched is cause for this 
---[[function test.inverse()
+function test.inverse()
    local a = torch.eye(5):add(torch.Tensor(5, 5):uniform(-0.1, 0.1))
    local i1 = torch.inverse(a)
    local i2 = torch.inverse(a:cuda())
    tester:assertle((i2 - i1:cuda()):abs():max(), 1e-5, "wrong inverse answer")
-end]]--
+end
 
 if cutorch.magma then
    function test.gesv()
@@ -3160,7 +3160,7 @@ end
 
 --TODO: fix the TensorSort and TopK implementation to run the below test
 -- Currently results in ERROR status
---[[function test.sort()
+function test.sort()
    for tries = 1, 5 do
       local t = createTestTensor(2 ^ 20)
       local selectdim = chooseInt(1, t:nDimension())
@@ -3251,7 +3251,7 @@ function test.topk()
          compareFloatAndCuda(t, runTopK, dim, kTests[k], dir)
       end
    end
-end]]--
+end
 
 function test.cat()
    for k, typename in ipairs(typenames) do
