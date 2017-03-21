@@ -208,7 +208,8 @@ hipblasOperation_t convertTransToHipblasOperation(char trans) {
     return HIPBLAS_OP_T;
   }
 }
-/*cublasOperation_t convertTransToCublasOperation(char trans) {
+#ifdef __NVCC__
+cublasOperation_t convertTransToCublasOperation(char trans) {
   if (trans == 't') return CUBLAS_OP_T;
   else if (trans == 'n') return CUBLAS_OP_N;
   else if (trans == 'c') return CUBLAS_OP_C;
@@ -216,7 +217,8 @@ hipblasOperation_t convertTransToHipblasOperation(char trans) {
     THError("trans must be one of: t, n, c");
     return CUBLAS_OP_T;
   }
-}*/
+}
+#endif
 void adjustLd(char transa, char transb, long m, long n, long k, long *lda, long *ldb, long *ldc)
 {
   int transa_ = ((transa == 't') || (transa == 'T'));
@@ -281,6 +283,7 @@ void THCudaBlas_Sgemm(THCState *state, char transa, char transb, long m, long n,
 
 void THCudaBlas_Hgemm(THCState *state, char transa, char transb, long m, long n, long k, half alpha, half *a, long lda, half *b, long ldb, half beta, half *c, long ldc)
 {
+#ifdef ENABLE_HGEMM
   adjustLd(transa, transb, m, n, k, &lda, &ldb, &ldc);
   cublasOperation_t opa = convertTransToCublasOperation(transa);
   cublasOperation_t opb = convertTransToCublasOperation(transb);
@@ -338,6 +341,7 @@ void THCudaBlas_Hgemm(THCState *state, char transa, char transb, long m, long n,
   THError("Cublas_Hgemm only supports m, n, k, lda, ldb, ldc"
           "with th bound [val] <= %d", INT_MAX);
 
+#endif
 }
 #endif
 
