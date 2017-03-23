@@ -845,6 +845,7 @@ struct MaxValuePair {
 
 template <typename T, typename Index>
 struct MinValuePair {
+  __host__ __device__
 #if defined(THRUST_PATH)
   thrust::pair<T, Index> operator()(const thrust::pair<T, Index>& a,
                                     const thrust::pair<T, Index>& b) const
