@@ -8,7 +8,7 @@
 
 template <typename T>
 struct TensorFillOp {
-  TensorFillOp(T v) : val(v) {}
+  __host__ __device__ TensorFillOp(T v) : val(v) {}
   __device__ __forceinline__ void operator()(T* v) { *v = val; }
 
   __host__ __device__ ~TensorFillOp() {};

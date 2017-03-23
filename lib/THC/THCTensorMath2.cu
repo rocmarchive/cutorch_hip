@@ -22,7 +22,7 @@
 #endif
 
 struct TensorTPowOp {
-  TensorTPowOp(float v) : val(v) {}
+  __host__ __device__ TensorTPowOp(float v) : val(v) {}
 
   __device__ __forceinline__ void operator()(float* out, float* in) {
     *out = powf(val, *in);

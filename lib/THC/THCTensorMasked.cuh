@@ -16,7 +16,8 @@
 
 template <typename T, typename MaskT>
 struct TensorMaskedFillOp {
-  TensorMaskedFillOp(T v) : value(v) {}
+  __host__ __device__ TensorMaskedFillOp(T v) : value(v) {}
+  __host__ __device__ TensorMaskedFillOp(const TensorMaskedFillOp &maskedFillOp) : value(maskedFillOp.value) {};
   __device__ inline void operator()(T* t, MaskT* mask) {
     if (*mask) {
       *t = value;

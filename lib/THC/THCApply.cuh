@@ -177,7 +177,7 @@ bool THC_pointwiseApply1(THCState* state,
   // dimension, and the loop to translate the linear index to the array
   // index can be similarly collapsed. That is what this unrolling is for.
 #define HANDLE_CASE(TYPE, A)                                            \
-  hipLaunchKernel(HIP_KERNEL_NAME(kernelPointwiseApply1<Op,                                             \
+  hipLaunchKernel((kernelPointwiseApply1<Op,                                             \
                         typename TensorUtils<TensorTypeA>::DataType,   \
                         TYPE, A>),                                        \
     grid, block, 0, THCState_getCurrentStream(state),             \
@@ -221,13 +221,13 @@ bool THC_pointwiseApply1(THCState* state,
     // version and the completely generic version, to reduce
     // compilation time.
     if (aInfo.isContiguous()) {
-      hipLaunchKernel(HIP_KERNEL_NAME(kernelPointwiseApply1<Op,
+      hipLaunchKernel((kernelPointwiseApply1<Op,
                             typename TensorUtils<TensorTypeA>::DataType,
                             unsigned long, -2>),
           grid, block, 0, THCState_getCurrentStream(state),
           aInfo.data, aInfo.dSizes, aInfo.dStrides, (unsigned long) totalElements, op);
     } else {
-      hipLaunchKernel(HIP_KERNEL_NAME(kernelPointwiseApply1<Op,
+      hipLaunchKernel((kernelPointwiseApply1<Op,
                             typename TensorUtils<TensorTypeA>::DataType,
                             unsigned long, -1>),
         grid, block, 0, THCState_getCurrentStream(state),
@@ -315,7 +315,7 @@ bool THC_pointwiseApply2(THCState* state,
   // dimension, and the loop to translate the linear index to the array
   // index can be similarly collapsed. That is what this unrolling is for.
 #define HANDLE_CASE(TYPE, A, B)                                         \
-  hipLaunchKernel(HIP_KERNEL_NAME(kernelPointwiseApply2<Op,                                             \
+  hipLaunchKernel((kernelPointwiseApply2<Op,                                             \
                         typename TensorUtils<TensorTypeA>::DataType,    \
                         typename TensorUtils<TensorTypeB>::DataType,    \
                         TYPE, A, B>),                                     \
@@ -384,14 +384,14 @@ bool THC_pointwiseApply2(THCState* state,
     // version and the completely generic version, to reduce
     // compilation time.
     if (aInfo.isContiguous() && bInfo.isContiguous()) {
-      hipLaunchKernel(HIP_KERNEL_NAME(kernelPointwiseApply2<Op,
+      hipLaunchKernel((kernelPointwiseApply2<Op,
                             typename TensorUtils<TensorTypeA>::DataType,
                             typename TensorUtils<TensorTypeB>::DataType,
                             unsigned long, -2, -2>),
           grid, block, 0, THCState_getCurrentStream(state),
           aInfo.data, aInfo.dSizes, aInfo.dStrides, bInfo.data, bInfo.dSizes, bInfo.dStrides, (unsigned long) totalElements, op);
     } else {
-      hipLaunchKernel(HIP_KERNEL_NAME(kernelPointwiseApply2<Op,
+      hipLaunchKernel((kernelPointwiseApply2<Op,
                             typename TensorUtils<TensorTypeA>::DataType,
                             typename TensorUtils<TensorTypeB>::DataType,
                             unsigned long, -1, -1>),
@@ -493,7 +493,7 @@ bool THC_pointwiseApply3(THCState* state,
     c = TensorUtils<TensorTypeC>::newContiguous(state, c);
   }
 #define HANDLE_CASE(TYPE, A, B, C)                                      \
-  hipLaunchKernel(HIP_KERNEL_NAME(kernelPointwiseApply3<Op,                                             \
+  hipLaunchKernel((kernelPointwiseApply3<Op,                                             \
                         typename TensorUtils<TensorTypeA>::DataType,    \
                         typename TensorUtils<TensorTypeB>::DataType,    \
                         typename TensorUtils<TensorTypeC>::DataType,    \
@@ -592,7 +592,7 @@ bool THC_pointwiseApply3(THCState* state,
     // version and the completely generic version, to reduce
     // compilation time.
     if (aInfo.isContiguous() && bInfo.isContiguous() && cInfo.isContiguous()) {
-      hipLaunchKernel(HIP_KERNEL_NAME(kernelPointwiseApply3<Op,
+      hipLaunchKernel((kernelPointwiseApply3<Op,
                             typename TensorUtils<TensorTypeA>::DataType,
                             typename TensorUtils<TensorTypeB>::DataType,
                             typename TensorUtils<TensorTypeC>::DataType,
@@ -601,7 +601,7 @@ bool THC_pointwiseApply3(THCState* state,
           aInfo.data, aInfo.dSizes, aInfo.dStrides, bInfo.data, bInfo.dSizes, bInfo.dStrides, 
           cInfo.data, cInfo.dSizes, cInfo.dStrides, (unsigned long) totalElements, op);
     } else {
-      hipLaunchKernel(HIP_KERNEL_NAME(kernelPointwiseApply3<Op,
+      hipLaunchKernel((kernelPointwiseApply3<Op,
                             typename TensorUtils<TensorTypeA>::DataType,
                             typename TensorUtils<TensorTypeB>::DataType,
                             typename TensorUtils<TensorTypeC>::DataType,

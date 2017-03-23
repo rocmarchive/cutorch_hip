@@ -244,7 +244,7 @@ struct TensorNormOp<half, StaticExp>
 template <typename T>
 struct TensorDistOp
 {
-  TensorDistOp(T exp) : exponent(exp) {}
+  __host__ __device__ TensorDistOp(T exp) : exponent(exp) {}
 
   __host__ __device__ T operator()(T x, T y) const {
     return THCNumerics<T>::pow(
