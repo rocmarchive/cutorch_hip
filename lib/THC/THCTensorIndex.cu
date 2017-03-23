@@ -136,9 +136,7 @@ __global__ void indexAddSmallIndex(hipLaunchParm lp, TensorInfo<T, IndexType> ds
         IndexType srcOffset =
           IndexToOffset<T, IndexType, SrcDim>::get(linearIndex, src.sizes, src.strides, src.dims);
         srcOffset += srcIndex * src.strides[srcAddDim];
-       #ifdef CUDA_PATH
         atomicAdd(&dst.data[dstOffset], src.data[srcOffset]);
-       #endif
       }
     }
   }
@@ -179,9 +177,7 @@ __global__ void indexAddLargeIndex(hipLaunchParm lp, TensorInfo<T, IndexType> ds
         IndexToOffset<T, IndexType, SrcDim>::get(elementInSlice, src.sizes, src.strides, src.dims);
       srcOffset += srcIndex * src.strides[srcAddDim];
 
-      #ifdef CUDA_PATH
       atomicAdd(&dst.data[dstOffset], src.data[srcOffset]);
-      #endif
     }
   }
 }
