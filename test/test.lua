@@ -1796,7 +1796,7 @@ function test.renorm()
    checkMultiDevice(x, 'renorm', 4, 2, maxnorm)
 end]]--
 
---[[function test.dist()
+function test.dist()
    local minsize = 5
    local maxsize = 10
    local sz1 = chooseInt(minsize, maxsize)
@@ -1805,7 +1805,7 @@ end]]--
    local y = torch.FloatTensor():rand(sz1, sz2)
    compareFloatAndCudaTensorArgs(x, 'dist', y)
    checkMultiDevice(x, 'dist', y)
-end]]--
+end
 
 -- TODO: Need to fix occasional runtime error at hipFree / allocator_free at line 184 generic/THCStorage.c
 --[[function test.indexCopy2()
