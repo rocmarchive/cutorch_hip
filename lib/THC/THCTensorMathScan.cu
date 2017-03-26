@@ -5,7 +5,13 @@
 #include "THCTensorCopy.h"
 #include "THCApply.cuh"
 #include "THCReduce.cuh"
-#include "THCThrustAlternate.h"
+
+#if defined(THRUST_PATH)
+    #include <thrust/functional>
+#else
+    #include <bolt/amp/functional.h>
+#endif
+
 
 /* Perform an inclusive scan along an outer dimension of a tensor.
  *
@@ -196,11 +202,29 @@ void THCudaTensor_scanDim(THCState *state, THCudaTensor *self_, THCudaTensor *sr
 void THCudaTensor_cumsum(THCState *state, THCudaTensor *self, THCudaTensor *src, long dimension)
 {
   THAssert(THCudaTensor_checkGPU(state, 2, self, src));
-  return THCudaTensor_scanDim(state, self, src, dimension, 0.0f, thrust_alternate::sum<float>());
+  return THCudaTensor_scanDim(state,
+                              self,
+                              src,
+                              dimension,
+                              0.0f,
+#if defined(THRUST_PATH)
+                              thrust::plus<float>();
+#else
+                              bolt::amp::plus<float>());
+#endif
 }
 
 void THCudaTensor_cumprod(THCState *state, THCudaTensor *self, THCudaTensor *src, long dimension)
 {
   THAssert(THCudaTensor_checkGPU(state, 2, self, src));
-  return THCudaTensor_scanDim(state, self, src, dimension, 1.0f, thrust_alternate::multiply<float>());
+  return THCudaTensor_scanDim(state,
+                              self,
+                              src,
+                              dimension,
+                              1.0f,
+#if defined(THRUST_PATH)
+                              thrust::multiplies<float>();
+#else
+                              bolt::amp::multiplies<float>());
+#endif
 }

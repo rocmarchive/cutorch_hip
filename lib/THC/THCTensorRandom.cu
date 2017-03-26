@@ -5,12 +5,17 @@
 #include "THCTensorCopy.h"
 #include "THCTensorMath.h"
 #include "THCReduceApplyUtils.cuh"
-#include "THCThrustAlternate.h"
 #ifdef CURAND_PATH
 #include <curand.h>
 #include <curand_kernel.h>
 #include <curand_mtgp32_host.h>
 #include <curand_mtgp32dc_p_11213.h>
+#endif
+
+#ifdef THRUST_PATH
+    #include <thrust/functional>
+#else
+    #include <bolt/amp/functional.h>
 #endif
 
 #define MAX_NUM_BLOCKS 64
@@ -407,7 +412,17 @@ __global__ void renormRowsL1(hipLaunchParm lp, float* dist, long rows, long cols
     for (long col = hipThreadIdx_x; col < cols; col += hipBlockDim_x) {
       sum += dist[row * cols + col];
     }
-    //sum = reduceBlock(smem, hipBlockDim_x, sum, thrust_alternate::sum<float>(), 0.0f);
+
+   sum = reduceBlock(reinterpret_cast<float*>(smem),
+                      hipBlockDim_x,
+                      sum,
+    #if defined(THRUST_PATH)
+                      thrust::plus<float>(),
+    #else
+                      bolt::amp::plus<float>(),
+    #endif
+                      0.0f);
+
     if (hipThreadIdx_x == 0) {
       smem[0] = sum;
     }
@@ -458,7 +473,15 @@ sampleMultinomialOnce(hipLaunchParm lp, float* dest,
     }
 
     // hipThreadIdx_x == 0 has the sum value from this
-    //sum = reduceBlock(smem, hipBlockDim_x, sum, thrust_alternate::sum<float>(), 0.0f);
+    sum = reduceBlock(reinterpret_cast<float*>(smem),
+                      hipBlockDim_x,
+                      sum,
+    #if defined(THRUST_PATH)
+                      thrust::plus<float>(),
+    #else
+                      bolt::amp::plus<float>(),
+    #endif
+                      0.0f);
 
     // Broadcast sum and sample value
     if (hipThreadIdx_x == 0) {

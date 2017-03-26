@@ -7,7 +7,6 @@
 #include "THCReduce.cuh"
 #include "THCTensorMathReduce.cuh"
 #include "THCTensorMathPointwise.cuh"
-#include "THCThrustAlternate.h"
 
 #ifdef THRUST_PATH
 #include <thrust/device_ptr.h>
