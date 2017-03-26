@@ -413,7 +413,7 @@ __global__ void renormRowsL1(hipLaunchParm lp, float* dist, long rows, long cols
       sum += dist[row * cols + col];
     }
 
-   sum = reduceBlock(reinterpret_cast<float*>(smem),
+   /*sum = reduceBlock(reinterpret_cast<float*>(smem),
                       hipBlockDim_x,
                       sum,
     #if defined(THRUST_PATH)
@@ -422,7 +422,7 @@ __global__ void renormRowsL1(hipLaunchParm lp, float* dist, long rows, long cols
                       bolt::amp::plus<float>(),
     #endif
                       0.0f);
-
+*/
     if (hipThreadIdx_x == 0) {
       smem[0] = sum;
     }
@@ -472,7 +472,7 @@ sampleMultinomialOnce(hipLaunchParm lp, float* dest,
       sum += dist[curDist * categories + cat];
     }
 
-    // hipThreadIdx_x == 0 has the sum value from this
+/*    // hipThreadIdx_x == 0 has the sum value from this
     sum = reduceBlock(reinterpret_cast<float*>(smem),
                       hipBlockDim_x,
                       sum,
@@ -481,7 +481,7 @@ sampleMultinomialOnce(hipLaunchParm lp, float* dest,
     #else
                       bolt::amp::plus<float>(),
     #endif
-                      0.0f);
+                      0.0f);*/
 
     // Broadcast sum and sample value
     if (hipThreadIdx_x == 0) {
