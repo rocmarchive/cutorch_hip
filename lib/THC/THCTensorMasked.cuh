@@ -7,11 +7,13 @@
 #include "THCReduce.cuh"
 
 #ifdef THRUST_PATH
-#include <thrust/device_ptr.h>
-#include <thrust/scan.h>
+  #include <thrust/device_ptr.h>
+  #include <thrust/scan.h>
 #if CUDA_VERSION >= 7000
-#include <thrust/system/cuda/execution_policy.h>
+  #include <thrust/system/cuda/execution_policy.h>
 #endif
+#else
+  #include "bolt/amp/scan.h"
 #endif
 
 template <typename T, typename MaskT>
@@ -29,13 +31,13 @@ struct TensorMaskedFillOp {
 
 template <typename T, typename MaskT, typename MaskPrefixSumT>
 struct TensorMaskedCopyOp {
-  TensorMaskedCopyOp(T* s) : in(s) {}
+  __host__ __device__ TensorMaskedCopyOp(T* s) : in(s) {}
 
-  __device__ inline void operator()(T* out,
+  __host__ __device__ inline void operator()(T* out,
                                     MaskT* mask,
                                     MaskPrefixSumT* maskPrefixSum) {
     if (*mask) {
-      *out = in[*maskPrefixSum];
+      out[0] = in[*maskPrefixSum];
     }
   }
   __host__ __device__ ~TensorMaskedCopyOp() {}
@@ -45,12 +47,12 @@ struct TensorMaskedCopyOp {
 
 template <typename T, typename MaskT, typename MaskPrefixSumT>
 struct TensorMaskedSelectOp {
-  TensorMaskedSelectOp(T* t) : out(t) {}
-  __device__ inline void operator()(MaskT* mask,
+  __host__ __device__ TensorMaskedSelectOp(T* t) : out(t) {}
+  __host__ __device__ inline void operator()(MaskT* mask,
                                     MaskPrefixSumT* maskPrefixSum,
                                     T* in) {
     if (*mask) {
-      out[*maskPrefixSum] = *in;
+      //out[*maskPrefixSum] = *in;
     }
   }
   __host__ __device__ ~TensorMaskedSelectOp() {}

@@ -75,12 +75,19 @@ THCTensor_(maskedCopy)(THCState* state,
     maskPrefixSumData(THCudaLongTensor_data(state, maskPrefixSum));
 
   thrust::exclusive_scan(
-#if CUDA_VERSION >= 7000
-    thrust::cuda::par.on(THCState_getCurrentStream(state)),
-#endif
+    #if CUDA_VERSION >= 7000
+        thrust::cuda::par.on(THCState_getCurrentStream(state)),
+    #endif
     maskData,
     maskData + THCudaLongTensor_nElement(state, maskLong),
     maskPrefixSumData);
+#else
+    auto maskData = THCudaLongTensor_data(state, maskLong);
+    auto maskPrefixSumData = THCudaLongTensor_data(state, maskPrefixSum);
+
+    bolt::amp::exclusive_scan(maskData,
+                              maskData + THCudaLongTensor_nElement(state, maskLong),
+                              maskPrefixSumData);
 #endif
 
   // We are getting elements from `src` based on an offset from
@@ -89,11 +96,12 @@ THCTensor_(maskedCopy)(THCState* state,
 
   // update `tensor` where `mask` == 1 but pull from `src` at
   // maskPrefixSum
+
   bool status = false;
-  /*status = THC_pointwiseApply3(
+  TensorMaskedCopyOp<real, unsigned char, long> maskedCopyOp(THCTensor_(data)(state, contigSrc));
+  status = THC_pointwiseApply3(
     state, tensor, mask, maskPrefixSum,
-    TensorMaskedCopyOp<real, unsigned char, long>(
-      THCTensor_(data)(state, contigSrc)));*/
+    maskedCopyOp);
 
   THCTensor_(free)(state, contigSrc);
   THCudaLongTensor_free(state, maskLong);
@@ -158,13 +166,22 @@ THCTensor_(maskedSelect)(THCState* state,
     maskData,
     maskData + THCudaLongTensor_nElement(state, maskLong),
     maskPrefixSumData);
+#else
+    auto maskData = THCudaLongTensor_data(state, maskLong);
+    auto maskPrefixSumData = THCudaLongTensor_data(state, maskPrefixSum);
+
+    bolt::amp::exclusive_scan(maskData,
+                              maskData + THCudaLongTensor_nElement(state, maskLong),
+                              maskPrefixSumData);
+ 
 #endif
+
  bool status = false;
   // Then copy over the masked elements at their desired output index
-  /*status = THC_pointwiseApply3(
+  status = THC_pointwiseApply3(
     state, mask, maskPrefixSum,
     src, TensorMaskedSelectOp<real, unsigned char, long>(
-      THCTensor_(data)(state, tensor)));*/
+      THCTensor_(data)(state, tensor)));
 
   THCudaLongTensor_free(state, maskLong);
   THCudaLongTensor_free(state, maskPrefixSum);
