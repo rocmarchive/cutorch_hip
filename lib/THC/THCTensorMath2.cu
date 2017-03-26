@@ -9,7 +9,6 @@
 #include "THCTensorMathPointwise.cuh"
 #include "THCThrustAlternate.h"
 
-#if 0
 #ifdef THRUST_PATH
 #include <thrust/device_ptr.h>
 #include <thrust/transform_reduce.h>
@@ -18,7 +17,9 @@
 #if CUDA_VERSION >= 7000
 #include <thrust/system/cuda/execution_policy.h>
 #endif
-#endif
+#else
+#include <bolt/amp/functional.h>
+#include <bolt/amp/inner_product.h>
 #endif
 
 struct TensorTPowOp {
@@ -78,7 +79,6 @@ float THCudaTensor_dist(THCState *state, THCudaTensor *self, THCudaTensor *src, 
   ptrdiff_t size = THCudaTensor_nElement(state, self);
   src = THCudaTensor_newContiguous(state, src);
   float result = 0;
-#if 0
 #ifdef THRUST_PATH
   thrust::device_ptr<float> self_data(THCudaTensor_data(state, self));
   thrust::device_ptr<float> src_data(THCudaTensor_data(state, src));
@@ -89,9 +89,18 @@ float THCudaTensor_dist(THCState *state, THCudaTensor *self, THCudaTensor *src, 
 #endif
     self_data, self_data+size, src_data, (float) 0,
     thrust::plus<float>(), TensorDistOp<float>(value));
+
+#else
+    auto self_data = THCudaTensor_data(state, self);
+    auto src_data = THCudaTensor_data(state, src);
+
+    result = bolt::amp::inner_product(self_data,
+                                            self_data + size,
+                                            src_data,
+                                            0.0f,
+                                            bolt::amp::plus<float>(),
+                                            TensorDistOp<float>(value));
 #endif
-#endif
-  thrust_alternate::inner_product<thrust_alternate::sum<float>, TensorDistOp<float> >(state, self, src, (float) 0, thrust_alternate::sum<float>(), TensorDistOp<float>(value)); 
 
   THCudaTensor_free(state, src);
   THCudaTensor_free(state, self);
