@@ -84,8 +84,8 @@ template <typename T, typename IndexType>
 TensorInfo<T, IndexType>::~TensorInfo(void) {
 
   // Free up allocated resource
-   //THCudaCheck(hipFree(dStrides));
-   //THCudaCheck(hipFree(dSizes));
+   THCudaCheck(hipFree(dStrides));
+   THCudaCheck(hipFree(dSizes));
 }
 
 template <typename T, typename IndexType>
