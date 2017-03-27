@@ -9,8 +9,11 @@
 
 template <typename T, typename TOut>
 struct TensorLTValueOp {
+  __host__ __device__
   TensorLTValueOp() = default;
+  __host__ __device__
   TensorLTValueOp(const TensorLTValueOp&) = default;
+  __host__ __device__
   TensorLTValueOp(TensorLTValueOp&&) = default;
 
   __host__ __device__
@@ -30,8 +33,11 @@ struct TensorLTValueOp {
 
 template <typename T, typename TOut>
 struct TensorGTValueOp {
+  __host__ __device__
   TensorGTValueOp() = default;
+  __host__ __device__
   TensorGTValueOp(const TensorGTValueOp&) = default;
+  __host__ __device__
   TensorGTValueOp(TensorGTValueOp&&) = default;
 
   __host__ __device__
@@ -52,8 +58,11 @@ struct TensorGTValueOp {
 
 template <typename T, typename TOut>
 struct TensorLEValueOp {
+  __host__ __device__
   TensorLEValueOp() = default;
+  __host__ __device__
   TensorLEValueOp(const TensorLEValueOp&) = default;
+  __host__ __device__
   TensorLEValueOp(TensorLEValueOp&&) = default;
 
   __host__ __device__
@@ -73,8 +82,11 @@ struct TensorLEValueOp {
 
 template <typename T, typename TOut>
 struct TensorGEValueOp {
+  __host__ __device__
   TensorGEValueOp() = default;
+  __host__ __device__
   TensorGEValueOp(const TensorGEValueOp&) = default;
+  __host__ __device__
   TensorGEValueOp(TensorGEValueOp&&) = default;
 
   __host__ __device__
@@ -94,8 +106,11 @@ struct TensorGEValueOp {
 
 template <typename T, typename TOut>
 struct TensorEQValueOp {
+  __host__ __device__
   TensorEQValueOp() = default;
+  __host__ __device__
   TensorEQValueOp(const TensorEQValueOp&) = default;
+  __host__ __device__
   TensorEQValueOp(TensorEQValueOp&&) = default;
 
   __host__ __device__
@@ -115,8 +130,11 @@ struct TensorEQValueOp {
 
 template <typename T, typename TOut>
 struct TensorNEValueOp {
+  __host__ __device__
   TensorNEValueOp() = default;
+  __host__ __device__
   TensorNEValueOp(const TensorNEValueOp&) = default;
+  __host__ __device__
   TensorNEValueOp(TensorNEValueOp&&) = default;
 
   __host__ __device__

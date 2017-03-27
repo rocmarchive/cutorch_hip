@@ -19,6 +19,8 @@
    int8_t fred;
    __device__
    ModT operator()(ModT a) const {  return a;  }
+   __device__
+  ~IdentityOp() {}
  };
 
 // Reduction operators that support `half`, unlike Thrust
@@ -27,6 +29,8 @@ struct ReduceAdd {
   int8_t fred;
   __host__ __device__
   AccT operator()(AccT a, InT b) const {  return a + (AccT) b;  }
+  __host__ __device__
+  ~ReduceAdd() {}
 };
 
 #ifdef CUDA_HALF_TENSOR
@@ -56,6 +60,8 @@ struct ReduceMultiply {
   int8_t fred;
   __device__
   AccT operator()(AccT a, InT b) const { return a * (AccT) b; }
+  __device__
+  ~ReduceMultiply() {}
 };
 
 #ifdef CUDA_HALF_TENSOR
@@ -138,6 +144,8 @@ struct ReduceMin {
   {
       return THCNumerics<T>::lt(b, a) ? b : a;
   }
+  __device__
+  ~ReduceMin() {}
 };
 
 template <typename T>
@@ -159,6 +167,8 @@ struct ReduceMax {
     {
         return THCNumerics<T>::lt(b, a) ? a : b;
     }
+  __device__
+  ~ReduceMax() {}
 };
 
 struct LogicalAll {
@@ -168,6 +178,8 @@ struct LogicalAll {
   {
     return (x && y);
   }
+  __device__
+  ~LogicalAll() {}
 };
 
 struct LogicalAny {
@@ -177,6 +189,8 @@ struct LogicalAny {
   {
     return (x || y);
   }
+  __device__
+  ~LogicalAny() {}
 };
 
 template<typename Real>
@@ -236,6 +250,7 @@ void THCTensor_kernel_renorm(hipLaunchParm lp,
 template <typename T>
 struct TensorNonZeroOp
 {
+  __host__ __device__
   TensorNonZeroOp() {}
   __host__ __device__
   T operator()(T lhs) const
@@ -246,11 +261,17 @@ struct TensorNonZeroOp
       return ScalarConvert<int, T>::to(1);
     }
   }
+  __host__ __device__
+  TensorNonZeroOp(const TensorNonZeroOp& op) = default;
+
+  __host__ __device__
+  ~TensorNonZeroOp() {}
 };
 
 template <typename T, int StaticExp>
 struct TensorNormOp
 {
+  __host__ __device__
   TensorNormOp(T exp) : exponent(exp) {}
 
   __host__ __device__
@@ -266,6 +287,9 @@ struct TensorNormOp
   }
 
   __host__ __device__
+  TensorNormOp(const TensorNormOp& op) = default;
+
+  __host__ __device__
   ~TensorNormOp() {}
 
   T exponent;
@@ -274,6 +298,7 @@ struct TensorNormOp
 template <int StaticExp>
 struct TensorNormOp<double, StaticExp>
 {
+  __host__ __device__
   TensorNormOp(double exp) : exponent(exp) {}
 
   __host__ __device__

@@ -51,9 +51,10 @@ kernelReduceAll(hipLaunchParm lp,
    }
  
    // Reduce within the block
-   HIP_DYNAMIC_SHARED(char, smemChar)
-   __attribute__((address_space(3))) AccT* smem = 
-     reinterpret_cast< __attribute__((address_space(3))) AccT*>(smemChar);
+   // HIP_DYNAMIC_SHARED(char, smemChar)
+   // __attribute__((address_space(3))) AccT* smem = 
+   //   reinterpret_cast< __attribute__((address_space(3))) AccT*>(smemChar);
+   __shared__ AccT smem[1024];
    r = reduceBlock(smem, hipBlockDim_x, r, reduceAccOp, init);
 
   if (hipThreadIdx_x == 0) {
