@@ -46,12 +46,21 @@ namespace detail {
 
 namespace serial
 {
-    template<typename InputIterator, typename OutputType, typename BinaryFunction1,typename BinaryFunction2>
+    template<
+        typename InputIterator,
+        typename OutputType,
+        typename BinaryFunction1,
+        typename BinaryFunction2>
     static
     inline
-    OutputType inner_product_enqueue(bolt::amp::control &ctl,  InputIterator first1,
-            InputIterator last1, InputIterator first2, OutputType init,
-            BinaryFunction1 f1, BinaryFunction2 f2)
+    OutputType inner_product_enqueue(
+        bolt::amp::control &ctl,
+        InputIterator first1,
+        InputIterator last1,
+        InputIterator first2,
+        OutputType init,
+        BinaryFunction1 f1,
+        BinaryFunction2 f2)
     {
         size_t sz = (last1 - first1);
         if (sz == 0)
@@ -64,12 +73,21 @@ namespace serial
         return accumulator;
     }
 
-	template< typename InputIterator, typename OutputType, typename BinaryFunction1,typename BinaryFunction2>
+	template<
+        typename InputIterator,
+        typename OutputType,
+        typename BinaryFunction1,
+        typename BinaryFunction2>
     static
     inline
-    OutputType inner_product(bolt::amp::control &ctl, InputIterator first1,
-        InputIterator last1, InputIterator first2, OutputType init,
-        BinaryFunction1 f1, BinaryFunction2 f2,
+    OutputType inner_product(
+        bolt::amp::control &ctl,
+        InputIterator first1,
+        InputIterator last1,
+        InputIterator first2,
+        OutputType init,
+        BinaryFunction1 f1,
+        BinaryFunction2 f2,
 		bolt::amp::device_vector_tag)
     {
 		 typedef typename std::iterator_traits<InputIterator>::value_type iType1;
@@ -175,13 +193,22 @@ namespace btbb
 
 
 namespace amp{
-
-    template< typename DVInputIterator, typename OutputType, typename BinaryFunction1,typename BinaryFunction2>
+    template<
+        typename DVInputIterator,
+        typename OutputType,
+        typename BinaryFunction1,
+        typename BinaryFunction2>
     static
     inline
-    OutputType inner_product(bolt::amp::control &ctl,  DVInputIterator first1,
-        DVInputIterator last1,  DVInputIterator first2, OutputType init,
-        BinaryFunction1 f1,  BinaryFunction2 f2, bolt::amp::device_vector_tag)
+    OutputType inner_product(
+        bolt::amp::control &ctl,
+        DVInputIterator first1,
+        DVInputIterator last1,
+        DVInputIterator first2,
+        OutputType init,
+        BinaryFunction1 f1,
+        BinaryFunction2 f2,
+        bolt::amp::device_vector_tag)
     {
         typedef typename std::iterator_traits<DVInputIterator>::value_type iType;
 
@@ -196,13 +223,22 @@ namespace amp{
         return detail::reduce( ctl, tempDV.begin(), tempDV.end(), init, f1);
     }
 
-	template<typename InputIterator, typename OutputType, typename BinaryFunction1,typename BinaryFunction2>
+	template<
+        typename InputIterator,
+        typename OutputType,
+        typename BinaryFunction1,
+        typename BinaryFunction2>
     static
     inline
-    OutputType inner_product(bolt::amp::control &ctl,  InputIterator first1,
-                InputIterator last1, InputIterator first2, OutputType init,
-                BinaryFunction1 f1, BinaryFunction2 f2,
-                std::random_access_iterator_tag )
+    OutputType inner_product(
+        bolt::amp::control &ctl,
+        InputIterator first1,
+        InputIterator last1,
+        InputIterator first2,
+        OutputType init,
+        BinaryFunction1 f1,
+        BinaryFunction2 f2,
+        std::random_access_iterator_tag)
     {
 
 		int sz = static_cast<int>(last1 - first1);
@@ -215,8 +251,15 @@ namespace amp{
         device_vector< iType, concurrency::array_view> dvInput( first1, last1, false, ctl);
         device_vector< iType, concurrency::array_view> dvInput2( first2, sz, false, ctl);
 
-        return inner_product(ctl, dvInput.begin( ), dvInput.end( ), dvInput2.begin( ),
-                                                   init, f1, f2, bolt::amp::device_vector_tag() );
+        return inner_product(
+            ctl,
+            dvInput.begin( ),
+            dvInput.end( ),
+            dvInput2.begin( ),
+            init,
+            f1,
+            f2,
+            bolt::amp::device_vector_tag() );
 
 	}
 
@@ -322,7 +365,8 @@ namespace amp{
         OutputType inner_product( InputIterator first1, InputIterator last1, InputIterator first2, OutputType init,
             BinaryFunction1 f1, BinaryFunction2 f2)
         {
-            return inner_product(control::getDefault(), first1, last1, first2, init, f1, f2);
+            return inner_product(
+                control::getDefault(), first1, last1, first2, init, f1, f2);
         }
 
         template<typename InputIterator,
@@ -345,7 +389,13 @@ namespace amp{
             OutputType init )
         {
             typedef typename std::iterator_traits<InputIterator>::value_type iType;
-            return detail::inner_product(ctl, first1,last1,first2,init,bolt::amp::plus< iType >( ),
+            return detail::inner_product(
+                ctl,
+                first1,
+                last1,
+                first2,
+                init,
+                bolt::amp::plus< iType >( ),
                 bolt::amp::multiplies< iType >( ));
         }
 
@@ -353,11 +403,21 @@ namespace amp{
         template<typename InputIterator, typename OutputType>
         static
         inline
-        OutputType inner_product( InputIterator first1, InputIterator last1, InputIterator first2, OutputType init)
+        OutputType inner_product(
+            InputIterator first1,
+            InputIterator last1,
+            InputIterator first2,
+            OutputType init)
         {
             typedef typename std::iterator_traits<InputIterator>::value_type iType;
-            return inner_product( control::getDefault(), first1, last1, first2, init,
-                bolt::amp::plus< iType >( ), bolt::amp::multiplies< iType >( ));
+            return inner_product(
+                control::getDefault(),
+                first1,
+                last1,
+                first2,
+                init,
+                bolt::amp::plus< iType >( ),
+                bolt::amp::multiplies< iType >( ));
         }
 
 

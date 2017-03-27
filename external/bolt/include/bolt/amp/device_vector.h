@@ -514,10 +514,14 @@ private:
             m_devMemory = arrayview_type(m_Size);//tmp.view_as(tmp.get_extent());
             if( init )
             {
+                std::fill_n(m_devMemory.data(), newSize, initValue);
                 //arrayview_type m_devMemoryAV( m_devMemory );
-                Concurrency::parallel_for_each(m_devMemory.get_extent(), [=](Concurrency::index<1> idx) restrict(amp) {
-                    m_devMemory[idx] = initValue;
-                });
+//                auto foo = m_devMemory;
+//                Concurrency::parallel_for_each(
+//                    m_devMemory.get_extent(),
+//                    [=](Concurrency::index<1> idx) restrict(amp) {
+//                    //foo[idx] = initValue;
+//                });
             }
         }
     }

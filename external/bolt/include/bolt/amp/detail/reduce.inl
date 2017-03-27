@@ -21,14 +21,14 @@
 
 #if !defined( BOLT_AMP_REDUCE_INL )
 #define BOLT_AMP_REDUCE_INL
-#define REDUCE_WAVEFRONT_SIZE 256 //64
+#define REDUCE_WAVEFRONT_SIZE 64
 #define _REDUCE_STEP(_LENGTH, _IDX, _W) \
 if ((_IDX < _W) && ((_IDX + _W) < _LENGTH)) {\
 	iType mine = scratch[_IDX]; \
 	iType other = scratch[_IDX + _W]; \
 	scratch[_IDX] = binary_op(mine, other); \
 }\
-    t_idx.barrier.wait();
+    //t_idx.barrier.wait();
 
 #ifdef BOLT_ENABLE_PROFILING
 #include "bolt/AsyncProfiler.h"
@@ -163,14 +163,14 @@ namespace amp{
 	template<typename T, typename DVInputIterator, typename BinaryFunction>
     static
     inline
-    T reduce_enqueue(bolt::amp::control &ctl,
-        DVInputIterator& first,
-        DVInputIterator& last,
-        T& init,
-        BinaryFunction& binary_op)
+    T reduce_enqueue(
+        bolt::amp::control &ctl,
+        const DVInputIterator& first,
+        const DVInputIterator& last,
+        const T& init,
+        BinaryFunction binary_op)
 	{
-
-		        typedef typename std::iterator_traits< DVInputIterator >::value_type iType;
+        typedef typename std::iterator_traits< DVInputIterator >::value_type iType;
 
         const int szElements = static_cast< int >( std::distance( first, last ) );
 
@@ -192,18 +192,12 @@ namespace amp{
         // Algorithm is different from cl::reduce. We launch worksize = number of elements here.
         // AMP doesn't have APIs to get CU capacity. Launchable size is great though.
 
-        try
-        {
-                concurrency::parallel_for_each(ctl.getAccelerator().get_default_view(),
-                                               tiledExtentReduce,
-                                               [ first,
-											 szElements,
-											 length,
-                                                 &result,
-                                                 binary_op ]
-                                               ( concurrency::tiled_index<REDUCE_WAVEFRONT_SIZE> t_idx ) restrict(amp)
-                {
-				int gx = t_idx.global[0];
+        try {
+            concurrency::parallel_for_each(
+                ctl.getAccelerator().get_default_view(),
+                tiledExtentReduce,
+                [=, &result](const concurrency::tiled_index<REDUCE_WAVEFRONT_SIZE>& t_idx) restrict(amp) {
+                int gx = t_idx.global[0];
 				int gloId = gx;
 				tile_static iType scratch[REDUCE_WAVEFRONT_SIZE];
 				//  Initialize local data store
@@ -227,12 +221,12 @@ namespace amp{
 				}
 
 				scratch[tileIndex] = accumulator;
-				t_idx.barrier.wait();
+				//t_idx.barrier.wait();
 
-				unsigned int tail = szElements - (t_idx.tile[0] * REDUCE_WAVEFRONT_SIZE);
+				unsigned int tail = szElements - t_idx.tile_origin[0];
 
-				_REDUCE_STEP(tail, tileIndex, 128);
-				_REDUCE_STEP(tail, tileIndex, 64);
+				//_REDUCE_STEP(tail, tileIndex, 128);
+				//_REDUCE_STEP(tail, tileIndex, 64);
 				_REDUCE_STEP(tail, tileIndex, 32);
 				_REDUCE_STEP(tail, tileIndex, 16);
 				_REDUCE_STEP(tail, tileIndex, 8);
@@ -250,19 +244,16 @@ namespace amp{
                   {
                       result[t_idx.tile[ 0 ]] = scratch[0];
                   }
+            });
 
-                });
+			//iType acc = static_cast<iType>(init);
+			std::vector<iType> cpuPointerReduce = result;
 
-			iType acc = static_cast<iType>(init);
-			std::vector<iType> *cpuPointerReduce = new std::vector<iType>(numTiles);
-
-			concurrency::copy(result, (*cpuPointerReduce).begin());
-			for(int i = 0; i < numTiles; ++i)
-			{
-				acc = binary_op(acc, (*cpuPointerReduce)[i]);
-			}
-			delete cpuPointerReduce;
-			return acc;
+//			for(int i = 0; i < numTiles; ++i)
+//			{
+//				acc = binary_op(acc, cpuPointerReduce[i]);
+//			}
+			return std::accumulate(cpuPointerReduce.cbegin(), cpuPointerReduce.cend(), init, binary_op);
             }
             catch(std::exception &e)
             {
@@ -279,8 +270,8 @@ namespace amp{
     T reduce(bolt::amp::control &ctl,
         DVInputIterator& first,
         DVInputIterator& last,
-        T& init,
-        BinaryFunction& binary_op,
+        const T& init,
+        BinaryFunction binary_op,
 	    bolt::amp::device_vector_tag)
     {
 		return reduce_enqueue( ctl, first, last, init, binary_op);
@@ -293,12 +284,13 @@ namespace amp{
     template<typename T, typename InputIterator, typename BinaryFunction>
     static
     inline
-    T reduce(bolt::amp::control &ctl,
-                InputIterator first,
-                InputIterator last,
-                T& init,
-                BinaryFunction& binary_op,
-                std::random_access_iterator_tag)
+    T reduce(
+        bolt::amp::control &ctl,
+        InputIterator first,
+        InputIterator last,
+        const T& init,
+        BinaryFunction binary_op,
+        std::random_access_iterator_tag)
     {
         int sz = static_cast<int>(last - first);
         if (sz == 0)
@@ -315,8 +307,8 @@ namespace amp{
     T reduce(bolt::amp::control &ctl,
                 InputIterator first,
                 InputIterator last,
-                T init,
-                BinaryFunction& binary_op,
+                const T& init,
+                BinaryFunction binary_op,
                 bolt::amp::fancy_iterator_tag)
     {
         return reduce_enqueue(ctl, first, last, init, binary_op);
@@ -331,11 +323,12 @@ namespace amp{
     template<typename T, typename InputIterator, typename BinaryFunction>
     static
     inline
-    T reduce(bolt::amp::control &ctl,
-                InputIterator first,
-                InputIterator last,
-                T init,
-                BinaryFunction& binary_op)
+    T reduce(
+        bolt::amp::control &ctl,
+        InputIterator first,
+        InputIterator last,
+        T init,
+        BinaryFunction binary_op)
     {
         int sz = static_cast<int>( std::distance(first, last ) );
         if (sz == 0)
@@ -361,7 +354,13 @@ namespace amp{
         }
         else
         {
-            return amp::reduce(ctl, first, last, init, binary_op, typename std::iterator_traits<InputIterator>::iterator_category() );
+            return amp::reduce(
+                ctl,
+                first,
+                last,
+                init,
+                binary_op,
+                typename std::iterator_traits<InputIterator>::iterator_category{});
         }
         return init;
     }

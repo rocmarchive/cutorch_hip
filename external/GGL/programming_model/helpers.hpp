@@ -8,7 +8,7 @@
 #include <utility>     // For std::declval.
 
 namespace std
-{
+{   // TODO: these should be removed as soon as possible.
     #if (__cplusplus < 201406L)
         template<typename...>
         using void_t = void;
@@ -22,7 +22,8 @@ namespace std
             using decay_t = typename decay<T>::type;
             template<FunctionalProcedure F, typename... Ts>
             using result_of_t = typename result_of<F(Ts...)>::type;
-
+            template<typename T>
+            using remove_reference_t = typename remove_reference<T>::type;
             template<
                 FunctionalProcedure F,
                 unsigned int n = 0u,
@@ -92,5 +93,32 @@ namespace std
             template<typename F>
             struct is_callable : is_callable_impl<F> {};
         #endif
+        template<typename...>
+        struct disjunction : false_type {};
+        template<typename B1>
+        struct disjunction<B1> : B1 {};
+        template<typename B1, typename... Bs>
+        struct disjunction<B1, Bs...>
+            : conditional_t<B1{} == true, B1, disjunction<Bs...>>
+        {};
     #endif
+}
+
+namespace // Only for documentation, macros ignore namespaces.
+{
+    #define count_macro_args_impl_hip_(\
+         _0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15,\
+         _16, _17, _18, _19, _20, _21, _n, ...)\
+         _n
+    #define count_macro_args_hip_(...)\
+        count_macro_args_impl_hip_(\
+            , ##__VA_ARGS__, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12,\
+            11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0)
+
+    #define overloaded_macro_expand_hip_(macro, arg_cnt) macro##arg_cnt
+    #define overload_macro_impl_hip_(macro, arg_cnt)\
+        overloaded_macro_expand_hip_(macro, arg_cnt)
+    #define overload_macro_hip_(macro, ...)\
+        overload_macro_impl_hip_(macro, count_macro_args_hip_(__VA_ARGS__))\
+            (__VA_ARGS__)
 }
