@@ -3160,7 +3160,7 @@ end
 
 --TODO: fix the TensorSort and TopK implementation to run the below test
 -- Currently results in ERROR status
---[[function test.sort()
+function test.sort()
    for tries = 1, 5 do
       local t = createTestTensor(2 ^ 20)
       local selectdim = chooseInt(1, t:nDimension())
@@ -3216,7 +3216,7 @@ end
    tester:assert(isEqual(gather_cpu, gather_gpu), 'indices mismatch')
 end
 
-function test.topk()
+--[[function test.topk()
    local function runTopK(t, dim, k, dir)
       -- FIXME: if the tensors ever contain equivalent values, then their indices
       -- could in fact be different.

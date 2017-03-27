@@ -58,7 +58,7 @@ fillSliceWithIndex(hipLaunchParm lp, TensorInfo<long, IndexType> out,
 // For slice sorting in Thrust; extracts a slice index from a linear
 // index and uses that for comparison
 struct SliceComp {
-  SliceComp(long size) : sliceSize(size) {}
+  __host__ __device__ SliceComp(long size) : sliceSize(size) {}
 
   __device__ bool operator()(const long& a, const long& b) const {
     // Since the slices are guaranteed to be innermost, the segment is
@@ -73,7 +73,7 @@ struct SliceComp {
 
 // For sorting in Thurst; extracts a within-slice index from a linear index
 struct GlobalIndexToPerSliceIndex {
-  GlobalIndexToPerSliceIndex(long size) : sliceSize(size) {}
+  __host__ __device__ GlobalIndexToPerSliceIndex(long size) : sliceSize(size) {}
 
   __device__ inline void operator()(long& v) const {
     v = v % sliceSize + TH_INDEX_BASE;
