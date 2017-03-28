@@ -6,6 +6,7 @@
 /* Generator */
 typedef struct _Generator {
   struct curandStateMtgp32* gen_states;
+  struct HipRandStateMtgp32* h_gen_states;
   struct mtgp32_kernel_params *kernel_params;
   int initf;
   unsigned long initial_seed;

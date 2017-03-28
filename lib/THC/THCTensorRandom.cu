@@ -10,6 +10,9 @@
 #include <curand_kernel.h>
 #include <curand_mtgp32_host.h>
 #include <curand_mtgp32dc_p_11213.h>
+#else
+#include "hip/hcc.h"
+#include <MTGP/hiprand_mtgp32.h>
 #endif
 
 #ifdef THRUST_PATH
@@ -27,6 +30,14 @@ void initializeGenerator(THCState *state, Generator* gen)
 #ifdef CURAND_PATH
   THCudaCheck(THCudaMalloc(state, (void**)&gen->gen_states, MAX_NUM_BLOCKS * sizeof(curandStateMtgp32)));
   THCudaCheck(THCudaMalloc(state, (void**)&gen->kernel_params, sizeof(mtgp32_kernel_params)));
+#else
+  assert(gen);
+  gen->h_gen_states = new HipRandStateMtgp32;
+  assert(gen->h_gen_states);
+  hipStream_t currentStream = THCState_getCurrentStream(state);
+  hc::accelerator_view* current_accl_view;
+  hipHccGetAcceleratorView(currentStream, &current_accl_view);
+  HipRandStateMtgp32_init(*current_accl_view, gen->h_gen_states);
 #endif 
 }
 
