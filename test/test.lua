@@ -2903,7 +2903,7 @@ function test.storageToTable()
    end
 end
 
-function test.maskedSelect()
+--[[function test.maskedSelect()
    local n_row = math.random(minsize,maxsize)
    local n_col = math.random(minsize,maxsize)
 
@@ -3085,7 +3085,7 @@ function test.maskedFill()
    tester:assertTensorEq(x, x_cuda:float(), 0.00001,
           "Error in maskedFill non-contig indexing x[x:gt(y)]")
 
-end
+end]]--
 
 -- Fill idx with valid indices.
 local function fillIdx(idx, dim, dim_size, elems_per_row, m, n, o)

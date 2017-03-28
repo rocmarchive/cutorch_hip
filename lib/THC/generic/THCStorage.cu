@@ -6,9 +6,11 @@
 void THCStorage_(fill)(THCState *state, THCStorage *self, real value)
 {
 #ifdef THRUST_PATH
-//  thrust::device_ptr<real> self_data(self->data);
-//  thrust::fill(
-//    self_data, self_data+self->size, value);
+  thrust::device_ptr<real> self_data(self->data);
+  thrust::fill(
+    self_data, self_data+self->size, value);
+#else
+    bolt::amp::fill(self->data, self->data + self->size, value);
 #endif
 }
 
@@ -29,13 +31,6 @@ void THCStorage_(resize)(THCState *state, THCStorage *self, ptrdiff_t size)
       (void**)&(self->data),
       self->size * sizeof(real),
       size * sizeof(real), THCState_getCurrentStream(state));
-/* 
-    if(self->data) {
-      THCudaCheck(hipFree(self->data));
-      self->data = NULL;
-    }
-    hipError_t err = hipMalloc((void **)&(self->data), size * sizeof(real));
-*/
     if (err != hipSuccess) {
       THCHeapUpdate(state, (self->size - size) * sizeof(real));
       THCudaCheck(err);
@@ -61,7 +56,6 @@ void THCStorage_(resize)(THCState *state, THCStorage *self, ptrdiff_t size)
     real *data = NULL;
     // update heap *before* attempting malloc, to free space for the malloc
     THCHeapUpdate(state, size * sizeof(real));
-//    hipError_t err = hipMalloc((void**)&(data), sizeof(real) * size);
     hipError_t err =
       (*self->allocator->malloc)(self->allocatorContext,
                                  (void**)&(data),
@@ -83,7 +77,6 @@ void THCStorage_(resize)(THCState *state, THCStorage *self, ptrdiff_t size)
         if(self->data) {
           THCudaCheck(
           (*self->allocator->free)(self->allocatorContext, self->data));
-          //THCudaCheck(hipFree(self->data));
           // Reset the deleted pointer to NULL
           self->data = NULL;
         }

@@ -6,6 +6,8 @@
 #if CUDA_VERSION >= 7000
 #include <thrust/system/cuda/execution_policy.h>
 #endif
+#else 
+#include "bolt/amp/fill.h"
 #endif
 
 #include "THCHalf.h"
