@@ -75,14 +75,14 @@ void bitonicSort(K (&keys)[Power2SortSize],
       }
 
       unsigned int pos = 2 * hipThreadIdx_x - (hipThreadIdx_x & (stride - 1));
-      bitonicSwap(keys[pos],
+      /*bitonicSwap(keys[pos],
                   values[pos],
                   valid[pos],
                   keys[pos + stride],
                   values[pos + stride],
                   valid[pos + stride],
                   flag,
-                  comp);
+                  comp);*/
     }
   }
 
@@ -94,14 +94,14 @@ void bitonicSort(K (&keys)[Power2SortSize],
     }
 
     unsigned int pos = 2 * hipThreadIdx_x - (hipThreadIdx_x & (stride - 1));
-    bitonicSwap(keys[pos],
+    /*bitonicSwap(keys[pos],
                 values[pos],
                 valid[pos],
                 keys[pos + stride],
                 values[pos + stride],
                 valid[pos + stride],
                 false,
-                comp);
+                comp);*/
   }
 
   // Single warp per slice is completely synchronous

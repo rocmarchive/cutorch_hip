@@ -35,7 +35,7 @@ struct ThrustLTOp {
 // `sliceSize - 1`.
 template <typename IndexType, int Dim>
 __global__ void
-fillSliceWithIndex(hipLaunchParm lp, TensorInfo<long, IndexType> out,
+fillSliceWithIndex(hipLaunchParm lp, long* outData, IndexType* outSizes, IndexType* outStrides, int outDims,
                    IndexType totalSlices,
                    IndexType sliceSize,
                    IndexType sliceStride) {
@@ -46,8 +46,8 @@ fillSliceWithIndex(hipLaunchParm lp, TensorInfo<long, IndexType> out,
   }
 
   const unsigned long offset =
-    IndexToOffset<long, IndexType, Dim>::get(slice, out.dSizes, out.dStrides, out.dims);
-  long* base = &out.data[offset];
+    IndexToOffset<long, IndexType, Dim>::get(slice, outSizes, outStrides, outDims);
+  long* base = &outData[offset];
 
   for (long i = hipThreadIdx_x; i < sliceSize; i += hipBlockDim_x) {
     // Torch indices are 1-based (hence the +1)
