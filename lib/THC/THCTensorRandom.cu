@@ -44,6 +44,7 @@ void initializeGenerator(THCState *state, Generator* gen)
 /* Frees memory allocated during setup. */
 void destroyGenerator(THCState *state, Generator* gen)
 {
+#ifdef CURAND_PATH
   if (gen->gen_states)
   {
     THCudaCheck(THCudaFree(state, gen->gen_states));
@@ -54,10 +55,16 @@ void destroyGenerator(THCState *state, Generator* gen)
     THCudaCheck(THCudaFree(state, gen->kernel_params));
     gen->kernel_params = NULL;
   }
+#else
+  if (gen->h_gen_states) {
+    HipRandStateMtgp32_release(gen->h_gen_states);
+    delete gen->h_gen_states;
+  }
+#endif
 }
 
 /* Creates a new generator state given the seed. */
-void createGeneratorState(Generator* gen, unsigned long seed)
+void createGeneratorState(THCState* state, Generator* gen, unsigned long seed)
 {
 #ifdef CURAND_PATH
   if (curandMakeMTGP32Constants(mtgp32dc_params_fast_11213, gen->kernel_params) != CURAND_STATUS_SUCCESS)
@@ -69,6 +76,20 @@ void createGeneratorState(Generator* gen, unsigned long seed)
   {
     THError("Creating MTGP kernel state failed.");
   }
+#else
+  hipStream_t currentStream = THCState_getCurrentStream(state);
+  hc::accelerator_view* current_accl_view;
+  hipHccGetAcceleratorView(currentStream, &current_accl_view);
+
+  if (mtgp32_init_params_kernel(*current_accl_view, mtgp32_params_fast_11213, gen->h_gen_states)) {
+    THError("Creating MTGP constants failed.");
+  }
+
+  // Using device API
+  if (mtgp32_init_seed_kernel(*current_accl_view, gen->h_gen_states, seed)) {
+    THError("Creating MTGP kernel state failed.");
+  }
+
 #endif
 }
 
@@ -101,10 +122,10 @@ void THCRandom_shutdown(THCState* state)
 }
 
 /* Manually set the generator seed */
-static void THCRandom_manualSeedGen(Generator* gen, unsigned long seed)
+static void THCRandom_manualSeedGen(THCState* state, Generator* gen, unsigned long seed)
 {
   gen->initial_seed = seed;
-  createGeneratorState(gen, seed);
+  createGeneratorState(state, gen, seed);
   gen->initf = 1;
 }
 
@@ -121,7 +142,7 @@ Generator* THCRandom_getGenerator(THCState* state)
   if (gen->initf == 0)
   {
     initializeGenerator(state, gen);
-    THCRandom_manualSeedGen(gen, (unsigned long)time(0));
+    THCRandom_manualSeedGen(state, gen, (unsigned long)time(0));
   }
   return gen;
 }
@@ -151,7 +172,7 @@ unsigned long THCRandom_seedAll(THCState* state)
 void THCRandom_manualSeed(THCState* state, unsigned long seed)
 {
   Generator* gen = THCRandom_getGenerator(state);
-  THCRandom_manualSeedGen(gen, seed);
+  THCRandom_manualSeedGen(state, gen, seed);
 }
 
 void THCRandom_manualSeedAll(THCState* state, unsigned long seed)
@@ -161,9 +182,7 @@ void THCRandom_manualSeedAll(THCState* state, unsigned long seed)
   THCudaCheck(hipGetDevice(&currentDevice));
   for (int i = 0; i < rng_state->num_devices; ++i) {
     THCudaCheck(hipSetDevice(i));
-#ifdef CUDA_PATH
     THCRandom_manualSeed(state, seed);
-#endif
   }
   THCudaCheck(hipSetDevice(currentDevice));
 }
@@ -179,19 +198,23 @@ void THCRandom_getRNGState(THCState* state, THByteTensor *rng_state)
   Generator* gen = THCRandom_getGenerator(state);
 
   // The RNG state comprises the MTPG32 states and the seed.
-#ifdef __HCC__
-  static const size_t states_size = 0;
-#endif
 #ifdef CURAND_PATH
   static const size_t states_size = MAX_NUM_BLOCKS * sizeof(curandStateMtgp32);
+#else
+  static const size_t states_size = MAX_NUM_BLOCKS * sizeof(HipRandStateMtgp32);
 #endif
   static const size_t seed_size = sizeof(unsigned long);
   static const size_t total_size = states_size + seed_size;
   THByteTensor_resize1d(rng_state, total_size);
   THArgCheck(THByteTensor_nElement(rng_state) == total_size, 1, "RNG state is wrong size");
   THArgCheck(THByteTensor_isContiguous(rng_state), 1, "RNG state must be contiguous");
+#ifdef CURAND_PATH
   THCudaCheck(hipMemcpy(THByteTensor_data(rng_state), gen->gen_states,
                          states_size, hipMemcpyDeviceToHost));
+#else
+  THCudaCheck(hipMemcpy(THByteTensor_data(rng_state), gen->h_gen_states,
+                         states_size, hipMemcpyDeviceToHost));
+#endif
   memcpy(THByteTensor_data(rng_state) + states_size, &gen->initial_seed, seed_size);
 }
 
