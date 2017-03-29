@@ -286,7 +286,7 @@ THCDeviceTensor<T, Dim, IndexT, PtrTraits>::downcastOuter() {
   // them).
   for (int i = 0; i < Dim - NewDim; ++i) {
     bool cont = isContiguousDim(i);
-#ifdef __CUDA_ARCH__
+#if (defined(__HIP_DEVICE_COMPILE__) && __HIP_DEVICE_COMPILE__ == 1)
     // Device code
     assert(cont);
 #else
