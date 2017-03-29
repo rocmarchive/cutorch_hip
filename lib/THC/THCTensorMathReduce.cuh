@@ -141,7 +141,6 @@ __global__ void THCTensor_kernel_renorm(hipLaunchParm lp, Real *data, const Real
   buffer[tx] = ScalarConvert<int, Real>::to(0);
 
   // get norm of axis
-#ifdef CUDA_PATH
   for (ptrdiff_t i=tx; i<size; i+=step)
   {
     buffer[tx] = THCNumerics<Real>::add(
@@ -151,7 +150,6 @@ __global__ void THCTensor_kernel_renorm(hipLaunchParm lp, Real *data, const Real
         value)
     );
   }
-#endif
   // add (reduce)
   for (unsigned int stride = hipBlockDim_x >> 1; stride > 0; stride >>= 1)
   {
