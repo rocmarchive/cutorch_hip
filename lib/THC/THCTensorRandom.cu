@@ -288,7 +288,7 @@ void NAME(THCState* state, HipRandStateMtgp32 *rngstate, int size, float *result
   hipStream_t currentStream = THCState_getCurrentStream(state); \
   hc::accelerator_view* current_accl_view; \
   hipHccGetAcceleratorView(currentStream, &current_accl_view); \
-  HIPRAND_FUNC##_kernel(*current_accl_view, rngstate, result, FUNCTOR); \                                                                 \
+  HIPRAND_FUNC##_kernel(*current_accl_view, rngstate, result, FUNCTOR); \
 }
 
 #define GENERATE_KERNEL2(NAME, ARG1, ARG2, HIPRAND_FUNC, FUNCTOR)                   \
@@ -414,30 +414,38 @@ struct user_cauchy_functor {
 
 
 GENERATE_KERNEL2(generate_uniform, double a, double b, user_uniform, user_uniform_functor(a, b))
-//GENERATE_KERNEL1(generate_bernoulli, double p, user_uniform, user_bernoulli_functor(p))
+GENERATE_KERNEL1(generate_bernoulli, double p, user_uniform, user_bernoulli_functor(p))
 GENERATE_KERNEL2(generate_normal, double mean, double stdv, user_normal, user_normal_functor(stdv,  mean))
-//GENERATE_KERNEL1(generate_geometric,  double p, user_uniform, user_geometric_functor(p))
-//GENERATE_KERNEL1(generate_exponential, double lambda, user_uniform, user_exponential_functor(p))
+GENERATE_KERNEL1(generate_geometric,  double p, user_uniform, user_geometric_functor(p))
+GENERATE_KERNEL1(generate_exponential, double lambda, user_uniform, user_exponential_functor(lambda))
 GENERATE_KERNEL2(generate_cauchy, double median, double sigma, user_uniform, user_cauchy_functor(median, sigma))
 #endif
 
 #undef GENERATE_KERNEL1
 #undef GENERATE_KERNEL2
 
+#ifdef CURAND_PATH
 /* Separate kernel because curand_log_normal gets extra parameters. */
 __global__ void generate_log_normal(hipLaunchParm lp, curandStateMtgp32 *state, int size, float *result, float mean, float stddev)
 {
   int idx = hipBlockIdx_x * BLOCK_SIZE + hipThreadIdx_x;
   int rounded_size = THCCeilDiv(size, BLOCK_SIZE) * BLOCK_SIZE;
   for (int i = idx; i < rounded_size; i += BLOCK_SIZE * MAX_NUM_BLOCKS) {
-    #ifdef CURAND_PATH
     float x = curand_log_normal(&state[hipBlockIdx_x], mean, stddev);
     if (i < size) {
       result[i] = x;
     }
-    #endif
   }
 }
+#else
+/* Separate kernel because curand_log_normal gets extra parameters. */
+void generate_log_normal(THCState* state, HipRandStateMtgp32 *rngstate, int size, float* result, float mean, float stddev) {
+  hipStream_t currentStream = THCState_getCurrentStream(state); 
+  hc::accelerator_view* current_accl_view; 
+  hipHccGetAcceleratorView(currentStream, &current_accl_view); 
+  user_log_normal_kernel(*current_accl_view, rngstate, result, mean, stddev);
+}
+#endif
 
 #define NUM_BLOCKS min((int)THCCeilDiv(size, (ptrdiff_t) BLOCK_SIZE), MAX_NUM_BLOCKS)
 THC_API void THCudaTensor_uniform(THCState* state, THCudaTensor *self_, double a, double b)
@@ -495,6 +503,8 @@ THC_API void THCudaTensor_logNormal(THCState* state, THCudaTensor *self_, double
   #ifdef CURAND_PATH
   hipLaunchKernel(HIP_KERNEL_NAME(generate_log_normal), dim3(NUM_BLOCKS), dim3(BLOCK_SIZE), 0, THCState_getCurrentStream(state), 
       gen->gen_states, size, data, mean, stdv);
+  #else
+    generate_log_normal(state, gen->h_gen_states, size, data, mean, stdv); 
   #endif
   THCudaTensor_freeCopyTo(state, self, self_);
 };
