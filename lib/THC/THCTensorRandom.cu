@@ -12,7 +12,7 @@
 #include <curand_mtgp32dc_p_11213.h>
 #else
 #include "hip/hcc.h"
-#include <MTGP/hiprand_mtgp32.h>
+#include "MTGP/hiprand_mtgp32.h"
 #endif
 
 #ifdef THRUST_PATH
@@ -104,6 +104,7 @@ void THCRandom_init(THCState* state, int devices, int current_device)
     rng_state->gen[i].initf = 0;
     rng_state->gen[i].initial_seed = 0;
     rng_state->gen[i].gen_states = NULL;
+    rng_state->gen[i].h_gen_states = NULL;
     rng_state->gen[i].kernel_params = NULL;
   }
 }
@@ -229,26 +230,29 @@ void THCRandom_setRNGState(THCState* state, THByteTensor *rng_state)
 {
   Generator* gen = THCRandom_getGenerator(state);
 
-#ifdef __HCC__
-  static const size_t states_size = 0; 
-#endif
 #ifdef CURAND_PATH
   static const size_t states_size = MAX_NUM_BLOCKS * sizeof(curandStateMtgp32);
+#else
+  static const size_t states_size = MAX_NUM_BLOCKS * sizeof(HipRandStateMtgp32);
 #endif
   static const size_t seed_size = sizeof(unsigned long);
   static const size_t total_size = states_size + seed_size;
   THArgCheck(THByteTensor_nElement(rng_state) == total_size, 1, "RNG state is wrong size");
   THArgCheck(THByteTensor_isContiguous(rng_state), 1, "RNG state must be contiguous");
 
+#ifdef CURAND_PATH
   THCudaCheck(hipMemcpy(gen->gen_states, THByteTensor_data(rng_state),
                          states_size, hipMemcpyHostToDevice));
-#ifdef CURAND_PATH
   hipLaunchKernel(HIP_KERNEL_NAME(set_rngstate_kernel), dim3(1), dim3(MAX_NUM_BLOCKS), 0, THCState_getCurrentStream(state), 
       gen->gen_states, gen->kernel_params);
+#else
+  THCudaCheck(hipMemcpy(gen->h_gen_states, THByteTensor_data(rng_state),
+                         states_size, hipMemcpyHostToDevice));
 #endif
   memcpy(&gen->initial_seed, THByteTensor_data(rng_state) + states_size, seed_size);
 }
 
+#ifdef CURAND_PATH
 #define GENERATE_KERNEL1(NAME, ARG1, CURAND_FUNC, TRANSFORM)                   \
 __global__ void NAME(hipLaunchParm  lp, curandStateMtgp32 *state, int size, float *result, ARG1)  \
 {                                                                              \
@@ -276,6 +280,27 @@ __global__ void NAME(hipLaunchParm lp, curandStateMtgp32 *state, int size, float
     }                                                                                \
   }                                                                                  \
 }
+#else
+
+#define GENERATE_KERNEL1(NAME, ARG1, HIPRAND_FUNC, FUNCTOR)                   \
+void NAME(THCState* state, HipRandStateMtgp32 *rngstate, int size, float *result, ARG1)  \
+{ \
+  hipStream_t currentStream = THCState_getCurrentStream(state); \
+  hc::accelerator_view* current_accl_view; \
+  hipHccGetAcceleratorView(currentStream, &current_accl_view); \
+  HIPRAND_FUNC##_kernel(*current_accl_view, rngstate, result, FUNCTOR); \                                                                 \
+}
+
+#define GENERATE_KERNEL2(NAME, ARG1, ARG2, HIPRAND_FUNC, FUNCTOR)                   \
+void NAME(THCState* state, HipRandStateMtgp32 *rngstate, int size, float *result, ARG1, ARG2)  \
+{                                                                                    \
+  hipStream_t currentStream = THCState_getCurrentStream(state); \
+  hc::accelerator_view* current_accl_view; \
+  hipHccGetAcceleratorView(currentStream, &current_accl_view); \
+  HIPRAND_FUNC##_kernel(*current_accl_view, rngstate, result, FUNCTOR);                                                 \
+}
+
+#endif
 #ifdef CURAND_PATH
 GENERATE_KERNEL2(generate_uniform, double a, double b, curand_uniform, x * (b-a) + a)
 GENERATE_KERNEL1(generate_bernoulli, double p, curand_uniform, (float)x <= p)
@@ -283,6 +308,117 @@ GENERATE_KERNEL2(generate_normal, double mean, double stdv, curand_normal, (x * 
 GENERATE_KERNEL1(generate_geometric, double p, curand_uniform, (log(1-x) / log(p)) + 1)
 GENERATE_KERNEL1(generate_exponential, double lambda, curand_uniform, (float)(-1. / lambda * log(1-x)))
 GENERATE_KERNEL2(generate_cauchy, double median, double sigma, curand_uniform, (float)(median + sigma * tan(M_PI*(x-0.5))))
+#else
+
+// Adding All HC based constructors
+
+struct user_uniform_functor {
+  double _a;
+  double _b;
+  user_uniform_functor(double a, double b) __attribute__((hc, cpu)) : _a(a), _b(b) {}
+  inline double operator()(const float& x) const __attribute__((hc, cpu)) {
+    return x * (_b - _a) + _a;
+  }
+  // User should provide copy ctor
+  user_uniform_functor(const user_uniform_functor&other) __attribute__((hc, cpu)) : _a(other._a), _b(other._b) { }
+  // User should provide copy assign ctor
+  user_uniform_functor& operator = (const user_uniform_functor&other) __attribute__((hc, cpu)) {
+    _a = other._a;
+    _b = other._b;
+    return *this;
+  }
+};
+
+
+struct user_bernoulli_functor {
+  double _p;
+  user_bernoulli_functor(double p) __attribute__((hc, cpu)) : _p(p) {}
+  inline double operator()(const float& x) const __attribute__((hc, cpu)) {
+    return (double)x <= _p;
+  }
+  // User should provide copy ctor
+  user_bernoulli_functor(const user_bernoulli_functor&other) __attribute__((hc, cpu)) : _p(other._p) { }
+  // User should provide copy assign ctor
+  user_bernoulli_functor& operator = (const user_bernoulli_functor&other) __attribute__((hc, cpu)) {
+    _p = other._p;
+    return *this;
+  }
+};
+
+
+struct user_normal_functor {
+  double _stdv;
+  double _mean;
+  user_normal_functor(double stdv, double mean) __attribute__((hc, cpu)) : _stdv(stdv), _mean(mean) {}
+  inline double operator()(const float& x) const __attribute__((hc, cpu)) {
+    return (x * _stdv) + _mean;
+  }
+  // User should provide copy ctor
+  user_normal_functor(const user_normal_functor&other) __attribute__((hc, cpu))
+    : _stdv(other._stdv), _mean(other._mean) { }
+  // User should provide copy assign ctor
+  user_normal_functor& operator = (const user_normal_functor&other) __attribute__((hc, cpu)) {
+    _stdv = other._stdv;
+    _mean = other._mean;
+    return *this;
+  }
+};
+
+struct user_geometric_functor {
+  double _p;
+  user_geometric_functor(double p) __attribute__((hc, cpu)) : _p(p) {}
+  inline double operator()(const float& x) const __attribute__((hc, cpu)) {
+    return (hc::precise_math::log((double)(1 - x)) / hc::precise_math::log(_p)) + 1;
+  }
+  // User should provide copy ctor
+  user_geometric_functor(const user_geometric_functor&other) __attribute__((hc, cpu)) : _p(other._p) { }
+  // User should provide copy assign ctor
+  user_geometric_functor& operator = (const user_geometric_functor&other) __attribute__((hc, cpu)) {
+    _p = other._p;
+    return *this;
+  }
+};
+
+struct user_exponential_functor {
+  double _lambda;
+  user_exponential_functor(double lambda) __attribute__((hc, cpu)) : _lambda(lambda) {}
+  inline double operator()(const float& x) const __attribute__((hc, cpu)) {
+    return (double)(-1. / _lambda * hc::precise_math::log((double)(1 - x)));
+  }
+  // User should provide copy ctor
+  user_exponential_functor(const user_exponential_functor&other) __attribute__((hc, cpu)) : _lambda(other._lambda) { }
+  // User should provide copy assign ctor
+  user_exponential_functor& operator = (const user_exponential_functor&other) __attribute__((hc, cpu)) {
+    _lambda = other._lambda;
+    return *this;
+  }
+};
+
+struct user_cauchy_functor {
+  double _median;
+  double _sigma;
+  user_cauchy_functor(double median, double sigma) __attribute__((hc, cpu)) : _median(median), _sigma(sigma) {}
+  inline double operator()(const float& x) const __attribute__((hc, cpu)) {
+    return (double)(_median + _sigma * hc::precise_math::tan((double)M_PI * (x - 0.5)));
+  }
+  // User should provide copy ctor
+  user_cauchy_functor(const user_cauchy_functor&other) __attribute__((hc, cpu))
+    : _median(other._median), _sigma(other._sigma) { }
+  // User should provide copy assign ctor
+  user_cauchy_functor& operator = (const user_cauchy_functor&other) __attribute__((hc, cpu)) {
+    _median = other._median;
+    _sigma = other._sigma;
+    return *this;
+  }
+};
+
+
+GENERATE_KERNEL2(generate_uniform, double a, double b, user_uniform, user_uniform_functor(a, b))
+//GENERATE_KERNEL1(generate_bernoulli, double p, user_uniform, user_bernoulli_functor(p))
+GENERATE_KERNEL2(generate_normal, double mean, double stdv, user_normal, user_normal_functor(stdv,  mean))
+//GENERATE_KERNEL1(generate_geometric,  double p, user_uniform, user_geometric_functor(p))
+//GENERATE_KERNEL1(generate_exponential, double lambda, user_uniform, user_exponential_functor(p))
+GENERATE_KERNEL2(generate_cauchy, double median, double sigma, user_uniform, user_cauchy_functor(median, sigma))
 #endif
 
 #undef GENERATE_KERNEL1
