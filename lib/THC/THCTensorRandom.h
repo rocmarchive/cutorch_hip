@@ -5,8 +5,12 @@
 
 /* Generator */
 typedef struct _Generator {
+#ifdef CURAND_PATH
   struct curandStateMtgp32* gen_states;
   struct mtgp32_kernel_params *kernel_params;
+#else
+  struct HipRandStateMtgp32* h_gen_states;
+#endif
   int initf;
   unsigned long initial_seed;
 } Generator;

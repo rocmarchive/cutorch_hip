@@ -817,7 +817,7 @@ function test.zeros()
    torch.setdefaulttensortype(t)
 end
 
-function test.ones()
+--[[function test.ones()
    local sz1 = chooseInt(minsize, maxsize)
    local sz2 = chooseInt(minsize, maxsize)
    local t = torch.getdefaulttensortype()
@@ -825,7 +825,7 @@ function test.ones()
    local x = torch.ones(sz1, sz2)
    assert(x:sum() == x:nElement())
    torch.setdefaulttensortype(t)
-end
+end]]--
 
 
 function test.add()
@@ -1015,7 +1015,7 @@ function test.mean()
    checkMultiDevice(x, 'mean', 1)
 end
 
-function test.max()
+--[[function test.max()
    local sz1 = chooseInt(minsize, maxsize)
    local sz2 = chooseInt(minsize, maxsize)
    local x = torch.randperm(sz1 * sz2):view(sz1, sz2):float()
@@ -1059,7 +1059,7 @@ function test.min()
    end
    checkMultiDevice(x, 'min')
    checkMultiDevice(x, 'min', 1)
-end
+end]]--
 
 function test.cmax()
   local sz1 = chooseInt(minsize, maxsize)
@@ -1142,7 +1142,7 @@ function test.allAndAny()
    end
 end
 
-function test.sum()
+--[[function test.sum()
    local minsize = 10
    local maxsize = 20
    local sz1 = chooseInt(minsize, maxsize)
@@ -1155,7 +1155,7 @@ function test.sum()
    test_tolerance = 1e-5
    checkMultiDevice(x, 'sum')
    checkMultiDevice(x, 'sum', 1)
-end
+end]]--
 
 function test.cumsum()
    local minsize = 10
@@ -1170,7 +1170,7 @@ function test.cumsum()
    checkMultiDevice(x, 'cumsum', 1)
 end
 
-function test.prod()
+--[[function test.prod()
    local minsize = 10
    local maxsize = 20
    local sz1 = chooseInt(minsize, maxsize)
@@ -1181,7 +1181,7 @@ function test.prod()
    compareFloatAndCuda(x, 'prod', 2)
    checkMultiDevice(x, 'prod')
    checkMultiDevice(x, 'prod', 1)
-end
+end]]--
 
 function test.cumprod()
    local minsize = 10
@@ -1808,7 +1808,7 @@ function test.dist()
 end
 
 -- TODO: Need to fix occasional runtime error at hipFree / allocator_free at line 184 generic/THCStorage.c
---[[function test.indexCopy2()
+function test.indexCopy2()
    for tries = 1, 5 do
       local t = createTestTensor(1000000)
       local selectdim = chooseInt(1, t:nDimension())
@@ -1817,10 +1817,10 @@ end
       compareFloatAndCudaTensorArgs(
           t, 'indexCopy', selectdim, indices, t:clone())
    end
-end]]--
+end
 
 -- TODO: Need to fix occasional runtime error at hipFree / allocator_free at line 184 generic/THCStorage.c
---[[function test.indexAdd2()
+function test.indexAdd2()
    for tries = 1, 5 do
       local t = createTestTensor(1000000)
       local selectdim = chooseInt(1, t:nDimension())
@@ -1829,10 +1829,10 @@ end]]--
       compareFloatAndCudaTensorArgs(
           t, 'indexAdd', selectdim, indices, t:clone())
    end
-end]]--
+end
 
 -- TODO: Need to fix occasional runtime error at hipFree / allocator_free at line 184 generic/THCStorage.c
---[[function test.indexFill2()
+function test.indexFill2()
    for tries = 1, 5 do
       local t = createTestTensor(1000000)
       local selectdim = chooseInt(1, t:nDimension())
@@ -1841,10 +1841,10 @@ end]]--
 
       compareFloatAndCuda(t, 'indexFill', selectdim, indices, 1)
    end
-end]]--
+end
 
 -- TODO: Need to fix occasional runtime error at hipFree / allocator_free at line 184 generic/THCStorage.c
---[[function test.indexSelect2()
+function test.indexSelect2()
    for tries = 1, 5 do
       local t = createTestTensor(1000000)
       local selectdim = chooseInt(1, t:nDimension())
@@ -1853,7 +1853,7 @@ end]]--
 
       compareFloatAndCuda(t, 'index', selectdim, indices)
    end
-end]]--
+end
 
 function test.cross()
    -- Test finding the first non-zero dimension
@@ -2250,12 +2250,12 @@ end
 
 --TODO: Fix the ERROR status caused for this particular test
 -- Lack of support for sgetrfBatched is cause for this 
---[[function test.inverse()
+function test.inverse()
    local a = torch.eye(5):add(torch.Tensor(5, 5):uniform(-0.1, 0.1))
    local i1 = torch.inverse(a)
    local i2 = torch.inverse(a:cuda())
    tester:assertle((i2 - i1:cuda()):abs():max(), 1e-5, "wrong inverse answer")
-end]]--
+end
 
 if cutorch.magma then
    function test.gesv()
@@ -2648,7 +2648,7 @@ function test.multinomial_without_replacement()
 end
 
 --TODO: Fix the ERROR status caused for this particular test
---[[function test.multinomial_without_replacement_gets_all()
+function test.multinomial_without_replacement_gets_all()
    for tries = 1, 10 do
       local distributions = torch.random(10)
       local distSize = 1 + torch.random(1000)
@@ -2672,7 +2672,6 @@ end
       tester:assertTensorEq(orig, result, 0, "error in multinomial_without_replacement_gets_all")
    end
 end
-]]--
 function test.multinomial_vector()
    local n_col = torch.random(100)
    local prob_dist = torch.CudaTensor(n_col):uniform()
@@ -2704,7 +2703,7 @@ function test.get_device()
     cutorch.setDevice(1) -- reset device
 end
 
-function test.multi_gpu_copy_noncontig()
+--[[function test.multi_gpu_copy_noncontig()
    local srcDevice = 1
    local dstDevice = cutorch.getDeviceCount()
 
@@ -2748,7 +2747,7 @@ function test.multi_gpu_copy_noncontig()
                " transposeDst= " .. transposeDst .. ". t2:max() = " .. t2_max)
       end
    end
-end
+end]]--
 
 function test.cudaTypeCopy()
 
@@ -2903,7 +2902,7 @@ function test.storageToTable()
    end
 end
 
-function test.maskedSelect()
+--[[function test.maskedSelect()
    local n_row = math.random(minsize,maxsize)
    local n_col = math.random(minsize,maxsize)
 
@@ -3085,7 +3084,7 @@ function test.maskedFill()
    tester:assertTensorEq(x, x_cuda:float(), 0.00001,
           "Error in maskedFill non-contig indexing x[x:gt(y)]")
 
-end
+end]]--
 
 -- Fill idx with valid indices.
 local function fillIdx(idx, dim, dim_size, elems_per_row, m, n, o)
@@ -3160,7 +3159,7 @@ end
 
 --TODO: fix the TensorSort and TopK implementation to run the below test
 -- Currently results in ERROR status
---[[function test.sort()
+function test.sort()
    for tries = 1, 5 do
       local t = createTestTensor(2 ^ 20)
       local selectdim = chooseInt(1, t:nDimension())
@@ -3251,7 +3250,7 @@ function test.topk()
          compareFloatAndCuda(t, runTopK, dim, kTests[k], dir)
       end
    end
-end]]--
+end
 
 function test.cat()
    for k, typename in ipairs(typenames) do
@@ -3293,7 +3292,7 @@ function test.catArray()
    end
 end
 
-function test.streamWaitFor()
+--[[function test.streamWaitFor()
    local size = 2000000
    local iter = 20 + torch.random(10)
    local result = torch.CudaTensor(size):zero()
@@ -3340,7 +3339,7 @@ function test.streamWaitFor()
    collectgarbage()
    collectgarbage()
    cutorch.synchronize()
-end
+end]]--
 
 function test.streamWaitForMultiDevice()
    -- This test requires multiple devices
@@ -3442,7 +3441,7 @@ function test.streamWaitForMultiDevice()
    cutorch.synchronize()
 end
 
-function test.streamBarrier()
+--[[function test.streamBarrier()
    local size = 2000000
    local iter = 20 + torch.random(10)
    local numStreams = torch.random(10)
@@ -3495,7 +3494,7 @@ function test.streamBarrier()
    collectgarbage()
    collectgarbage()
    cutorch.synchronize()
-end
+end]]--
 
 function test.streamBarrierMultiDevice()
    -- This test requires multiple devices

@@ -182,7 +182,7 @@ template <typename T, int Dim,
 __host__ __device__ THCDeviceTensor<T, Dim, IndexT, PtrTraits>
 THCDeviceTensor<T, Dim, IndexT, PtrTraits>::transpose(int dim1,
                                                       int dim2) const {
-#ifdef __CUDA_ARCH__
+#if (defined(__HIP_DEVICE_COMPILE__) && __HIP_DEVICE_COMPILE__ == 1)
   // Device code
   assert(dim1 >= 0 && dim1 < Dim);
   assert(dim1 >= 0 && dim2 < Dim);
@@ -286,7 +286,7 @@ THCDeviceTensor<T, Dim, IndexT, PtrTraits>::downcastOuter() {
   // them).
   for (int i = 0; i < Dim - NewDim; ++i) {
     bool cont = isContiguousDim(i);
-#ifdef __CUDA_ARCH__
+#if (defined(__HIP_DEVICE_COMPILE__) && __HIP_DEVICE_COMPILE__ == 1)
     // Device code
     assert(cont);
 #else
@@ -339,7 +339,7 @@ THCDeviceTensor<T, Dim, IndexT, PtrTraits>::downcastInner() {
   // them).
   for (int i = NewDim; i < Dim; ++i) {
     bool cont = isContiguousDim(i);
-#ifdef __CUDA_ARCH__
+#if (defined(__HIP_DEVICE_COMPILE__) && __HIP_DEVICE_COMPILE__ == 1)
     // Device code
     assert(cont);
 #else
@@ -408,7 +408,7 @@ template <typename T, int Dim,
           typename IndexT, template <typename U> class PtrTraits>
 void
 THCDeviceTensor<T, Dim, IndexT, PtrTraits>::zero(hipStream_t stream) {
-#ifdef __CUDA_ARCH__
+#if (defined(__HIP_DEVICE_COMPILE__) && __HIP_DEVICE_COMPILE__ == 1)
   assert(isContiguous());
 #else
   if (!isContiguous()) {

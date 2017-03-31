@@ -1530,7 +1530,7 @@ for _,name in ipairs({"log", "log1p", "exp",
                       "tan", "atan", "tanh",
                       "sqrt", "rsqrt", "sigmoid",
                       "cinv", "ceil", "floor",
-                      "neg", "abs", "sign",
+                      "neg", "sign",
                       "round", "trunc", "frac"}) do
 
    wrap(name,

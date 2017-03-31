@@ -32,7 +32,7 @@ template <typename ModifyOp,
           typename T,
           typename IndexType,
           int ADims, int BDims>
-#if __CUDA_ARCH__ >= 350 || defined(__HIP_DEVICE_COMPILE__)
+#if __CUDA_ARCH__ >= 350 || defined(__HIP_PLATFORM_HCC__)
 __launch_bounds__(32 * 16, 4)
 #endif
 __global__

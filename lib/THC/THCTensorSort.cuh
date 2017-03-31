@@ -69,16 +69,8 @@ void fillSliceWithIndex(hipLaunchParm lp,
 // For slice sorting in Thrust; extracts a slice index from a linear
 // index and uses that for comparison
 struct SliceComp {
-//  __host__ __device__
-//  SliceComp() = default;
-//  __host__ __device__
-//  SliceComp(const SliceComp&) = default;
-//  __host__ __device__
-//  SliceComp(SliceComp&&) = default;
-//
-//  //__device__ __host__
-//  explicit
-//  SliceComp(long size) : sliceSize{size} {}
+  explicit
+  SliceComp(long size) : sliceSize(size) {}
 
   __device__
   bool operator()(long a, long b) const
@@ -101,7 +93,6 @@ struct SliceComp {
 
 // For sorting in Thurst; extracts a within-slice index from a linear index
 struct GlobalIndexToPerSliceIndex {
-  __host__ __device__
   explicit
   GlobalIndexToPerSliceIndex(long size) : sliceSize{size} {}
 

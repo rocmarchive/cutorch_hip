@@ -207,7 +207,8 @@ hipblasOperation_t convertTransToHipblasOperation(char trans) {
     return HIPBLAS_OP_T;
   }
 }
-/*cublasOperation_t convertTransToCublasOperation(char trans) {
+#ifdef __NVCC__
+cublasOperation_t convertTransToCublasOperation(char trans) {
   if (trans == 't') return CUBLAS_OP_T;
   else if (trans == 'n') return CUBLAS_OP_N;
   else if (trans == 'c') return CUBLAS_OP_C;
@@ -215,7 +216,8 @@ hipblasOperation_t convertTransToHipblasOperation(char trans) {
     THError("trans must be one of: t, n, c");
     return CUBLAS_OP_T;
   }
-}*/
+}
+#endif
 void adjustLd(char transa, char transb, long m, long n, long k, long *lda, long *ldb, long *ldc)
 {
   int transa_ = ((transa == 't') || (transa == 'T'));
@@ -296,8 +298,8 @@ void THCudaBlas_Hgemm(THCState *state, char transa, char transb, long m, long n,
     hipblasHandle_t handle = THCState_getCurrentBlasHandle(state);
     hipblasSetStream(handle, THCState_getCurrentStream(state));
 
-#ifdef HIPBLAS_TODO
     // Check for native Hgemm support
+#ifdef __NVCC__
     if (THC_fastHalfInstructions(state)) {
       THCublasCheck(hipblasHgemm(handle, opa, opb,
 				i_m, i_n, i_k, &alpha, a, i_lda, b, i_ldb,
@@ -312,25 +314,10 @@ void THCudaBlas_Hgemm(THCState *state, char transa, char transb, long m, long n,
                                   a, CUDA_R_16F, i_lda, b, CUDA_R_16F,
 				  i_ldb, &fBeta, c, CUDA_R_16F, i_ldc));
     }
-#else
-#ifdef __NVCC__
-    cublasSetStream((cublasHandle_t)handle, THCState_getCurrentStream(state));
-    // Check for native Hgemm support
-    if (THC_fastHalfInstructions(state)) {
+#elif __HCC__
       cublasHgemm(handle, opa, opb,
 				i_m, i_n, i_k, &alpha, a, i_lda, b, i_ldb,
 				&beta, c, i_ldc);
-    } else {
-      // Simulated Hgemm
-      float fAlpha = THC_half2float(alpha);
-      float fBeta = THC_half2float(beta);
-
-      cublasSgemmEx(handle, opa, opb,
-				  i_m, i_n, i_k, &fAlpha,
-                                  a, CUDA_R_16F, i_lda, b, CUDA_R_16F,
-				  i_ldb, &fBeta, c, CUDA_R_16F, i_ldc);
-    }
-#endif
 #endif
     return;
   }

@@ -119,6 +119,9 @@ ELSE()
   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -v")
 ENDIF()
 
+SET(mtgp32_src
+    MTGP/mtgp32-param-fast.cpp MTGP/hiprand_mtgp32.cpp)
+
 SET(src
     THCCachingAllocator.cpp
     THCGeneral.cc
@@ -188,7 +191,7 @@ IF(${PLATFORM} MATCHES "nvcc")
   MESSAGE(STATUS "CUDA_NVCC_FLAGS: ${CUDA_NVCC_FLAGS}")
 ENDIF() #PLATFORM
 
-HIP_ADD_LIBRARY(THC SHARED ${src} ${src-cuda})
+HIP_ADD_LIBRARY(THC SHARED ${src} ${src-cuda} ${mtgp32_src})
 target_compile_options(THC PUBLIC -v)
 
 IF(${PLATFORM} STREQUAL "nvcc")
@@ -203,11 +206,11 @@ ENDIF()
 
 IF(${PLATFORM} STREQUAL "nvcc")
 IF(USE_MAGMA)
-  FIND_LIBRARY(HIPBLAS_LIBRARY hipblas_hcc HINTS ${HIPBLAS_PATH}/lib)
+  FIND_LIBRARY(HIPBLAS_LIBRARY hipblas_nvcc HINTS ${HIPBLAS_PATH}/lib)
   FIND_LIBRARY(CUDART_LIBRARY cudart HINTS ${CUDA_SDK_ROOT_DIR}/lib64)
   TARGET_LINK_LIBRARIES(THC ${MAGMA_LIBRARIES} ${CUDA_cusparse_LIBRARY} ${HIPBLAS_LIBRARY} ${CUDART_LIBRARY})
 ELSE()
-  FIND_LIBRARY(HIPBLAS_LIBRARY hipblas_hcc HINTS ${HIPBLAS_PATH}/lib)
+  FIND_LIBRARY(HIPBLAS_LIBRARY hipblas_nvcc HINTS ${HIPBLAS_PATH}/lib)
   FIND_LIBRARY(CUDART_LIBRARY cudart HINTS /usr/local/cuda/lib64)
   TARGET_LINK_LIBRARIES(THC ${CUDA_cusparse_LIBRARY}
                             ${HIPBLAS_LIBRARY}
@@ -267,6 +270,12 @@ INSTALL(FILES
           THCTensorInfo.cuh
           THCTensorTypeUtils.cuh
           DESTINATION "${THC_INSTALL_INCLUDE_SUBDIR}/THC")
+
+INSTALL(FILES
+        MTGP/hiprand_mtgp32.h
+        MTGP/mtgp32-fast.h
+        DESTINATION "${Torch_INSTALL_INCLUDE_SUBDIR}/THC/MTGP")
+
 
 INSTALL(FILES
         generic/THCStorage.c
