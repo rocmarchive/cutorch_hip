@@ -76,7 +76,7 @@ struct ReduceMultiply<half, float> {
 
 template <typename ResT, typename ArgT>
 struct SquareFunctor {
-    SquareFunctor(ResT mean): mean_(mean) {}
+    __host__ __device__ SquareFunctor(ResT mean): mean_(mean) {}
 
     inline __device__ ResT operator()(ArgT x) const {
       return (((ResT) x) - mean_) * (((ResT) x) - mean_);
@@ -88,7 +88,7 @@ struct SquareFunctor {
 #ifdef CUDA_HALF_TENSOR
 template <typename ResT>
 struct SquareFunctor<ResT, half> {
-    SquareFunctor(ResT mean): mean_(mean) {}
+    __host__ __device__ SquareFunctor(ResT mean): mean_(mean) {}
 
     inline __device__ ResT operator()(half x) const {
       return THCNumerics<ResT>::mul(
@@ -180,7 +180,7 @@ __global__ void THCTensor_kernel_renorm(hipLaunchParm lp, Real *data, const Real
 template <typename T>
 struct TensorNonZeroOp
 {
-  TensorNonZeroOp() {}
+  __host__ __device__ TensorNonZeroOp() {}
   __host__ __device__ T operator()(T lhs) const {
     if (THCNumerics<T>::eq(lhs, ScalarConvert<float, T>::to(0.0))) {
       return ScalarConvert<int, T>::to(0);
@@ -193,7 +193,7 @@ struct TensorNonZeroOp
 template <typename T, int StaticExp>
 struct TensorNormOp
 {
-  TensorNormOp(T exp) : exponent(exp) {}
+  __host__ __device__ TensorNormOp(T exp) : exponent(exp) {}
 
   __host__ __device__ T operator()(T x) const {
     if (StaticExp == 1) {
@@ -211,7 +211,7 @@ struct TensorNormOp
 template <int StaticExp>
 struct TensorNormOp<double, StaticExp>
 {
-  TensorNormOp(double exp) : exponent(exp) {}
+  __host__ __device__ TensorNormOp(double exp) : exponent(exp) {}
 
   __host__ __device__ double operator()(double x) const {
     if (StaticExp == 1) {
@@ -230,7 +230,7 @@ struct TensorNormOp<double, StaticExp>
 template <int StaticExp>
 struct TensorNormOp<half, StaticExp>
 {
-  TensorNormOp(half exp) : exponent(exp) {}
+  __host__ __device TensorNormOp(half exp) : exponent(exp) {}
 
   __host__ __device__ half operator()(half x) const {
     if (StaticExp == 1) {

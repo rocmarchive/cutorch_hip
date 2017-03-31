@@ -13,7 +13,7 @@
 #include "THCReduceApplyUtils.cuh"
 
 // Threads per thread block
-#define THC_NONCONTIG_REDUCE_BLOCK_SIZE 32 * 16
+#define THC_NONCONTIG_REDUCE_BLOCK_SIZE 16 * 16
 
 template <typename IndexType>
 __device__ __forceinline__ IndexType getReduceNoncontigDimSliceIndex() {
@@ -28,11 +28,18 @@ template <typename ModifyOp,
           typename IndexType,
           int ADims, int BDims>
 #if __CUDA_ARCH__ >= 350
-__launch_bounds__(32 * 16, 4)
+__launch_bounds__(16 * 16, 4)
 #endif
 __global__ void
-kernelReduceNoncontigDim(hipLaunchParm lp, TensorInfo<T, IndexType> out,
-                         TensorInfo<T, IndexType> in,
+kernelReduceNoncontigDim(hipLaunchParm lp, 
+                         T* outData,
+                         IndexType* outSizes,
+                         IndexType* outStrides,
+                         int outDims,
+                         T* inData,
+                         IndexType* inSizes,
+                         IndexType* inStrides,
+                         int inDims,
                          IndexType reductionStride,
                          IndexType reductionSize,
                          IndexType totalSlices,
@@ -48,21 +55,21 @@ kernelReduceNoncontigDim(hipLaunchParm lp, TensorInfo<T, IndexType> out,
   // Each thread picks a point in `out` and `in` for which it is
   // producing the reduction
   const IndexType outOffset =
-    IndexToOffset<T, IndexType, ADims>::get(sliceIndex, out.dSizes, out.dStrides, out.dims);
+    IndexToOffset<T, IndexType, ADims>::get(sliceIndex, outSizes, outStrides, outDims);
   const IndexType inBaseOffset =
-    IndexToOffset<T, IndexType, BDims>::get(sliceIndex, in.dSizes, in.dStrides, in.dims);
+    IndexToOffset<T, IndexType, BDims>::get(sliceIndex, inSizes, inStrides, inDims);
 
   // For each point in reductionSize, reduce into `r`
   IndexType inOffset = inBaseOffset;
   T r = init;
 
   for (IndexType i = 0; i < reductionSize; ++i) {
-    r = reduceOp(r, modifyOp(in.data[inOffset]));
+    r = reduceOp(r, modifyOp(inData[inOffset]));
     inOffset += reductionStride;
   }
 
   // Write out reduced value
-  out.data[outOffset] = r;
+  outData[outOffset] = r;
 }
 
 template <typename IndexType>
@@ -79,8 +86,15 @@ template <typename ModifyOp,
           typename IndexType,
           int ADims, int BDims>
 __global__ void
-kernelReduceContigDim(hipLaunchParm lp, TensorInfo<T, IndexType> out,
-                      TensorInfo<T, IndexType> in,
+kernelReduceContigDim(hipLaunchParm lp, 
+                      T* outData,
+                      IndexType* outSizes,
+                      IndexType* outStrides,
+                      int outDims,
+                      T* inData,
+                      IndexType* inSizes,
+                      IndexType* inStrides,
+                      int inDims,
                       IndexType reductionSize,
                       IndexType totalSlices,
                       T init,
@@ -94,29 +108,29 @@ kernelReduceContigDim(hipLaunchParm lp, TensorInfo<T, IndexType> out,
 
   // Get the offset in `out` for the reduction
   const IndexType outOffset =
-    IndexToOffset<T, IndexType, ADims>::get(sliceIndex, out.dSizes, out.dStrides, out.dims);
+    IndexToOffset<T, IndexType, ADims>::get(sliceIndex, outSizes, outStrides, outDims);
 
   // Get the base offset in `in` for this block's reduction
   const IndexType inBaseOffset =
-    IndexToOffset<T, IndexType, BDims>::get(sliceIndex, in.dSizes, in.dStrides, in.dims);
+    IndexToOffset<T, IndexType, BDims>::get(sliceIndex, inSizes, inStrides, inDims);
 
   // Each thread in the block will reduce some subset of elements in
   // the slice. The elements are guaranteed contiguous starting at
   // `inBaseOffset`.
   T r = init;
   for (IndexType i = hipThreadIdx_x; i < reductionSize; i += hipBlockDim_x) {
-    r = reduceOp(r, modifyOp(in.data[inBaseOffset + i]));
+    r = reduceOp(r, modifyOp(inData[inBaseOffset + i]));
   }
 
   // Reduce within the block
   // FIXME: extern name
   HIP_DYNAMIC_SHARED( char, smemChar)
   T* smem = (T*) smemChar;
-  r = reduceBlock<T, ReduceOp>(smem, hipBlockDim_x, r, reduceOp, init);
+  //r = reduceBlock<T, ReduceOp>(smem, hipBlockDim_x, r, reduceOp, init);
 
   if (hipThreadIdx_x == 0) {
     // Write out reduced value
-    out.data[outOffset] = r;
+    outData[outOffset] = r;
   }
 }
 
@@ -208,7 +222,6 @@ bool THC_reduceDim(THCState* state,
     block = getNoncontigReduceBlock();
   }
 
-#ifdef CUDA_PATH
   // Resize out to correspond to the reduced size
   THLongStorage* sizes = TensorUtils<TensorType>::newSizeOf(state, in);
   THLongStorage_set(sizes, dim, 1);
@@ -229,14 +242,14 @@ bool THC_reduceDim(THCState* state,
                           typename TensorUtils<TensorType>::DataType,   \
                           TYPE, OUT, IN>),                                \
         grid, block, smemSize, THCState_getCurrentStream(state),    \
-        outInfo, inInfo, reductionSize,                                 \
+        outData, outSizes, outStrides, outDims, inData, inSizes, inStrides, inDims,  reductionSize,                                 \
         (TYPE) outElements, init, modifyOp, reduceOp);                  \
   } else {                                                              \
     hipLaunchKernel(HIP_KERNEL_NAME(kernelReduceNoncontigDim<ModifyOp, ReduceOp,                        \
                              typename TensorUtils<TensorType>::DataType, \
                              TYPE, OUT, IN>),                             \
         grid, block, 0, THCState_getCurrentStream(state),          \
-        outInfo, inInfo, reductionStride, reductionSize,                \
+        outData, outSizes, outStrides, outDims, inData, inSizes, inStrides, inDims, reductionStride, reductionSize,                                 \
         (TYPE) outElements, init, modifyOp, reduceOp);                  \
   }                                                                     \
 
@@ -278,11 +291,6 @@ bool THC_reduceDim(THCState* state,
     }                                                  \
   }
 
-#else
-    #define HANDLE_CASE(TYPE, OUT, IN)
-    #define HANDLE_IN_CASE(TYPE, OUT, IN)
-    #define HANDLE_OUT_CASE(TYPE, OUT, IN)
-#endif 
 
   if (TensorUtils<TensorType>::canUse32BitIndexMath(state, out) &&
       TensorUtils<TensorType>::canUse32BitIndexMath(state, in)) {
@@ -297,7 +305,16 @@ bool THC_reduceDim(THCState* state,
     inInfo.reduceDim(dim);
     inInfo.collapseDims();
 
-    HANDLE_OUT_CASE(unsigned int, outInfo.dims, inInfo.dims);
+    auto outData = outInfo.data;
+    unsigned int* outSizes = outInfo.dSizes;
+    unsigned int* outStrides = outInfo.dStrides;
+    int outDims = outInfo.dims;
+    auto inData = inInfo.data;
+    unsigned int* inSizes = inInfo.dSizes;
+    unsigned int* inStrides = inInfo.dStrides;
+    int inDims = inInfo.dims;
+
+    HANDLE_OUT_CASE(unsigned int, outDims, inDims);
   } else {
     TensorInfo<typename TensorUtils<TensorType>::DataType,
                unsigned long> outInfo =
@@ -309,6 +326,15 @@ bool THC_reduceDim(THCState* state,
       getTensorInfo<TensorType, unsigned long>(state, in);
     inInfo.reduceDim(dim);
     inInfo.collapseDims();
+
+    auto outData = outInfo.data;
+    unsigned long* outSizes = outInfo.dSizes;
+    unsigned long* outStrides = outInfo.dStrides;
+    int outDims = outInfo.dims;
+    auto inData = inInfo.data;
+    unsigned long* inSizes = inInfo.dSizes;
+    unsigned long* inStrides = inInfo.dStrides;
+    int inDims = inInfo.dims;
 
     // For large tensors, we only compile the completely contiguous
     // version and the completely generic version, to reduce

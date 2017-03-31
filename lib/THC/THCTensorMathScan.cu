@@ -170,10 +170,10 @@ void THCudaTensor_scanInnermostDim(THCState *state, THCudaTensor *tgt, THCudaTen
   }
   unsigned row_size = THCudaTensor_size(state, src, ndim - 1);
 
-  dim3 threads(16, 32);
+  dim3 threads(16, 16);
   dim3 grid(min(1024, THCCeilDiv(num_rows, threads.y)));
 
-  hipLaunchKernel(HIP_KERNEL_NAME(THCudaTensor_kernel_scanInnermostDim<16, 32>), dim3(grid), dim3(threads), 0, THCState_getCurrentStream(state), 
+  hipLaunchKernel(HIP_KERNEL_NAME(THCudaTensor_kernel_scanInnermostDim<16, 16>), dim3(grid), dim3(threads), 0, THCState_getCurrentStream(state), 
       THCudaTensor_data(state, tgt), THCudaTensor_data(state, src), num_rows, row_size, init, binary_op);
   hipError_t errcode = hipGetLastError();
   if (errcode != hipSuccess) {

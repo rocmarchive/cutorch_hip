@@ -1,6 +1,6 @@
-#include "hip/hip_runtime.h"
 #ifndef THC_REDUCEALL_INC
 #define THC_REDUCEALL_INC
+#include "hip/hip_runtime.h"
 
 //
 // This file contains dimension reduction operation functions and
@@ -13,10 +13,10 @@
 #include "THCReduceApplyUtils.cuh"
 
 // Size per each reduction block
-#define THC_REDUCE_ALL_BLOCK_SIZE 1024L
+#define THC_REDUCE_ALL_BLOCK_SIZE 256L
 
 // Cutoff size for two-pass reduction
-#define THC_TWO_PASS_REDUCTION_SIZE 2048L
+#define THC_TWO_PASS_REDUCTION_SIZE 256L
 
 // Kernel that handles an entire reduction of a tensor in one pass
 template <typename ModifyOp,
@@ -27,7 +27,11 @@ template <typename ModifyOp,
           typename IndexType,
           int ADims>
 __global__ void
-kernelReduceAll(hipLaunchParm lp, TensorInfo<InT, IndexType> in,
+kernelReduceAll(hipLaunchParm lp, 
+                InT* inData, 
+                IndexType* inSizes, 
+                IndexType* inStrides,
+                int inDims, 
                 IndexType totalElements,
                 AccT init,
                 ModifyOp modifyOp,
@@ -37,14 +41,14 @@ kernelReduceAll(hipLaunchParm lp, TensorInfo<InT, IndexType> in,
   // With a block-wide stride, have each thread perform its own reduction.
   AccT r = init;
   for (IndexType i = hipThreadIdx_x; i < totalElements; i += hipBlockDim_x) {
-    const IndexType inOffset = IndexToOffset<InT, IndexType, ADims>::get(i, in.dSizes, in.dStrides, in.dims);
-    r = reduceOp(r, modifyOp(in.data[inOffset]));
+    const IndexType inOffset = IndexToOffset<InT, IndexType, ADims>::get(i, inSizes, inStrides, inDims);
+    r = reduceOp(r, modifyOp(inData[inOffset]));
   }
 
   // Reduce within the block
   HIP_DYNAMIC_SHARED( char, smemChar)
   AccT* smem = (AccT*) smemChar;
-  r = reduceBlock<AccT, ReduceAccOp>(smem, hipBlockDim_x, r, reduceAccOp, init);
+  //r = reduceBlock<AccT, ReduceAccOp>(smem, hipBlockDim_x, r, reduceAccOp, init);
 
   if (hipThreadIdx_x == 0) {
     // Write out reduced value
@@ -73,7 +77,11 @@ template <typename ModifyOp,
           typename IndexType,
           int ADims>
 __global__ void
-kernelReduceAllPass1(hipLaunchParm lp, TensorInfo<InT, IndexType> in,
+kernelReduceAllPass1(hipLaunchParm lp, 
+                     InT* inData, 
+                     IndexType* inSizes, 
+                     IndexType* inStrides,
+                     int inDims, 
                      IndexType totalElements,
                      AccT init,
                      ModifyOp modifyOp,
@@ -86,14 +94,14 @@ kernelReduceAllPass1(hipLaunchParm lp, TensorInfo<InT, IndexType> in,
   // With a block-wide stride, have each thread perform its own reduction.
   AccT r = init;
   for (IndexType i = startIndex + hipThreadIdx_x; i < endIndex; i += hipBlockDim_x) {
-    const IndexType inOffset = IndexToOffset<InT, IndexType, ADims>::get(i, in.dSizes, in.dStrides, in.dims);
-    r = reduceOp(r, modifyOp(in.data[inOffset]));
+    const IndexType inOffset = IndexToOffset<InT, IndexType, ADims>::get(i, inSizes, inStrides, inDims);
+    r = reduceOp(r, modifyOp(inData[inOffset]));
   }
 
   // Reduce within the block
   HIP_DYNAMIC_SHARED( char, smemChar)
   AccT* smem = (AccT*) smemChar;
-  r = reduceBlock<AccT, ReduceAccOp>(smem, hipBlockDim_x, r, reduceAccOp, init);
+  //r = reduceBlock<AccT, ReduceAccOp>(smem, hipBlockDim_x, r, reduceAccOp, init);
 
   if (hipThreadIdx_x == 0) {
     // Write out block-wide reduced value
@@ -116,7 +124,7 @@ kernelReduceAllPass2(hipLaunchParm lp, int numPass1Blocks,
   // Reduce within the block
   HIP_DYNAMIC_SHARED( char, smemChar)
   T* smem = (T*) smemChar;
-  r = reduceBlock<T, ReduceOp>(smem, numPass1Blocks, r, reduceOp, init);
+  //r = reduceBlock<T, ReduceOp>(smem, numPass1Blocks, r, reduceOp, init);
 
   if (hipThreadIdx_x == 0) {
     *out = r;
@@ -185,7 +193,10 @@ void callReduceAll(THCState* state,
                    AccT* devOut) {
   dim3 grid;
   dim3 block;
-
+  InT* inData = in.data;
+  IndexType* inSizes = in.dSizes;
+  IndexType* inStrides = in.dSizes;
+  int inDims = in.dims;
   if (isTwoPassReductionSize(totalElements)) {
     bool freeScratchSpace = false;
     void* scratchSpace = THCState_getCurrentDeviceScratchSpace(state);
@@ -197,30 +208,24 @@ void callReduceAll(THCState* state,
 
     getPass1ReduceBlockGrid<InT, AccT>(state, totalElements, grid, block);
     size_t smemSize = block.x * sizeof(AccT);
-#ifdef CUDA_PATH
     hipLaunchKernel(HIP_KERNEL_NAME(kernelReduceAllPass1<ModifyOp, ReduceOp, ReduceAccOp, InT, AccT, IndexType, ADims>), dim3(grid), dim3(block), smemSize, THCState_getCurrentStream(state), 
-        in, (IndexType) totalElements, init, modifyOp, reduceOp, reduceAccOp,
+        inData, inSizes, inStrides, inDims, (IndexType) totalElements, init, modifyOp, reduceOp, reduceAccOp,
         (AccT*) scratchSpace);
-#endif
 
     int numPass1Blocks = grid.x;
     getPass2ReduceBlockGrid<InT, AccT>(state, totalElements, grid, block);
     smemSize = block.x * sizeof(AccT);
-#ifdef CUDA_PATH
     hipLaunchKernel(HIP_KERNEL_NAME(kernelReduceAllPass2<ReduceAccOp, AccT, IndexType>), dim3(grid), dim3(block), smemSize, THCState_getCurrentStream(state), 
         numPass1Blocks, init, reduceAccOp,
         (AccT*) scratchSpace, devOut);
-#endif
     if (freeScratchSpace) {
       THCudaCheck(THCudaFree(state, scratchSpace));
     }
   } else {
     getSinglePassReduceBlockGrid<InT, AccT>(totalElements, grid, block);
     size_t smemSize = block.x * sizeof(AccT);
-#ifdef CUDA_PATH
     hipLaunchKernel(HIP_KERNEL_NAME(kernelReduceAll<ModifyOp, ReduceOp, ReduceAccOp, InT, AccT, IndexType, ADims>), dim3(grid), dim3(block), smemSize, THCState_getCurrentStream(state), 
-        in, (IndexType) totalElements, init, modifyOp, reduceOp, reduceAccOp, devOut);
-#endif
+        inData, inSizes, inStrides, inDims, (IndexType) totalElements, init, modifyOp, reduceOp, reduceAccOp, devOut);
   }
 }
 
