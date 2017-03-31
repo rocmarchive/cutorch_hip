@@ -126,7 +126,7 @@ kernelReduceContigDim(hipLaunchParm lp,
   // FIXME: extern name
   HIP_DYNAMIC_SHARED( char, smemChar)
   T* smem = (T*) smemChar;
-  //r = reduceBlock<T, ReduceOp>(smem, hipBlockDim_x, r, reduceOp, init);
+  r = reduceBlock<T, ReduceOp>(smem, hipBlockDim_x, r, reduceOp, init);
 
   if (hipThreadIdx_x == 0) {
     // Write out reduced value
