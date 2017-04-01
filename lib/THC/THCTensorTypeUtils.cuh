@@ -98,20 +98,20 @@ getTensorInfo(THCState* state, TensorType* t) {
 
 template <typename T>
 struct ScalarNegate {
-  static __host__ __device__ T to(const T v) { return -v; }
+  static __host__ __device__ T to(const T& v) { return -v; }
 };
 
 template <typename T>
 struct ScalarInv {
-  static __host__ __device__ T to(const T v) { return ((T) 1) / v; }
+  static __host__ __device__ T to(const T& v) { return ((T) 1) / v; }
 };
 
 #ifdef CUDA_HALF_TENSOR
 template <>
 struct ScalarNegate<half> {
-  static __host__ __device__ half to(const half v) {
+  static __host__ __device__ half to(half v) {
 #if defined(__CUDA_ARCH__)  || defined(__HIP_DEVICE_COMPILE__)
-#ifdef CUDA_HALF_INSTRUCTIONS
+#if defined(CUDA_HALF_INSTRUCTIONS) || defined(__HIP_PLATFORM_HCC__)
     return __hneg(v);
 #else
     return __float2half(-__half2float(v));

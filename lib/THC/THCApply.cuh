@@ -227,7 +227,7 @@ bool THC_pointwiseApply1(
   // dimension, and the loop to translate the linear index to the array
   // index can be similarly collapsed. That is what this unrolling is for.
 #define HANDLE_CASE(TYPE, A)                                                                        \
-  hipLaunchKernelV2(HIP_KERNEL_NAME(kernelPointwiseApply1<Op,                                       \
+  hipLaunchKernelV2((kernelPointwiseApply1<Op,                                       \
                                                         typename TensorUtils<TensorTypeA>::DataType,\
                                                         TYPE,                                       \
                                                         A>),                                        \
@@ -279,7 +279,7 @@ bool THC_pointwiseApply1(
     // version and the completely generic version, to reduce
     // compilation time.
     if (aInfo.isContiguous()) {
-      hipLaunchKernelV2(HIP_KERNEL_NAME(
+      hipLaunchKernelV2((
           kernelPointwiseApply1<
               Op,
               typename TensorUtils<TensorTypeA>::DataType,
@@ -297,7 +297,7 @@ bool THC_pointwiseApply1(
     }
     else {
       hipLaunchKernelV2(
-          HIP_KERNEL_NAME(kernelPointwiseApply1<
+          (kernelPointwiseApply1<
               Op,
               typename TensorUtils<TensorTypeA>::DataType,
               unsigned long,
@@ -395,7 +395,7 @@ bool THC_pointwiseApply2(
   // dimension, and the loop to translate the linear index to the array
   // index can be similarly collapsed. That is what this unrolling is for.
 #define HANDLE_CASE(TYPE, A, B)                                                                     \
-  hipLaunchKernelV2(HIP_KERNEL_NAME(kernelPointwiseApply2<Op,                                       \
+  hipLaunchKernelV2((kernelPointwiseApply2<Op,                                       \
                                                         typename TensorUtils<TensorTypeA>::DataType,\
                                                         typename TensorUtils<TensorTypeB>::DataType,\
                                                         TYPE,                                       \
@@ -477,7 +477,7 @@ bool THC_pointwiseApply2(
     // compilation time.
     if (aInfo.isContiguous() && bInfo.isContiguous()) {
       hipLaunchKernelV2(
-          HIP_KERNEL_NAME(kernelPointwiseApply2<
+          (kernelPointwiseApply2<
               Op,
               typename TensorUtils<TensorTypeA>::DataType,
               typename TensorUtils<TensorTypeB>::DataType,
@@ -499,7 +499,7 @@ bool THC_pointwiseApply2(
     }
     else {
       hipLaunchKernelV2(
-          HIP_KERNEL_NAME(kernelPointwiseApply2<
+          (kernelPointwiseApply2<
               Op,
               typename TensorUtils<TensorTypeA>::DataType,
               typename TensorUtils<TensorTypeB>::DataType,
@@ -619,7 +619,7 @@ bool THC_pointwiseApply3(
   }
 
 #define HANDLE_CASE(TYPE, A, B, C)                                                                  \
-  hipLaunchKernelV2(HIP_KERNEL_NAME(kernelPointwiseApply3<Op,                                       \
+  hipLaunchKernelV2((kernelPointwiseApply3<Op,                                       \
                                                         typename TensorUtils<TensorTypeA>::DataType,\
                                                         typename TensorUtils<TensorTypeB>::DataType,\
                                                         typename TensorUtils<TensorTypeC>::DataType,\
@@ -734,7 +734,7 @@ bool THC_pointwiseApply3(
     // compilation time.
     if (aInfo.isContiguous() && bInfo.isContiguous() && cInfo.isContiguous()) {
       hipLaunchKernelV2(
-          HIP_KERNEL_NAME(kernelPointwiseApply3<
+          (kernelPointwiseApply3<
               Op,
               typename TensorUtils<TensorTypeA>::DataType,
               typename TensorUtils<TensorTypeB>::DataType,
@@ -761,7 +761,7 @@ bool THC_pointwiseApply3(
     }
     else {
       hipLaunchKernelV2(
-          HIP_KERNEL_NAME(kernelPointwiseApply3<
+          (kernelPointwiseApply3<
               Op,
               typename TensorUtils<TensorTypeA>::DataType,
               typename TensorUtils<TensorTypeB>::DataType,

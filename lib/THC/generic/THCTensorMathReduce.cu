@@ -99,7 +99,7 @@ void THCTensor_(mean)(
       dim3 threads(32);
 
       hipLaunchKernelV2(
-        HIP_KERNEL_NAME(THCTensor_kernel_renorm<real>),
+        (THCTensor_kernel_renorm<real>),
         dim3(grid),
         dim3(threads),
         0,

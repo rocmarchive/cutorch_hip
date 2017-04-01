@@ -261,7 +261,7 @@ void callReduceAll(
     size_t smemSize = block.x * sizeof(AccT);
 
     hipLaunchKernelV2(
-        HIP_KERNEL_NAME(kernelReduceAllPass1<
+        (kernelReduceAllPass1<
             ModifyOp,
             ReduceOp,
             ReduceAccOp,
@@ -289,7 +289,7 @@ void callReduceAll(
     smemSize = block.x * sizeof(AccT);
 
     hipLaunchKernelV2(
-        HIP_KERNEL_NAME(kernelReduceAllPass2<ReduceAccOp, AccT>),
+        (kernelReduceAllPass2<ReduceAccOp, AccT>),
         dim3(grid),
         dim3(block),
         smemSize,
@@ -307,7 +307,7 @@ void callReduceAll(
     getSinglePassReduceBlockGrid<InT, AccT>(totalElements, grid, block);
     size_t smemSize = block.x * sizeof(AccT);
 
-    hipLaunchKernelV2(HIP_KERNEL_NAME(kernelReduceAll<ModifyOp,
+    hipLaunchKernelV2((kernelReduceAll<ModifyOp,
                                                     ReduceOp,
                                                     ReduceAccOp,
                                                     InT,

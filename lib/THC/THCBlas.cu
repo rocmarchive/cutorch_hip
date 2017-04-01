@@ -315,7 +315,7 @@ void THCudaBlas_Hgemm(THCState *state, char transa, char transb, long m, long n,
 				  i_ldb, &fBeta, c, CUDA_R_16F, i_ldc));
     }
 #elif __HCC__
-      cublasHgemm(handle, opa, opb,
+      hipblasHgemm(handle, opa, opb,
 				i_m, i_n, i_k, &alpha, a, i_lda, b, i_ldb,
 				&beta, c, i_ldc);
 #endif

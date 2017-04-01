@@ -16,7 +16,7 @@ struct TensorFillOp {
   void operator()(T* v) const { *v = val; }
 
   __host__ __device__
-  ~TensorFillOp() {}
+  ~TensorFillOp() = default;
 
   T val;
 };

@@ -119,6 +119,9 @@ ELSE()
   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -v")
 ENDIF()
 
+# TODO: the below is temporary, GGL will be part of HIP ultimately
+set(ggl_src ${CMAKE_CURRENT_SOURCE_DIR}/../../external/GGL/GGL/grid_launch.cpp)
+
 SET(mtgp32_src
     MTGP/mtgp32-param-fast.cpp MTGP/hiprand_mtgp32.cpp)
 
@@ -191,8 +194,10 @@ IF(${PLATFORM} MATCHES "nvcc")
   MESSAGE(STATUS "CUDA_NVCC_FLAGS: ${CUDA_NVCC_FLAGS}")
 ENDIF() #PLATFORM
 
-HIP_ADD_LIBRARY(THC SHARED ${src} ${src-cuda} ${mtgp32_src})
+HIP_ADD_LIBRARY(THC SHARED ${src} ${src-cuda} ${mtgp32_src} ${ggl_src})
 target_compile_options(THC PUBLIC -v)
+# TODO: the below is temporary.
+target_include_directories(THC PRIVATE ${HIP_PATH}/src)
 
 IF(${PLATFORM} STREQUAL "nvcc")
   CUDA_ADD_CUBLAS_TO_TARGET(THC)

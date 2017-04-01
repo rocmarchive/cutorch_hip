@@ -63,11 +63,11 @@ void bitonicSort(K (&keys)[Power2SortSize],
                  bool (&valid)[Power2SortSize],
                  Comparator comp)
 {
-  #pragma unroll
+#pragma unroll
   for (unsigned int size = 2; size < Power2SortSize; size *= 2) {
     bool flag = ((hipThreadIdx_x & (size / 2)) != 0);
 
-    #pragma unroll
+#pragma unroll
     for (unsigned int stride = size / 2; stride > 0; stride /= 2) {
       // Single warp per slice is completely synchronous
       if (Power2SortSize > warpSize) {
@@ -86,10 +86,10 @@ void bitonicSort(K (&keys)[Power2SortSize],
     }
   }
 
-  #pragma unroll
+#pragma unroll
   for (unsigned int stride = Power2SortSize / 2; stride > 0; stride /= 2) {
     // Single warp per slice is completely synchronous
-    if (Power2SortSize > warpSize) {
+    if (Power2SortSize > warp_size) {
       __syncthreads();
     }
 
@@ -105,7 +105,7 @@ void bitonicSort(K (&keys)[Power2SortSize],
   }
 
   // Single warp per slice is completely synchronous
-  if (Power2SortSize > warpSize) {
+  if (Power2SortSize > warp_size) {
     __syncthreads();
   }
 }

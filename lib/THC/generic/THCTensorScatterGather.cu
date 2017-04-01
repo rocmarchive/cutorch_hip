@@ -3,7 +3,7 @@
 #else
 
 #define RUN(TYPE, DIMS, REAL)                                                  \
-  hipLaunchKernelV2(HIP_KERNEL_NAME(THCudaTensor_gatherKernel<TYPE, REAL, DIMS>),\
+  hipLaunchKernelV2((THCudaTensor_gatherKernel<TYPE, REAL, DIMS>),\
                   dim3{grid},                                                  \
                   dim3{block},                                                 \
                   0,                                                           \
@@ -113,7 +113,7 @@ void THCTensor_(gather)(THCState* state, THCTensor *tensor,
 
 
 #define RUN(TYPE, DIMS, REAL)                                                   \
-  hipLaunchKernelV2(HIP_KERNEL_NAME(THCudaTensor_scatterKernel<TYPE, REAL, DIMS>),\
+  hipLaunchKernelV2((THCudaTensor_scatterKernel<TYPE, REAL, DIMS>),\
                   dim3{grid},                                                   \
                   dim3{block},                                                  \
                   0,                                                            \
@@ -216,7 +216,7 @@ void THCTensor_(scatter)(THCState* state, THCTensor *tensor, int dim, THCudaLong
 #undef RUN
 
 #define RUN(TYPE, DIMS, REAL)                                                       \
-  hipLaunchKernelV2(HIP_KERNEL_NAME(THCudaTensor_scatterFillKernel<TYPE, REAL, DIMS>),\
+  hipLaunchKernelV2((THCudaTensor_scatterFillKernel<TYPE, REAL, DIMS>),\
                   dim3{grid},                                                       \
                   dim3{block},                                                      \
                   0,                                                                \

@@ -623,7 +623,7 @@ template<typename In, typename Out>
 struct ScalarConvert {
   __host__ __device__
   static
-  Out to(In v) { return static_cast<Out>(v); }
+  Out to(const In& v) { return static_cast<Out>(v); }
 };
 
 #ifdef CUDA_HALF_TENSOR

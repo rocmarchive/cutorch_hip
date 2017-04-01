@@ -3,7 +3,10 @@
 namespace detail {
 
 template <typename T, int N>
-__host__ __device__ void copy(T to[N], T from[N]) {
+__host__ __device__
+inline
+void copy(T (&to)[N], T (&from)[N])
+{
   for (int i = 0; i < N; ++i) {
     to[i] = from[i];
   }
@@ -11,8 +14,8 @@ __host__ __device__ void copy(T to[N], T from[N]) {
 
 } // namespace detail
 
-template <typename T, int Dim,
-          typename IndexT, template <typename U> class PtrTraits>
+template<
+    typename T, int Dim, typename IndexT, template <typename U> class PtrTraits>
 __host__ __device__
 THCDeviceTensor<T, Dim, IndexT, PtrTraits>::THCDeviceTensor()
     : data_(NULL) {
@@ -67,9 +70,10 @@ THCDeviceTensor<T, Dim, IndexT, PtrTraits>::THCDeviceTensor(
 template <typename T, int Dim,
           typename IndexT, template <typename U> class PtrTraits>
 template <int OtherDim>
-__host__ __device__ bool
-THCDeviceTensor<T, Dim, IndexT, PtrTraits>::isSameSizeAndStride(
-  const THCDeviceTensor<T, OtherDim, IndexT, PtrTraits>& rhs) const {
+__host__ __device__
+bool THCDeviceTensor<T, Dim, IndexT, PtrTraits>::isSameSizeAndStride(
+  const THCDeviceTensor<T, OtherDim, IndexT, PtrTraits>& rhs) const
+{
   if (Dim != OtherDim) {
     return false;
   }

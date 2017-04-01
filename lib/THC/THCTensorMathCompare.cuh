@@ -10,12 +10,6 @@
 template <typename T, typename TOut>
 struct TensorLTValueOp {
   __host__ __device__
-  TensorLTValueOp() : value{} {}
-  __host__ __device__
-  TensorLTValueOp(const TensorLTValueOp& x) : value{x.value} {}
-  TensorLTValueOp(TensorLTValueOp&&) = default;
-
-  __host__ __device__
   explicit
   TensorLTValueOp(T v) : value(v) {}
 
@@ -25,19 +19,13 @@ struct TensorLTValueOp {
   }
 
   __host__ __device__
-  ~TensorLTValueOp() {}
+  ~TensorLTValueOp() = default;
 
   T value;
 };
 
 template <typename T, typename TOut>
 struct TensorGTValueOp {
-  __host__ __device__
-  TensorGTValueOp() : value{} {}
-  __host__ __device__
-  TensorGTValueOp(const TensorGTValueOp& x) : value{x.value} {}
-  TensorGTValueOp(TensorGTValueOp&&) = default;
-
   __host__ __device__
   explicit
   TensorGTValueOp(T v) : value(v) {}
@@ -48,7 +36,7 @@ struct TensorGTValueOp {
   }
 
   __host__ __device__
-  ~TensorGTValueOp() {}
+  ~TensorGTValueOp() = default;
 
   T value;
 };
@@ -56,12 +44,6 @@ struct TensorGTValueOp {
 
 template <typename T, typename TOut>
 struct TensorLEValueOp {
-  __host__ __device__
-  TensorLEValueOp() : value{} {}
-  __host__ __device__
-  TensorLEValueOp(const TensorLEValueOp& x) : value{x.value} {}
-  TensorLEValueOp(TensorLEValueOp&&) = default;
-
   __host__ __device__
   explicit
   TensorLEValueOp(T v) : value(v) {}
@@ -72,19 +54,13 @@ struct TensorLEValueOp {
   }
 
   __host__ __device__
-  ~TensorLEValueOp() {}
+  ~TensorLEValueOp() = default;
 
   T value;
 };
 
 template <typename T, typename TOut>
 struct TensorGEValueOp {
-  __host__ __device__
-  TensorGEValueOp() : value{} {}
-  __host__ __device__
-  TensorGEValueOp(const TensorGEValueOp& x) : value{x.value} {}
-  TensorGEValueOp(TensorGEValueOp&&) = default;
-
   __host__ __device__
   explicit
   TensorGEValueOp(T v) : value(v) {}
@@ -95,19 +71,13 @@ struct TensorGEValueOp {
   }
 
   __host__ __device__
-  ~TensorGEValueOp() {}
+  ~TensorGEValueOp() = default;
 
   T value;
 };
 
 template <typename T, typename TOut>
 struct TensorEQValueOp {
-  __host__ __device__
-  TensorEQValueOp() : value{} {}
-  __host__ __device__
-  TensorEQValueOp(const TensorEQValueOp& x) : value{x.value} {}
-  TensorEQValueOp(TensorEQValueOp&&) = default;
-
   __host__ __device__
   explicit
   TensorEQValueOp(T v) : value(v) {}
@@ -118,19 +88,13 @@ struct TensorEQValueOp {
   }
 
   __host__ __device__
-  ~TensorEQValueOp() {}
+  ~TensorEQValueOp() = default;
 
   T value;
 };
 
 template <typename T, typename TOut>
 struct TensorNEValueOp {
-  __host__ __device__
-  TensorNEValueOp() : value{} {}
-  __host__ __device__
-  TensorNEValueOp(const TensorNEValueOp& x) : value{x.value} {}
-  TensorNEValueOp(TensorNEValueOp&&) = default;
-
   __host__ __device__
   explicit
   TensorNEValueOp(T v) : value(v) {}
@@ -141,7 +105,7 @@ struct TensorNEValueOp {
   }
 
   __host__ __device__
-  ~TensorNEValueOp() {}
+  ~TensorNEValueOp() = default;
 
   T value;
 };

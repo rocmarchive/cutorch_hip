@@ -18,10 +18,11 @@
 // CUDA kernel argument that defines tensor layout
 template <typename T, typename IndexType>
 struct TensorInfo {
-  TensorInfo(T* p,
-             int dim,
-             const IndexType (&sz)[MAX_CUTORCH_DIMS],
-             const IndexType (&st)[MAX_CUTORCH_DIMS]);
+  TensorInfo(
+      T* p,
+      int dim,
+      const IndexType (&sz)[MAX_CUTORCH_DIMS],
+      const IndexType (&st)[MAX_CUTORCH_DIMS]);
 
   ~TensorInfo(void);
 
@@ -53,10 +54,11 @@ struct TensorInfo {
 };
 
 template <typename T, typename IndexType>
-TensorInfo<T, IndexType>::TensorInfo(T* p,
-                                     int dim,
-                                     const IndexType (&sz)[MAX_CUTORCH_DIMS],
-                                     const IndexType (&st)[MAX_CUTORCH_DIMS])
+TensorInfo<T, IndexType>::TensorInfo(
+    T* p,
+    int dim,
+    const IndexType (&sz)[MAX_CUTORCH_DIMS],
+    const IndexType (&st)[MAX_CUTORCH_DIMS])
     : data{p}, dims{dim}
 {
   assert(dims > 0 && dims < MAX_CUTORCH_DIMS);

@@ -25,9 +25,6 @@
 // This also gives a relative order for NaNs, but that's ok, as they
 // will all be adjacent
 struct FloatToSortedInt {
-  __host__ __device__
-  FloatToSortedInt() {}
-
   __device__
   unsigned int convert(float v) const
   {
@@ -97,7 +94,7 @@ void countRadixUsingMask(const RadixConverter& conv,
 
   // Now, for each warp, sum values
   // TODO: this is technically incorrect.
-  if (hipThreadIdx_x % warpSize == 0) {//getLaneId() == 0) {
+  if (hipThreadIdx_x % warp_size == 0) {//getLaneId() == 0) {
 #pragma unroll
     for (unsigned int i = 0; i < RadixSize; ++i) {
       atomicAdd(&smem[i], counts[i]);
@@ -451,7 +448,7 @@ THC_API void THCudaTensor_topk(THCState* state,
   THLongStorage_free(topKSize);
 
 #define RUN_K(INDEX_T, DIM, DIR)                                               \
-  hipLaunchKernelV2(HIP_KERNEL_NAME(gatherTopK<INDEX_T, DIM, DIR>),              \
+  hipLaunchKernelV2((gatherTopK<INDEX_T, DIM, DIR>),              \
                   dim3{grid},                                                  \
                   dim3{block},                                                 \
                   0,                                                           \

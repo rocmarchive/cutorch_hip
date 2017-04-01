@@ -167,13 +167,16 @@ struct TensorCAddOp {
   TensorCAddOp(T v) : val(v) {}
 
   __device__ __forceinline__
-  void operator()(T* out, T* in) const { *out += val * *in; }
+  void operator()(T* out, const T* in) const { *out += val * *in; }
 
   __device__ __forceinline__
-  void operator()(T* out, T* in1, T* in2) const { *out = *in1 + val * *in2; }
+  void operator()(T* out, const T* in1, const T* in2) const
+  {
+      *out = *in1 + val * *in2;
+  }
 
   __host__ __device__
-  ~TensorCAddOp() {}
+  ~TensorCAddOp() = default;
 
   T val;
 };
@@ -214,9 +217,6 @@ struct TensorCAddOp {
         *out = __float2half(fout);
       #endif
     }
-
-    __host__ __device__
-    ~TensorCAddOp() {}
 
     half val;
   };
@@ -326,9 +326,6 @@ struct TensorPowOp {
     *v = powf(static_cast<float>(*v), static_cast<float>(val));
   }
 
-  __host__ __device__
-  ~TensorPowOp() {}
-
   T val;
 };
 
@@ -343,9 +340,6 @@ struct TensorPowOp<double> {
 
   __device__ __forceinline__
   void operator()(double* v) const { *v = pow(*v, val); }
-
-  __host__ __device__
-  ~TensorPowOp() {}
 
   double val;
 };
@@ -376,9 +370,6 @@ struct TensorPowOp<double> {
       float fout = powf(fv, fval);
       *v = __float2half(fout);
     }
-
-    __host__ __device__
-    ~TensorPowOp() {}
 
     half val;
   };
@@ -488,13 +479,10 @@ template <typename T>
 struct TensorClampOp {
   __host__ __device__
   TensorClampOp() : minValue{FLT_MIN}, maxValue{FLT_MAX} {}
-  __host__ __device__
-  TensorClampOp(const TensorClampOp& x)
-    : minValue{x.minValue}, maxValue{x.maxValue} {}
-  TensorClampOp(TensorClampOp&&) = default;
 
   __host__ __device__
-  TensorClampOp(T min, T max) : minValue(min), maxValue(max) {}
+  TensorClampOp(T min, T max) : minValue{min}, maxValue{max} {}
+
   __device__ __forceinline__
   void operator()(T* out, const T* in) const
   {
@@ -517,9 +505,8 @@ struct TensorClampOp {
     *v = THCNumerics<T>::gt(foo, val) ? foo : val;
   }
 
-
   __host__ __device__
-  ~TensorClampOp() {}
+  ~TensorClampOp() = default;
 
   T minValue;
   T maxValue;
@@ -537,9 +524,6 @@ struct TensorLerpOp {
     *out = THCNumerics<T>::add(
       *a, THCNumerics<T>::mul(w, THCNumerics<T>::sub(*b, *a)));
   }
-
-  __host__ __device__
-  ~TensorLerpOp() {}
 
   T w;
 };
@@ -567,9 +551,6 @@ struct TensorCrossOp {
         THCNumerics<T>::mul(x[1 * sx], y[0 * sy])
     );
   }
-
-  __host__ __device__
-  ~TensorCrossOp() {}
 
   long sx;
   long sy;
@@ -631,7 +612,7 @@ struct TensorMaxValueOp {
   }
 
   __host__ __device__
-  ~TensorMaxValueOp() {}
+  ~TensorMaxValueOp() = default;
 
   T val;
 };
@@ -662,7 +643,7 @@ struct TensorMinValueOp {
   }
 
   __host__ __device__
-  ~TensorMinValueOp() {}
+  ~TensorMinValueOp() = default;
 
   T val;
 };
@@ -681,7 +662,7 @@ struct TensorAddCMulOp {
   }
 
   __host__ __device__
-  ~TensorAddCMulOp() {}
+  ~TensorAddCMulOp() = default;
 
   T val;
 };
@@ -700,7 +681,7 @@ struct TensorAddCDivOp {
   }
 
   __host__ __device__
-  ~TensorAddCDivOp() {}
+  ~TensorAddCDivOp() = default;
 
   T val;
 };

@@ -262,7 +262,7 @@ bool THC_reduceDim(THCState* state,
   // index can be similarly collapsed. That is what this unrolling is for.
 #define HANDLE_CASE(TYPE, OUT, IN)                                                                     \
   if (contigReduction) {                                                                                 \
-    hipLaunchKernelV2(HIP_KERNEL_NAME(kernelReduceContigDim<ModifyOp,                                      \
+    hipLaunchKernelV2((kernelReduceContigDim<ModifyOp,                                      \
                                                           ReduceOp,                                      \
                                                           typename TensorUtils<TensorType>::DataType,    \
                                                           TYPE,                                          \
@@ -286,7 +286,7 @@ bool THC_reduceDim(THCState* state,
                     modifyOp,                                                                            \
                     reduceOp);                                                                           \
   } else {                                                                                               \
-    hipLaunchKernelV2(HIP_KERNEL_NAME(kernelReduceNoncontigDim<ModifyOp,                                   \
+    hipLaunchKernelV2((kernelReduceNoncontigDim<ModifyOp,                                   \
                                                              ReduceOp,                                   \
                                                              typename TensorUtils<TensorType>::DataType, \
                                                              TYPE,                                       \

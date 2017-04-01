@@ -11,10 +11,6 @@
 
 template <typename T>
 struct TensorAddConstantOp {
-  TensorAddConstantOp() = default;
-  TensorAddConstantOp(const TensorAddConstantOp&) = default;
-  TensorAddConstantOp(TensorAddConstantOp&&) = default;
-
   __host__ __device__
   explicit
   TensorAddConstantOp(T v) : val(v) {}
@@ -25,56 +21,47 @@ struct TensorAddConstantOp {
   __device__ __forceinline__
   void operator()(T* v) const { *v += val; }
 
-  __host__ __device__
-  ~TensorAddConstantOp() {}
-
   T val;
 };
 
 #ifdef CUDA_HALF_TENSOR
 template <>
 struct TensorAddConstantOp<half> {
-  TensorAddConstantOp() = default;
-  TensorAddConstantOp(const TensorAddConstantOp&) = default;
-  TensorAddConstantOp(TensorAddConstantOp&&) = default;
-
-#ifdef CUDA_HALF_INSTRUCTIONS
   __host__ __device__
   explicit
-  TensorAddConstantOp(half v) : val(v) {}
-#else
-  TensorAddConstantOp(half v) : fval(THC_half2float(v)) {}
-#endif
+  #if defined(CUDA_HALF_INSTRUCTIONS) || defined(__HIP_PLATFORM_HCC__)
+    TensorAddConstantOp(half v) : val(v) {}
+  #else
+    TensorAddConstantOp(half v) : fval(THC_half2float(v)) {}
+  #endif
 
   __device__ __forceinline__
   void operator()(half* out, half* in) const {
-#ifdef CUDA_HALF_INSTRUCTIONS
+  #if defined(CUDA_HALF_INSTRUCTIONS) || defined(__HIP_PLATFORM_HCC__)
     *out = __hadd(*in, val);
-#else
+  #else
     float fin = __half2float(*in);
     float fout = fin + fval;
     *out = __float2half(fout);
-#endif
+  #endif
   }
 
   __device__ __forceinline__
   void operator()(half* v) const {
-#ifdef CUDA_HALF_INSTRUCTIONS
+  #if defined(CUDA_HALF_INSTRUCTIONS) || defined(__HIP_PLATFORM_HCC__)
     *v = __hadd(*v, val);
-#else
+  #else
     float fv = __half2float(*v);
     fv += fval;
     *v = __float2half(fv);
-#endif
+  #endif
   }
 
-  __host__ __device__
-  ~TensorAddConstantOp() {}
-#ifdef CUDA_HALF_INSTRUCTIONS
-  half val;
-#else
-  float fval;
-#endif
+  #if defined(CUDA_HALF_INSTRUCTIONS) || defined(__HIP_PLATFORM_HCC__)
+    half val;
+  #else
+    float fval;
+  #endif
 };
 #endif // CUDA_HALF_TENSOR
 
@@ -94,9 +81,6 @@ struct TensorSubConstantOp {
 
   __device__ __forceinline__
   void operator()(T* v) const { *v -= val; }
-
-  __host__ __device__
-  ~TensorSubConstantOp() {}
 
   T val;
 };
@@ -152,10 +136,6 @@ struct TensorSubConstantOp<half> {
 
 template <typename T>
 struct TensorMulConstantOp {
-  TensorMulConstantOp() = default;
-  TensorMulConstantOp(const TensorMulConstantOp&) = default;
-  TensorMulConstantOp(TensorMulConstantOp&&) = default;
-
   __host__ __device__
   explicit
   TensorMulConstantOp(T v) : val(v) {}
@@ -165,9 +145,6 @@ struct TensorMulConstantOp {
 
   __device__ __forceinline__
   void operator()(T* v) const { *v *= val; }
-
-  __host__ __device__
-  ~TensorMulConstantOp() {}
 
   T val;
 };
@@ -221,10 +198,6 @@ struct TensorMulConstantOp<half> {
 
 template <typename T>
 struct TensorDivConstantOp {
-  TensorDivConstantOp() = default;
-  TensorDivConstantOp(const TensorDivConstantOp&) = default;
-  TensorDivConstantOp(TensorDivConstantOp&&) = default;
-
   __host__ __device__
   explicit
   TensorDivConstantOp(T v) : val(v) {}
@@ -235,18 +208,11 @@ struct TensorDivConstantOp {
   __device__ __forceinline__
   void operator()(T* v) const { *v /= val; }
 
-  __host__ __device__
-  ~TensorDivConstantOp() {}
-
   T val;
 };
 
 template <>
 struct TensorDivConstantOp<float> {
-  TensorDivConstantOp() = default;
-  TensorDivConstantOp(const TensorDivConstantOp&) = default;
-  TensorDivConstantOp(TensorDivConstantOp&&) = default;
-
   __host__ __device__
   explicit
   TensorDivConstantOp(float v) : val(1.f / v) {}
@@ -257,18 +223,11 @@ struct TensorDivConstantOp<float> {
   __device__ __forceinline__
   void operator()(float* v) const { *v *= val; }
 
-  __host__ __device__
-  ~TensorDivConstantOp() {}
-
   float val;
 };
 
 template <>
 struct TensorDivConstantOp<double> {
-  TensorDivConstantOp() = default;
-  TensorDivConstantOp(const TensorDivConstantOp&) = default;
-  TensorDivConstantOp(TensorDivConstantOp&&) = default;
-
   __host__ __device__
   explicit
   TensorDivConstantOp(double v) : val(1. / v) {}
@@ -284,9 +243,6 @@ struct TensorDivConstantOp<double> {
   void operator()(double* v) const {
     *v *= val;
   }
-
-  __host__ __device__
-  ~TensorDivConstantOp() {}
 
   double val;
 };
@@ -339,13 +295,6 @@ struct TensorDivConstantOp<half> {
 
 template <int Upper>
 struct TensorTriOp {
-  TensorTriOp() = default;
-  __host__ __device__
-  TensorTriOp(const TensorTriOp& x)
-      : start(x.start), stride0(x.stride0), stride1(x.stride1), k(x.k)
-  {}
-  TensorTriOp(TensorTriOp&&) = default;
-
   __host__ __device__
   TensorTriOp(float *start_, long stride0_, long stride1_, long k_)
     : start(start_), stride0(stride0_), stride1(stride1_), k(k_) {}
@@ -373,9 +322,6 @@ struct TensorTriOp {
 
   __device__ __forceinline__
   void operator()(float* v) const { if (!mask(v)) *v = 0; }
-
-  __host__ __device__
-  ~TensorTriOp() {}
 
   float *start;
   long stride0;
@@ -489,7 +435,7 @@ void THCudaTensor_diag(THCState *state, THCudaTensor *self_, THCudaTensor *src_,
     const dim3 threads(min((long long)THCState_getCurrentDeviceProperties(state)->maxThreadsPerBlock, (long long)size));
     dim3 grid(min((long long)1024, (long long)THCCeilDiv(size, (long)threads.x)));
     long start = (k >= 0 ? k * stride1 : -k * stride0);
-    hipLaunchKernelV2(HIP_KERNEL_NAME(THCudaTensor_copyFromDiagonal),
+    hipLaunchKernelV2(THCudaTensor_copyFromDiagonal,
                     dim3(grid),
                     dim3(threads),
                     0,
@@ -511,7 +457,7 @@ void THCudaTensor_diag(THCState *state, THCudaTensor *self_, THCudaTensor *src_,
     const dim3 threads(min((long long)THCState_getCurrentDeviceProperties(state)->maxThreadsPerBlock, (long long)size));
     dim3 grid(min((long long)1024, (long long)THCCeilDiv(size, (ptrdiff_t)threads.x)));
     ptrdiff_t start = (k >= 0 ? k * stride1 : -k * stride0);
-    hipLaunchKernelV2(HIP_KERNEL_NAME(THCudaTensor_copyToDiagonal),
+    hipLaunchKernelV2(THCudaTensor_copyToDiagonal,
                     dim3(grid),
                     dim3(threads),
                     0,

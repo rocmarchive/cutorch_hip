@@ -80,7 +80,7 @@ void THCudaTensor_scanOuterDim(THCState *state,
   dim3 grid(min(maxGridDim, num_orows), min(maxGridDim, THCCeilDiv(num_irows, threads.x)));
 
   hipLaunchKernelV2(
-      HIP_KERNEL_NAME(THCudaTensor_kernel_scanOuterDim<BinaryOp>),
+      (THCudaTensor_kernel_scanOuterDim<BinaryOp>),
       dim3(grid),
       dim3(threads),
       0,
@@ -207,10 +207,7 @@ void THCudaTensor_scanInnermostDim(
   dim3 grid(min(1024, THCCeilDiv(num_rows, threads.y)));
 
   hipLaunchKernelV2(
-      HIP_KERNEL_NAME(THCudaTensor_kernel_scanInnermostDim<
-          16,
-          32,
-          BinaryFunction>),
+      (THCudaTensor_kernel_scanInnermostDim<16, 32, BinaryFunction>),
       dim3(grid),
       dim3(threads),
       0,

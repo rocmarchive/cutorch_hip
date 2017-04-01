@@ -385,32 +385,57 @@ namespace amp{
     /*! \brief This template function overload is used strictly for device_vector and AMP implementations.
         \detail
     */
-    template<typename DVInputIterator1, typename DVInputIterator2, typename DVOutputIterator, typename BinaryFunction>
+    template<
+        typename DVInputIterator1,
+        typename DVInputIterator2,
+        typename DVOutputIterator,
+        typename BinaryFunction>
     static
     inline
-    typename std::enable_if<
-               std::is_same< typename std::iterator_traits< DVOutputIterator >::iterator_category ,
-                                       bolt::amp::device_vector_tag
-                           >::value
-                           >::type
-    binary_transform( ::bolt::amp::control &ctl,  DVInputIterator1 first1,  DVInputIterator1 last1,
-                       DVInputIterator2 first2,  DVOutputIterator result,  BinaryFunction f)
-
+    typename std::enable_if<std::is_same<
+        typename std::iterator_traits<DVOutputIterator>::iterator_category,
+        bolt::amp::device_vector_tag>::value>::type
+    binary_transform(
+        ::bolt::amp::control& ctl,
+        DVInputIterator1 first1,
+        DVInputIterator1 last1,
+        DVInputIterator2 first2,
+        DVOutputIterator result,
+        BinaryFunction f)
     {
-        concurrency::accelerator_view av = ctl.getAccelerator().get_default_view();
+        concurrency::accelerator_view av =
+            ctl.getAccelerator().get_default_view();
 
-        const int szElements =  static_cast< int >( std::distance( first1, last1 ) );
+        const int szElements =
+            static_cast<int>(std::distance(first1, last1));
 
-        const unsigned int leng =  szElements + TRANSFORM_WAVEFRNT_SIZE - (szElements % TRANSFORM_WAVEFRNT_SIZE);
+        const unsigned int leng =
+            szElements +
+            TRANSFORM_WAVEFRNT_SIZE -
+            (szElements % TRANSFORM_WAVEFRNT_SIZE);
 
         concurrency::extent< 1 > inputExtent(leng);
 
-		auto dvInput1_itr = bolt::amp::create_mapped_iterator(typename bolt::amp::iterator_traits< DVInputIterator1 >::iterator_category( ), first1, szElements, false, ctl );
-        auto dvInput2_itr = bolt::amp::create_mapped_iterator(typename bolt::amp::iterator_traits< DVInputIterator2 >::iterator_category( ), first2, szElements, false, ctl);
+		auto dvInput1_itr =
+            bolt::amp::create_mapped_iterator(
+                typename bolt::amp::iterator_traits<
+                    DVInputIterator1>::iterator_category{},
+                first1,
+                szElements,
+                false,
+                ctl);
+        auto dvInput2_itr =
+            bolt::amp::create_mapped_iterator(
+                typename bolt::amp::iterator_traits<
+                    DVInputIterator2>::iterator_category{},
+                first2,
+                szElements,
+                false,
+                ctl);
 
         try {
-            concurrency::parallel_for_each(av, inputExtent, [=](Concurrency::index<1> idx) restrict(amp)
-            {
+            concurrency::parallel_for_each(
+                av, inputExtent, [=](Concurrency::index<1> idx) restrict(amp) {
                 int globalId = idx[ 0 ];
 
                 if( globalId >= szElements)
@@ -421,7 +446,8 @@ namespace amp{
             });
         }
 		catch(std::exception &e) {
-            std::cout << "Exception while calling bolt::amp::transform parallel_for_each"<<e.what()<<std::endl;
+            std::cout << "Exception while calling bolt::amp::transform "
+                << "parallel_for_each: " << e.what() << std::endl;
 
             return;
         }
@@ -467,36 +493,44 @@ namespace amp{
     }
 
 
-	template<typename DVInputIterator, typename DVOutputIterator, typename UnaryFunction>
+	template<
+        typename DVInputIterator,
+        typename DVOutputIterator,
+        typename UnaryFunction>
     static
     inline
-    typename std::enable_if< std::is_same< typename std::iterator_traits< DVOutputIterator >::iterator_category ,
-                                       bolt::amp::device_vector_tag
-                                     >::value
-                       >::type
-    unary_transform( ::bolt::amp::control &ctl,  DVInputIterator first,  DVInputIterator last,
-     DVOutputIterator result,  UnaryFunction f)
+    typename std::enable_if<std::is_same<
+        typename std::iterator_traits<DVOutputIterator>::iterator_category,
+        bolt::amp::device_vector_tag>::value>::type
+    unary_transform(
+        ::bolt::amp::control &ctl,
+        DVInputIterator first,
+        DVInputIterator last,
+        DVOutputIterator result,
+        UnaryFunction f)
     {
-
-//        typedef typename std::iterator_traits< DVInputIterator >::value_type iType;
-//        typedef typename std::iterator_traits< DVOutputIterator >::value_type oType;
-
-
         const int szElements =  static_cast< int >( std::distance( first, last ) );
         concurrency::accelerator_view av = ctl.getAccelerator().get_default_view();
 
-        const unsigned int leng =  szElements + TRANSFORM_WAVEFRNT_SIZE - (szElements % TRANSFORM_WAVEFRNT_SIZE);
+        const unsigned int leng =
+            szElements +
+            TRANSFORM_WAVEFRNT_SIZE -
+            (szElements % TRANSFORM_WAVEFRNT_SIZE);
 
-        concurrency::extent< 1 > inputExtent(leng);
+        concurrency::extent<1> inputExtent(leng);
 
+		auto dvInput1_itr =
+            bolt::amp::create_mapped_iterator(
+                typename bolt::amp::iterator_traits<
+                    DVInputIterator>::iterator_category{},
+                first,
+                szElements,
+                false,
+                ctl);
 
-		auto dvInput1_itr  = bolt::amp::create_mapped_iterator(typename bolt::amp::iterator_traits< DVInputIterator >::iterator_category( ), first, szElements, false, ctl );
-
-        try
-        {
-
-            concurrency::parallel_for_each(av,  inputExtent, [=](concurrency::index<1> idx) restrict(amp)
-            {
+        try {
+            concurrency::parallel_for_each(
+                av, inputExtent, [=](concurrency::index<1> idx) restrict(amp) {
                 int globalId = idx[ 0 ];
 
                 if( globalId >= szElements)
@@ -506,13 +540,11 @@ namespace amp{
 				result[globalId] = f(dvInput1_itr[globalId]);
             });
         }
+		catch(std::exception &e) {
+            std::cout << "Exception while calling bolt::amp::transform "
+                << "parallel_for_each" << e.what() << std::endl;
 
-		catch(std::exception &e)
-        {
-
-               std::cout << "Exception while calling bolt::amp::transform parallel_for_each"<<e.what()<<std::endl;
-
-               return;
+            return;
         }
     }
 
@@ -520,15 +552,20 @@ namespace amp{
 	/*! \brief This template function overload is used strictly std random access vectors and AMP implementations.
         \detail
     */
-    template<typename InputIterator, typename OutputIterator, typename UnaryFunction>
+    template<
+        typename InputIterator, typename OutputIterator, typename UnaryFunction>
     static
     inline
     typename std::enable_if< std::is_same< typename std::iterator_traits< OutputIterator >::iterator_category ,
                                        std::random_access_iterator_tag
                                      >::value
                            >::type
-    unary_transform( ::bolt::amp::control &ctl,  InputIterator first,  InputIterator last,
-     OutputIterator result,  UnaryFunction f)
+    unary_transform(
+        ::bolt::amp::control& ctl,
+        InputIterator first,
+        InputIterator last,
+        OutputIterator result,
+        UnaryFunction f)
     {
         int sz = static_cast<int>(last - first);
         if (sz == 0)
@@ -545,7 +582,6 @@ namespace amp{
 		return;
 
     }
-
 
 
     /*! \brief This template function overload is used strictly for device_vector and AMP implementations.
@@ -653,20 +689,29 @@ namespace amp{
 	/*! \brief This template function overload is used strictly for device vectors and std random access vectors.
         \detail Here we branch out into the SerialCpu, MultiCore TBB or The AMP code paths.
     */
-    template<typename InputIterator1, typename InputIterator2, typename OutputIterator, typename BinaryFunction>
+    template<
+        typename InputIterator1,
+        typename InputIterator2,
+        typename OutputIterator,
+        typename BinaryFunction>
     static
     inline
     typename std::enable_if<
-             !(std::is_same< typename std::iterator_traits< OutputIterator>::iterator_category,
-                             std::input_iterator_tag
-                           >::value ||
-               std::is_same< typename std::iterator_traits< OutputIterator>::iterator_category,
-                             bolt::amp::fancy_iterator_tag >::value)
-                           >::type
-    binary_transform(::bolt::amp::control& ctl,  InputIterator1 first1,  InputIterator1 last1,
-                      InputIterator2 first2,  OutputIterator result,  BinaryFunction f)
+        !(std::is_same<
+            typename std::iterator_traits< OutputIterator>::iterator_category,
+            std::input_iterator_tag>::value ||
+        std::is_same<
+            typename std::iterator_traits< OutputIterator>::iterator_category,
+            bolt::amp::fancy_iterator_tag >::value)>::type
+    binary_transform(
+        ::bolt::amp::control& ctl,
+        InputIterator1 first1,
+        InputIterator1 last1,
+        InputIterator2 first2,
+        OutputIterator result,
+        BinaryFunction f)
     {
-        const int sz =  static_cast< int >( std::distance( first1, last1 ));
+        const int sz =  static_cast<int>(std::distance(first1, last1));
         if (sz == 0)
             return;
 

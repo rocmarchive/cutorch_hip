@@ -85,13 +85,6 @@ struct ReduceMultiply {
 
 template<typename ResT, typename ArgT>
 struct SquareFunctor {
-    //int8_t fred;
-    //__host__ __device__
-//    __host__ __device__
-//    SquareFunctor() : mean_{} {}
-//    __host__ __device__
-//    SquareFunctor(const SquareFunctor& x) : mean_{x.mean_} {}
-
     __host__ __device__
     explicit
     SquareFunctor(ResT mean) : mean_(mean) {}
@@ -102,20 +95,12 @@ struct SquareFunctor {
       return (static_cast<ResT>(x) - mean_) * (static_cast<ResT>(x) - mean_);
     }
 
-    __host__ __device__
-    ~SquareFunctor() {}
-
     ResT mean_;
 };
 
 #ifdef CUDA_HALF_TENSOR
     template<typename ResT>
     struct SquareFunctor<ResT, half> {
-//        __host__ __device__
-//        SquareFunctor() : mean_{} {}
-//        __host__ __device__
-//        SquareFunctor(const SquareFunctor& x) : mean_{x.mean_} {}
-
         __host__ __device__
         explicit
         SquareFunctor(ResT mean): mean_(mean) {}
@@ -135,15 +120,14 @@ struct SquareFunctor {
 
 template <typename T>
 struct ReduceMin {
-  //int8_t fred;
   template<typename U = T,
            typename std::enable_if<std::is_integral<U>::value>::type* = nullptr>
   __device__
   T operator()(U a, U b) const
   {// TODO: this is a temporary workaround for a compiler bug. It is not quite
     //       correct in general.
-    //  return b ^ ((a ^ b) & -(a < b));
-      return a;
+      return b ^ ((a ^ b) & -(a < b));
+      //return a;
   }
 
   template<typename U = T,
@@ -157,7 +141,6 @@ struct ReduceMin {
 
 template<typename T>
 struct ReduceMax {
-  //int8_t fred;
     template<
         typename U = T,
         typename std::enable_if<std::is_integral<U>::value>::type* = nullptr>
@@ -166,8 +149,8 @@ struct ReduceMax {
     {// TODO: this is a temporary workaround for a compiler bug. It is not quite
         //       correct in general.
         //if (b < a) return a;
-        return a;
-        //return b ^ ((a ^ b) & -(a < b));
+        //return a;
+        return b ^ ((a ^ b) & -(a < b));
     }
 
     template<
@@ -181,7 +164,6 @@ struct ReduceMax {
 };
 
 struct LogicalAll {
-  //int8_t fred;
   __device__
   unsigned char operator()(unsigned char x, unsigned char y) const
   {
@@ -190,7 +172,6 @@ struct LogicalAll {
 };
 
 struct LogicalAny {
-  //int8_t fred;
   __device__
   unsigned char operator()(unsigned char x, unsigned char y) const
   {
@@ -278,19 +259,7 @@ struct TensorNormOp {
           default: return static_cast<T>(THCNumerics<T>::pow(
                   THCNumerics<T>::abs(x), exponent));
       }
-//    if (StaticExp == 1) {
-//      return (T) fabsf((float) x);
-//    }
-//    else if (StaticExp == 2) {
-//      return x * x;
-//    }
-//    else {
-//      return (T) powf(fabsf((float) x), (float) exponent);
-//    }
   }
-
-  __host__ __device__
-  ~TensorNormOp() {}
 
   T exponent;
 };
@@ -314,9 +283,6 @@ struct TensorNormOp<double, StaticExp>
     }
   }
 
-  __host__ __device__
-  ~TensorNormOp() {}
-
   double exponent;
 };
 
@@ -337,17 +303,7 @@ struct TensorNormOp<double, StaticExp>
               default: return THCNumerics<half>::pow(
                       THCNumerics<half>::abs(x), exponent);
           }
-//        if (StaticExp == 1) {
-//          return THCNumerics<half>::abs(x);
-//        } else if (StaticExp == 2) {
-//          return THCNumerics<half>::mul(x, x);
-//        } else {
-//          return THCNumerics<half>::pow(THCNumerics<half>::abs(x), exponent);
-//        }
       }
-
-      __host__ __device__
-      ~TensorNormOp() {}
 
       half exponent;
     };
@@ -355,11 +311,6 @@ struct TensorNormOp<double, StaticExp>
 
 template <typename T>
 struct TensorDistOp {
-//  __host__ __device__
-//  TensorDistOp() : exponent{} {};
-//  __host__ __device__
-//  TensorDistOp(const TensorDistOp& x) : exponent{x.exponent} {}
-
   __host__ __device__
   explicit
   TensorDistOp(T exp) : exponent{exp} {}
@@ -370,9 +321,6 @@ struct TensorDistOp {
     return THCNumerics<T>::pow(
         THCNumerics<T>::abs(THCNumerics<T>::sub(x, y)), exponent);
   }
-
-  __host__ __device__
-  ~TensorDistOp() {}
 
   T exponent;
 };
@@ -482,7 +430,7 @@ void THCTensor_varOuterDim(
 
   if (flag) {
     hipLaunchKernelV2(
-        HIP_KERNEL_NAME(THCTensor_kernel_varOuterDim<Real, true, apply_sqrt>),
+        (THCTensor_kernel_varOuterDim<Real, true, apply_sqrt>),
         grid,
         threads,
         0,
@@ -495,7 +443,7 @@ void THCTensor_varOuterDim(
   }
   else {
     hipLaunchKernelV2(
-        HIP_KERNEL_NAME(THCTensor_kernel_varOuterDim<Real, false, apply_sqrt>),
+        (THCTensor_kernel_varOuterDim<Real, false, apply_sqrt>),
         grid,
         threads,
         0,
@@ -601,7 +549,7 @@ void THCTensor_varInnermostDim(
 
   if (flag) {
     hipLaunchKernelV2(
-        HIP_KERNEL_NAME(THCTensor_kernel_varInnermostDim<Real, true, apply_sqrt>),
+        (THCTensor_kernel_varInnermostDim<Real, true, apply_sqrt>),
         dim3(grid),
         dim3(threads),
         0,
@@ -613,8 +561,7 @@ void THCTensor_varInnermostDim(
   }
   else {
     hipLaunchKernelV2(
-        HIP_KERNEL_NAME(
-            THCTensor_kernel_varInnermostDim<Real, false, apply_sqrt>),
+        (THCTensor_kernel_varInnermostDim<Real, false, apply_sqrt>),
         dim3(grid),
         dim3(threads),
         0,
@@ -715,7 +662,7 @@ void THC_transformReduceOuterDimIndex(
             min(maxGridDim, THCCeilDiv(num_irows, threads.x)));
 
   hipLaunchKernelV2(
-      HIP_KERNEL_NAME(kernelTransformReduceOuterDimIndex<
+      (kernelTransformReduceOuterDimIndex<
           typename TensorUtils<TensorTypeK>::DataType,
           typename TensorUtils<TensorTypeIndex>::DataType,
           BinaryFunction>),
@@ -847,7 +794,7 @@ void THC_transformReduceInnermostDimIndex(
   dim3 grid(min(1024, THCCeilDiv(num_rows, threads.y)));
 
   hipLaunchKernelV2(
-      HIP_KERNEL_NAME(kernelTransformReduceInnermostDimIndex<
+      (kernelTransformReduceInnermostDimIndex<
           typename TensorUtils<TensorTypeK>::DataType,
           typename TensorUtils<TensorTypeIndex>::DataType,
           BinaryFunction>),

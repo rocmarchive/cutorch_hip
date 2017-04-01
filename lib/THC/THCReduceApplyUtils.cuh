@@ -16,6 +16,12 @@
 // read-only
 enum TensorArgType { ReadWrite, ReadOnly };
 
+#if defined(__HIP_PLATFORM_HCC__)
+    static constexpr int warp_size = 64;
+#else
+    static constexpr int warp_size = 32;
+#endif
+
 template <typename IndexType>
 __device__ __forceinline__
 static
@@ -31,7 +37,8 @@ template <typename T, typename dressedT, typename ReduceOp>
 __device__
 static
 inline
-T reduceBlock(dressedT* smem, int numVals, T threadVal, ReduceOp reduceOp, T init)
+T reduceBlock(
+    dressedT* smem, int numVals, T threadVal, ReduceOp reduceOp, T init)
 {
   if (numVals == 0) {
     return init;
@@ -43,10 +50,10 @@ T reduceBlock(dressedT* smem, int numVals, T threadVal, ReduceOp reduceOp, T ini
 
   // First warp will perform reductions across warps
   __syncthreads();
-  if ((hipThreadIdx_x / warpSize) == 0) {
+  if ((hipThreadIdx_x / warp_size) == 0) {
     T r = hipThreadIdx_x < numVals ? smem[hipThreadIdx_x] : init;
 
-    for (int i = warpSize + hipThreadIdx_x; i < numVals; i += warpSize) {
+    for (int i = warp_size + hipThreadIdx_x; i < numVals; i += warp_size) {
       r = reduceOp(r, smem[i]);
     }
 
@@ -60,12 +67,12 @@ T reduceBlock(dressedT* smem, int numVals, T threadVal, ReduceOp reduceOp, T ini
   if (hipThreadIdx_x == 0) {
     r = smem[0];
 
-    int numLanesParticipating = min(numVals, warpSize);
+    int numLanesParticipating = min(numVals, warp_size);
 
-    if (numLanesParticipating == warpSize) {
+    if (numLanesParticipating == warp_size) {
       // Unroll for warpSize == 32 and numVals >= 32
 #pragma unroll
-      for (int i = 1; i < warpSize; ++i) {
+      for (int i = 1; i < warp_size; ++i) {
         r = reduceOp(r, smem[i]);
       }
     } else {
