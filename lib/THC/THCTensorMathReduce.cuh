@@ -230,7 +230,7 @@ struct TensorNormOp<double, StaticExp>
 template <int StaticExp>
 struct TensorNormOp<half, StaticExp>
 {
-  __host__ __device TensorNormOp(half exp) : exponent(exp) {}
+  __host__ __device__ TensorNormOp(half exp) : exponent(exp) {}
 
   __host__ __device__ half operator()(half x) const {
     if (StaticExp == 1) {
@@ -590,11 +590,12 @@ kernelTransformReduceInnermostDimIndex(hipLaunchParm lp, K *tgt1,
 #if defined(THRUST_PATH)
         thrust::pair<K, Index> arg1{sline[hipThreadIdx_x], iline[hipThreadIdx_x]};
         thrust::pair<K, Index> arg2{sline[hipThreadIdx_x + s], iline[hipThreadIdx_x + s]};
+        thrust::pair<K, Index> res = binary_op(arg1, arg2);
 #else
         bolt::amp::pair<K, Index> arg1{sline[hipThreadIdx_x], iline[hipThreadIdx_x]};
         bolt::amp::pair<K, Index> arg2{sline[hipThreadIdx_x + s], iline[hipThreadIdx_x + s]};
+        bolt::amp::pair<K, Index> res = binary_op(arg1, arg2);
 #endif
-        auto res = binary_op(arg1, arg2);
 
         sline[hipThreadIdx_x] = res.first;
         iline[hipThreadIdx_x] = res.second;

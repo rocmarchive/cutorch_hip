@@ -310,10 +310,10 @@ void THCudaBlas_Hgemm(THCState *state, char transa, char transb, long m, long n,
       float fAlpha = THC_half2float(alpha);
       float fBeta = THC_half2float(beta);
 
-      THCublasCheck(hipblasSgemmEx(handle, opa, opb,
+      /*THCublasCheck(cublasSgemmEx(handle, opa, opb,
 				  i_m, i_n, i_k, &fAlpha,
                                   a, CUDA_R_16F, i_lda, b, CUDA_R_16F,
-				  i_ldb, &fBeta, c, CUDA_R_16F, i_ldc));
+				  i_ldb, &fBeta, c, CUDA_R_16F, i_ldc));*/
     }
 #elif __HCC__
       cublasHgemm(handle, opa, opb,

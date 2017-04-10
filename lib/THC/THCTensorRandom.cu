@@ -16,7 +16,7 @@
 #endif
 
 #ifdef THRUST_PATH
-    #include <thrust/functional>
+    #include <thrust/functional.h>
 #else
     #include <bolt/amp/functional.h>
 #endif
@@ -106,8 +106,9 @@ void THCRandom_init(THCState* state, int devices, int current_device)
 #ifdef CURAND_PATH
     rng_state->gen[i].gen_states = NULL;
     rng_state->gen[i].kernel_params = NULL;
-#endif
+#else
     rng_state->gen[i].h_gen_states = NULL;
+#endif
   }
 }
 

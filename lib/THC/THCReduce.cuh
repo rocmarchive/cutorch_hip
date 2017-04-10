@@ -305,11 +305,11 @@ bool THC_reduceDim(THCState* state,
     inInfo.reduceDim(dim);
     inInfo.collapseDims();
 
-    auto outData = outInfo.data;
+    typename TensorUtils<TensorType>::DataType* outData = outInfo.data;
     unsigned int* outSizes = outInfo.dSizes;
     unsigned int* outStrides = outInfo.dStrides;
     int outDims = outInfo.dims;
-    auto inData = inInfo.data;
+    typename TensorUtils<TensorType>::DataType* inData = inInfo.data;
     unsigned int* inSizes = inInfo.dSizes;
     unsigned int* inStrides = inInfo.dStrides;
     int inDims = inInfo.dims;
@@ -327,11 +327,11 @@ bool THC_reduceDim(THCState* state,
     inInfo.reduceDim(dim);
     inInfo.collapseDims();
 
-    auto outData = outInfo.data;
+    typename TensorUtils<TensorType>::DataType* outData = outInfo.data;
     unsigned long* outSizes = outInfo.dSizes;
     unsigned long* outStrides = outInfo.dStrides;
     int outDims = outInfo.dims;
-    auto inData = inInfo.data;
+    typename TensorUtils<TensorType>::DataType* inData = inInfo.data;
     unsigned long* inSizes = inInfo.dSizes;
     unsigned long* inStrides = inInfo.dStrides;
     int inDims = inInfo.dims;
