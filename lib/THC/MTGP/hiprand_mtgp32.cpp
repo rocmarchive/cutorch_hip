@@ -103,6 +103,7 @@ void HipRandStateMtgp32_release(HipRandStateMtgp32* s) {
   FREE_MEMBER(s, index);
 }
 
+
 void HipRandStateMtgp32_copy_D2H(void* src, void* dst) {
   HOSTRandStateMtgp32* host = (HOSTRandStateMtgp32*)(dst);
   HipRandStateMtgp32* hc = (HipRandStateMtgp32*)(src);
@@ -171,14 +172,14 @@ int mtgp32_init_params_kernel(hc::accelerator_view accl_view,
     }
   }
 
-  hc::am_copy((void*)av_mask, &params[0].mask, 1 * sizeof(uint32_t));
-  hc::am_copy((void*)av_param_tbl, vec_param, HcRAND_GROUP_NUM * MTGP32_TS * sizeof(uint32_t));
-  hc::am_copy((void*)av_temper_tbl, vec_temper, HcRAND_GROUP_NUM * MTGP32_TS * sizeof(uint32_t));
-  hc::am_copy((void*)av_single_temper_tbl, vec_single_temper, HcRAND_GROUP_NUM * MTGP32_TS * sizeof(uint32_t));
-  hc::am_copy((void*)av_pos_tbl, vec_pos, HcRAND_GROUP_NUM * sizeof(uint32_t));
-  hc::am_copy((void*)av_sh1_tbl, vec_sh1, HcRAND_GROUP_NUM * sizeof(uint32_t));
-  hc::am_copy((void*)av_sh2_tbl, vec_sh2, HcRAND_GROUP_NUM * sizeof(uint32_t));
-  hc::am_copy((void*)av_mexp_tbl, vec_mexp, HcRAND_GROUP_NUM * sizeof(uint32_t));
+  accl_view.copy(&params[0].mask, (void*)av_mask, 1 * sizeof(uint32_t));
+  accl_view.copy(vec_param,(void*)av_param_tbl,  HcRAND_GROUP_NUM * MTGP32_TS * sizeof(uint32_t));
+  accl_view.copy(vec_temper, (void*)av_temper_tbl, HcRAND_GROUP_NUM * MTGP32_TS * sizeof(uint32_t));
+  accl_view.copy(vec_single_temper, (void*)av_single_temper_tbl, HcRAND_GROUP_NUM * MTGP32_TS * sizeof(uint32_t));
+  accl_view.copy(vec_pos, (void*)av_pos_tbl, HcRAND_GROUP_NUM * sizeof(uint32_t));
+  accl_view.copy(vec_sh1, (void*)av_sh1_tbl, HcRAND_GROUP_NUM * sizeof(uint32_t));
+  accl_view.copy(vec_sh2, (void*)av_sh2_tbl, HcRAND_GROUP_NUM * sizeof(uint32_t));
+  accl_view.copy(vec_mexp, (void*)av_mexp_tbl, HcRAND_GROUP_NUM * sizeof(uint32_t));
 
   return 0;
 }
