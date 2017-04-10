@@ -53,6 +53,7 @@ struct DefaultPtrTraits {
 - this is just T*, but RestrictPtrTraits can be used to apply T*
 - __restrict__ for alias-free analysis.
 */
+#define MAX_Dim 6
 template <typename T,
           int Dim,
           typename IndexT = int,
@@ -235,15 +236,51 @@ class THCDeviceTensor {
   /// in question are not contiguous.
   void zero(hipStream_t stream = 0);
 
+#ifdef __HCC__
+  __attribute__((annotate("serialize")))
+  void __cxxamp_serialize(Kalmar::Serialize &s) const {
+    assert(MAX_Dim == 6); // This is hardcoded into the deserialize function signature and the mapping below
+    s.Append(sizeof(data_), &data_);
+    for (int i=0; i<MAX_Dim; i++) {
+      s.Append(sizeof(stride_[0]), &stride_[i]);
+    }
+    for (int i=0; i<MAX_Dim; i++) {
+      s.Append(sizeof(size_[0]), &size_[i]);
+    }
+  }
+
+
+  __attribute__((annotate("user_deserialize")))
+  THCDeviceTensor(DataPtrType data, 
+                 IndexT stride0, IndexT stride1, IndexT stride2, IndexT stride3, IndexT stride4, IndexT stride5,
+                 IndexT size0, IndexT size1, IndexT size2, IndexT size3, IndexT size4, IndexT size5
+                 ) [[cpu]][[hc]] {
+
+    data_ = data;
+    stride_[0] = stride0;
+    stride_[1] = stride1;
+    stride_[2] = stride2;
+    stride_[3] = stride3;
+    stride_[4] = stride4;
+    stride_[5] = stride5;
+    size_[0]   = size0;
+    size_[1]   = size1;
+    size_[2]   = size2;
+    size_[3]   = size3;
+    size_[4]   = size4;
+    size_[5]   = size5;
+  }
+#endif
+
  private:
   /// Raw pointer to where the tensor data begins
   DataPtrType data_;
 
   /// Array of strides (in sizeof(T) terms) per each dimension
-  IndexT stride_[Dim];
+  IndexT stride_[MAX_Dim];
 
   /// Size per each dimension
-  IndexT size_[Dim];
+  IndexT size_[MAX_Dim];
 };
 
 namespace detail {
