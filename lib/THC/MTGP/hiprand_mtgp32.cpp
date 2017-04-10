@@ -103,39 +103,6 @@ void HipRandStateMtgp32_release(HipRandStateMtgp32* s) {
   FREE_MEMBER(s, index);
 }
 
-
-void HipRandStateMtgp32_copy_D2H(void* src, void* dst) {
-  HOSTRandStateMtgp32* host = (HOSTRandStateMtgp32*)(dst);
-  HipRandStateMtgp32* hc = (HipRandStateMtgp32*)(src);
-  hc::am_copy(host->offset, (hc->offset), USER_GROUP_NUM * sizeof(uint32_t));
-  hc::am_copy(host->index, (hc->index), USER_GROUP_NUM * sizeof(uint32_t));
-  hc::am_copy(host->d_status, (hc->d_status), (USER_GROUP_NUM * MTGP32_STATE_SIZE * sizeof(uint32_t)));
-  hc::am_copy(host->mexp_tbl, (hc->mexp_tbl), (HcRAND_GROUP_NUM * sizeof(uint32_t)));
-  hc::am_copy(host->param_tbl, (hc->param_tbl), (HcRAND_GROUP_NUM * MTGP32_TS * sizeof(uint32_t)));
-  hc::am_copy(host->temper_tbl, (hc->temper_tbl), (HcRAND_GROUP_NUM * MTGP32_TS * sizeof(uint32_t)));
-  hc::am_copy(host->single_temper_tbl, (hc->single_temper_tbl), (HcRAND_GROUP_NUM * MTGP32_TS * sizeof(uint32_t)));
-  hc::am_copy(host->pos_tbl, (hc->pos_tbl), (HcRAND_GROUP_NUM * sizeof(uint32_t)));
-  hc::am_copy(host->sh1_tbl, (hc->sh1_tbl), (HcRAND_GROUP_NUM * sizeof(uint32_t)));
-  hc::am_copy(host->sh2_tbl, (hc->sh2_tbl), (HcRAND_GROUP_NUM * sizeof(uint32_t)));
-  hc::am_copy(host->mask, (hc->mask), (1 * sizeof(uint32_t)));
-}
-void HipRandStateMtgp32_copy_H2D(void* src, void* dst) {
-  HOSTRandStateMtgp32* host = (HOSTRandStateMtgp32*)(src);
-  HipRandStateMtgp32* hc = (HipRandStateMtgp32*)(dst);
-  hc::am_copy((hc->offset), host->offset, USER_GROUP_NUM * sizeof(uint32_t));
-  hc::am_copy((hc->index), host->index, USER_GROUP_NUM * sizeof(uint32_t));
-  hc::am_copy((hc->d_status), host->d_status, (USER_GROUP_NUM * MTGP32_STATE_SIZE * sizeof(uint32_t)));
-  hc::am_copy((hc->mexp_tbl), host->mexp_tbl, (HcRAND_GROUP_NUM * sizeof(uint32_t)));
-  hc::am_copy((hc->param_tbl), host->param_tbl, (HcRAND_GROUP_NUM * MTGP32_TS * sizeof(uint32_t)));
-  hc::am_copy((hc->temper_tbl), host->temper_tbl, (HcRAND_GROUP_NUM * MTGP32_TS * sizeof(uint32_t)));
-  hc::am_copy((hc->single_temper_tbl), host->single_temper_tbl, (HcRAND_GROUP_NUM * MTGP32_TS * sizeof(uint32_t)));
-  hc::am_copy((hc->pos_tbl), host->pos_tbl, (HcRAND_GROUP_NUM * sizeof(uint32_t)));
-  hc::am_copy((hc->sh1_tbl), host->sh1_tbl, (HcRAND_GROUP_NUM * sizeof(uint32_t)));
-  hc::am_copy((hc->sh2_tbl), host->sh2_tbl, (HcRAND_GROUP_NUM* sizeof(uint32_t)));
-  hc::am_copy((hc->mask), host->mask, (1 * sizeof(uint32_t)));
-}
-
-
 // The following are device APIs
 
 // Copy param constants onto device
