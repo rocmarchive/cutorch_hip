@@ -7,7 +7,7 @@
 #include "THCReduce.cuh"
 
 #if defined(THRUST_PATH)
-    #include <thrust/functional>
+    #include <thrust/functional.h>
 #else
     #include <bolt/amp/functional.h>
 #endif
@@ -208,7 +208,7 @@ void THCudaTensor_cumsum(THCState *state, THCudaTensor *self, THCudaTensor *src,
                               dimension,
                               0.0f,
 #if defined(THRUST_PATH)
-                              thrust::plus<float>();
+                              thrust::plus<float>());
 #else
                               bolt::amp::plus<float>());
 #endif
@@ -223,7 +223,7 @@ void THCudaTensor_cumprod(THCState *state, THCudaTensor *self, THCudaTensor *src
                               dimension,
                               1.0f,
 #if defined(THRUST_PATH)
-                              thrust::multiplies<float>();
+                              thrust::multiplies<float>());
 #else
                               bolt::amp::multiplies<float>());
 #endif

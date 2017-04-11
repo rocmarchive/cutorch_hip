@@ -172,8 +172,10 @@ bitonicSortKVInPlace(hipLaunchParm lp,
     const int elem2 = hipThreadIdx_x + (Power2SortSize / 2);
 
     bool valid1 = (elem1 < keySliceSize);
-    K k1 = /*valid1 ?*/ keysData[keyStartOffset + elem1 * keySliceStride];// : //ScalarConvert<int, K>::to(0);
-    V v1 = valid1 ? valuesData[valueStartOffset + elem1 * valueSliceStride] : V{0};//ScalarConvert<int, V>::to(0);
+    K k1 = valid1 ?
+      keysData[keyStartOffset + elem1 * keySliceStride] : ScalarConvert<int, K>::to(0);
+    V v1 = valid1 ?
+      valuesData[valueStartOffset + elem1 * valueSliceStride] : ScalarConvert<int, V>::to(0);
 
     sharedKeys[elem1] = k1;
     sharedValues[elem1] = v1;
