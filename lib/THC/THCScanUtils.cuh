@@ -60,15 +60,19 @@ template <typename T, bool KillWARDependency>
 __device__ void inclusiveBinaryPrefixSum(T* smem, bool in, T* out) {
   // Within-warp, we use warp voting.
   T vote = __ballot(in);
+#ifdef CUDA_PATH
   T index = __popc(getLaneMaskLe() & vote);
+#endif
   T carry = __popc(vote);
 
   int warp = hipThreadIdx_x / 32;
 
+#ifdef CUDA_PATH
   // Per each warp, write out a value
   if (getLaneId() == 0) {
     smem[warp] = carry;
   }
+#endif
 
   __syncthreads();
 
