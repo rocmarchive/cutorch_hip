@@ -46,8 +46,9 @@ kernelReduceAll(hipLaunchParm lp,
   }
 
   // Reduce within the block
-  HIP_DYNAMIC_SHARED( char, smemChar)
-  AccT* smem = (AccT*) smemChar;
+  //HIP_DYNAMIC_SHARED( char, smemChar)
+  //AccT* smem = (AccT*) smemChar;
+  __shared__ AccT smem[1024];
   r = reduceBlock<AccT, ReduceAccOp>(smem, hipBlockDim_x, r, reduceAccOp, init);
 
   if (hipThreadIdx_x == 0) {
@@ -99,8 +100,9 @@ kernelReduceAllPass1(hipLaunchParm lp,
   }
 
   // Reduce within the block
-  HIP_DYNAMIC_SHARED( char, smemChar)
-  AccT* smem = (AccT*) smemChar;
+  //HIP_DYNAMIC_SHARED( char, smemChar)
+  //AccT* smem = (AccT*) smemChar;
+   __shared__ AccT smem[1024]; 
   r = reduceBlock<AccT, ReduceAccOp>(smem, hipBlockDim_x, r, reduceAccOp, init);
 
   if (hipThreadIdx_x == 0) {
@@ -122,8 +124,9 @@ kernelReduceAllPass2(hipLaunchParm lp, int numPass1Blocks,
   }
 
   // Reduce within the block
-  HIP_DYNAMIC_SHARED( char, smemChar)
-  T* smem = (T*) smemChar;
+  //HIP_DYNAMIC_SHARED( char, smemChar)
+  //T* smem = (T*) smemChar;
+   __shared__ T smem[1024]; 
   r = reduceBlock<T, ReduceOp>(smem, numPass1Blocks, r, reduceOp, init);
 
   if (hipThreadIdx_x == 0) {

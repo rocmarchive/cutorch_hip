@@ -602,8 +602,8 @@ __device__ int binarySearchForMultinomial(float* dist,
 
 // Normalizes the L1 norm of every row to 1; used by multinomial
 __global__ void renormRowsL1(hipLaunchParm lp, float* dist, long rows, long cols) {
-  HIP_DYNAMIC_SHARED( float, smem)
-
+  //HIP_DYNAMIC_SHARED( float, smem)
+  __shared__ float smem[1024];
   for (long row = hipBlockIdx_x; row < rows; row += hipGridDim_x) {
     float sum = 0.0f;
     for (long col = hipThreadIdx_x; col < cols; col += hipBlockDim_x) {
@@ -657,7 +657,8 @@ sampleMultinomialOnce(hipLaunchParm lp, float* dest,
                       long distributions,
                       int categories,
                       float* dist) {
-  HIP_DYNAMIC_SHARED( float, smem)
+  //HIP_DYNAMIC_SHARED( float, smem)
+  __shared__ float smem[1024];
 
   for (long curDist = hipBlockIdx_x;
        curDist < distributions; curDist += hipGridDim_x) {

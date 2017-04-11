@@ -62,7 +62,7 @@ TensorInfo<T, IndexType>::TensorInfo(T* p,
                                      IndexType st[MAX_CUTORCH_DIMS]) {
   data = p;
   dims = dim;
-  //assert(dims > 0 && dims < MAX_CUTORCH_DIMS);
+  assert(dims > 0 && dims < MAX_CUTORCH_DIMS);
 
   // Allocate to accomodate device strides and sizes for the tensor
   THCudaCheck(hipMalloc((void **)&dSizes, sizeof(IndexType) * MAX_CUTORCH_DIMS));
