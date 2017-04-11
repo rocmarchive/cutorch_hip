@@ -101,9 +101,12 @@ static inline __device__ void atomicAdd_t(int *address, int val) {
   AtomicAddIntegerImpl<int, sizeof(int)>()(address, val);
 }
 
+#ifdef __HCC__
 static inline __device__ void atomicAdd_t(double *address, double val) {
   AtomicAddIntegerImpl<double, sizeof(double)>()(address, val);
 }
+#endif
+
 #ifdef CUDA_HALF_TENSOR
 static inline  __device__ void atomicAdd_t(half *address, half val) {
   unsigned int * address_as_ui =
