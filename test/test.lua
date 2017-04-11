@@ -1015,7 +1015,7 @@ function test.mean()
    checkMultiDevice(x, 'mean', 1)
 end
 
---[[function test.max()
+function test.max()
    local sz1 = chooseInt(minsize, maxsize)
    local sz2 = chooseInt(minsize, maxsize)
    local x = torch.randperm(sz1 * sz2):view(sz1, sz2):float()
@@ -1059,7 +1059,7 @@ function test.min()
    end
    checkMultiDevice(x, 'min')
    checkMultiDevice(x, 'min', 1)
-end]]--
+end
 
 function test.cmax()
   local sz1 = chooseInt(minsize, maxsize)
@@ -1335,11 +1335,11 @@ for _,name in ipairs({
 end
 
 --TODO: Fix the ERROR status caused for this particular test
---[[test["abs1"] = testUnary1({"abs", -100, 100}, {'torch.CudaIntTensor',
-                                               'torch.CudaLongTensor'})]]--
+test["abs1"] = testUnary1({"abs", -100, 100}, {'torch.CudaIntTensor',
+                                               'torch.CudaLongTensor'})
 --TODO: Fix the ERROR status caused for this particular test
---[[test["abs2"] = testUnary2({"abs", -100, 100}, {'torch.CudaIntTensor',
-                                               'torch.CudaLongTensor'})]]--
+test["abs2"] = testUnary2({"abs", -100, 100}, {'torch.CudaIntTensor',
+                                               'torch.CudaLongTensor'})
 
 
 test["sign1"] = testUnary1({"sign", -100, 100}, typenames)
@@ -1832,7 +1832,7 @@ function test.indexAdd2()
 end
 
 -- TODO: Need to fix occasional runtime error at hipFree / allocator_free at line 184 generic/THCStorage.c
---[[function test.indexFill2()
+function test.indexFill2()
    for tries = 1, 5 do
       local t = createTestTensor(1000000)
       local selectdim = chooseInt(1, t:nDimension())
@@ -1841,7 +1841,7 @@ end
 
       compareFloatAndCuda(t, 'indexFill', selectdim, indices, 1)
    end
-end]]--
+end
 
 -- TODO: Need to fix occasional runtime error at hipFree / allocator_free at line 184 generic/THCStorage.c
 function test.indexSelect2()
@@ -2967,7 +2967,7 @@ function test.maskedSelect()
           "Error in maskedSelect indexing non-contig x[x:gt(y)]")
 end
 
---[[function test.maskedCopy()
+function test.maskedCopy()
    local n_row = math.random(minsize,maxsize)
    local n_col = math.random(minsize,maxsize)
 
@@ -3041,7 +3041,7 @@ end
 
    tester:assertTensorEq(x, x_cuda:float(), 0.00001,
                          "Error in maskedCopy indexing x[x:gt(y)]")
-end]]--
+end
 
 function test.maskedFill()
    local n_row = math.random(minsize,maxsize)

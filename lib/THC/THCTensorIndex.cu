@@ -139,7 +139,7 @@ __global__ void indexAddSmallIndex(hipLaunchParm lp,
         IndexType srcOffset =
           IndexToOffset<T, IndexType, SrcDim>::get(linearIndex, srcSizes, srcStrides, srcDims);
         srcOffset += srcIndex * srcStrides[srcAddDim];
-        //atomicAdd(&dstData[dstOffset], srcData[srcOffset]);
+        atomicAdd(&dstData[dstOffset], srcData[srcOffset]);
       }
     }
   }
@@ -181,7 +181,7 @@ __global__ void indexAddLargeIndex(hipLaunchParm lp,
         IndexToOffset<T, IndexType, SrcDim>::get(elementInSlice, srcSizes, srcStrides, srcDims);
       srcOffset += srcIndex * srcStrides[srcAddDim];
 
-      //atomicAdd(&dstData[dstOffset], srcData[srcOffset]);
+      atomicAdd(&dstData[dstOffset], srcData[srcOffset]);
     }
   }
 }

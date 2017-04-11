@@ -52,7 +52,7 @@ struct TensorMaskedSelectOp {
                                     MaskPrefixSumT* maskPrefixSum,
                                     T* in) {
     if (*mask) {
-      //out[*maskPrefixSum] = *in;
+      out[*maskPrefixSum] = *in;
     }
   }
   __host__ __device__ ~TensorMaskedSelectOp() {}
