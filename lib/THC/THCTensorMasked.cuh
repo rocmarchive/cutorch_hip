@@ -37,7 +37,11 @@ struct TensorMaskedCopyOp {
                                     MaskT* mask,
                                     MaskPrefixSumT* maskPrefixSum) {
     if (*mask) {
-    //  out[0] = in[*maskPrefixSum];
+#ifdef __NVCC__
+    *out = in[*maskPrefixSum];
+#else
+    //*out = in[*maskPrefixSum];
+#endif
     }
   }
   __host__ __device__ ~TensorMaskedCopyOp() {}
@@ -52,7 +56,11 @@ struct TensorMaskedSelectOp {
                                     MaskPrefixSumT* maskPrefixSum,
                                     T* in) {
     if (*mask) {
-     // out[*maskPrefixSum] = *in;
+#ifdef __NVCC__
+      out[*maskPrefixSum] = *in;
+#else
+      //out[*maskPrefixSum] = *in;
+#endif
     }
   }
   __host__ __device__ ~TensorMaskedSelectOp() {}
