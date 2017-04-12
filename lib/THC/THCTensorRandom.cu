@@ -156,6 +156,11 @@ struct curandStateMtgp32* THCRandom_generatorStates(struct THCState* state)
 {
   return THCRandom_getGenerator(state)->gen_states;
 }
+#else
+struct HipRandStateMtgp32* THCRandom_generatorStates(struct THCState* state)
+{
+  return THCRandom_getGenerator(state)->h_gen_states;
+}
 #endif
 /* Random seed */
 unsigned long THCRandom_seed(THCState* state)
@@ -787,6 +792,8 @@ sampleMultinomialWithReplacement(hipLaunchParm lp, HipRandStateMtgp32* state,
       float r = 0.0f;
       #ifdef CURAND_PATH
       r = curand_uniform(&state[hipBlockIdx_x]);
+      #else
+     // r = _hiprand_uniform(&state[hipBlockIdx_x]);
       #endif 
 
       if (hipThreadIdx_x == 0 && sample < totalSamples) {

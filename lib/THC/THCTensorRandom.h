@@ -42,6 +42,9 @@ THC_API void THCudaTensor_logNormal(struct THCState *state, THCudaTensor *self, 
 
 THC_API void THCudaTensor_multinomial(struct THCState *state, THCudaTensor *self, THCudaTensor *prob_dist, int n_sample, int with_replacement);
 
+#ifdef CURAND_PATH
 THC_API struct curandStateMtgp32* THCRandom_generatorStates(struct THCState* state);
-
+#else
+THC_API struct HipRandStateMtgp32* THCRandom_generatorStates(struct THCState* state);
+#endif
 #endif
