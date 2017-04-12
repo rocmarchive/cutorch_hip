@@ -67,8 +67,8 @@ __device__ void inclusiveBinaryPrefixSum(T* smem, bool in, T* out) {
 
   int warp = hipThreadIdx_x / 32;
 
-  // Per each warp, write out a value
 #ifdef CUDA_PATH
+  // Per each warp, write out a value
   if (getLaneId() == 0) {
     smem[warp] = carry;
   }

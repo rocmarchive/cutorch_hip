@@ -57,10 +57,12 @@ IMPLEMENT_CUDA_TENSOR_BASIC_FUNC( tanh, THCNumerics<real>::tanh,  Real)
 IMPLEMENT_CUDA_TENSOR_BASIC_FUNC(round, THCNumerics<real>::round, Real)
 IMPLEMENT_CUDA_TENSOR_BASIC_FUNC( frac, THCNumerics<real>::frac,  Real)
 IMPLEMENT_CUDA_TENSOR_BASIC_FUNC( cinv, THCNumerics<real>::cinv,  Real)
+
+#endif
 IMPLEMENT_CUDA_TENSOR_BASIC_FUNC(  abs, THCNumerics<real>::abs,   Real)
+
 #undef IMPLEMENT_CUDA_TENSOR_BASIC_FUNC_
 #undef IMPLEMENT_CUDA_TENSOR_BASIC_FUNC
-#endif
 void THCTensor_(sign)(THCState* state, THCTensor* self_, THCTensor* src) {
   THAssert(THCTensor_(checkGPU)(state, 2, self_, src));
   if (self_ == src) {
