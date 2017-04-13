@@ -40,7 +40,7 @@ struct TensorMaskedCopyOp {
 #ifdef __NVCC__
     *out = in[*maskPrefixSum];
 #else
-    //*out = in[*maskPrefixSum];
+    *out = in[*maskPrefixSum];
 #endif
     }
   }
@@ -59,7 +59,7 @@ struct TensorMaskedSelectOp {
 #ifdef __NVCC__
       out[*maskPrefixSum] = *in;
 #else
-      //out[*maskPrefixSum] = *in;
+      out[*maskPrefixSum] = *in;
 #endif
     }
   }

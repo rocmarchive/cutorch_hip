@@ -82,12 +82,26 @@ THCTensor_(maskedCopy)(THCState* state,
     maskData + THCudaLongTensor_nElement(state, maskLong),
     maskPrefixSumData);
 #else
-    auto maskData = THCudaLongTensor_data(state, maskLong);
-    auto maskPrefixSumData = THCudaLongTensor_data(state, maskPrefixSum);
+    // auto maskData = THCudaLongTensor_data(state, maskLong);
+    // auto maskPrefixSumData = THCudaLongTensor_data(state, maskPrefixSum);
 
-    bolt::amp::exclusive_scan(maskData,
-                              maskData + THCudaLongTensor_nElement(state, maskLong),
-                              maskPrefixSumData);
+    auto maskData = (long*) THCudaLongTensor_data(state, maskLong);
+    auto maskPrefixSumData = (long*) THCudaLongTensor_data(state, maskPrefixSum);
+    /// TODO Make a non-crappy implementation
+    // Unfortunately, the Bolt implementation of scan needs the input and output
+    // pointers to be on the host
+    auto maskLongSize = THCudaLongTensor_nElement(state, maskLong);
+    auto maskDataHost = new long[maskLongSize];
+    auto maskPrefixSumDataHost = 
+      new long[maskLongSize];
+    THCudaCheck(hipMemcpy(maskDataHost, maskData, maskLongSize*sizeof(long), hipMemcpyDeviceToHost));
+    THCudaCheck(hipMemcpy(maskPrefixSumDataHost, maskPrefixSumData, maskLongSize*sizeof(long), hipMemcpyDeviceToHost));
+    bolt::amp::exclusive_scan(maskDataHost,
+                              maskDataHost + maskLongSize,
+                              maskPrefixSumDataHost);
+    THCudaCheck(hipMemcpy(maskPrefixSumData, maskPrefixSumDataHost, maskLongSize*sizeof(long), hipMemcpyHostToDevice));
+    delete [] maskDataHost;
+    delete [] maskPrefixSumDataHost;
 #endif
 
   // We are getting elements from `src` based on an offset from
@@ -169,11 +183,21 @@ THCTensor_(maskedSelect)(THCState* state,
 #else
     auto maskData = THCudaLongTensor_data(state, maskLong);
     auto maskPrefixSumData = THCudaLongTensor_data(state, maskPrefixSum);
-
-    bolt::amp::exclusive_scan(maskData,
-                              maskData + THCudaLongTensor_nElement(state, maskLong),
-                              maskPrefixSumData);
- 
+    /// TODO Make a non-crappy implementation
+    // Unfortunately, the Bolt implementation of scan needs the input and output
+    // pointers to be on the host
+    auto maskLongSize = THCudaLongTensor_nElement(state, maskLong);
+    auto maskDataHost = new long[maskLongSize];
+    auto maskPrefixSumDataHost = 
+      new long[maskLongSize];
+    THCudaCheck(hipMemcpy(maskDataHost, maskData, maskLongSize*sizeof(long), hipMemcpyDeviceToHost));
+    THCudaCheck(hipMemcpy(maskPrefixSumDataHost, maskPrefixSumData, maskLongSize*sizeof(long), hipMemcpyDeviceToHost));
+    bolt::amp::exclusive_scan(maskDataHost,
+                              maskDataHost + maskLongSize,
+                              maskPrefixSumDataHost);
+    THCudaCheck(hipMemcpy(maskPrefixSumData, maskPrefixSumDataHost, maskLongSize*sizeof(long), hipMemcpyHostToDevice));
+    delete [] maskDataHost;
+    delete [] maskPrefixSumDataHost;
 #endif
 
  bool status = false;
