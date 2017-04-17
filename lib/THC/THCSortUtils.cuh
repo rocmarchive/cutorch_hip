@@ -122,7 +122,7 @@ template <typename K,
 __global__
 inline
 void
-bitonicSortKVInPlace(hipLaunchParm lp,
+bitonicSortKVInPlace(
                      K* keysData,
                      IndexType* keysSizes,
                      IndexType* keysStrides,

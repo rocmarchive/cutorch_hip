@@ -251,7 +251,7 @@ __device__ void radixSelect(const RadixConverter& conv,
 }
 
 template <typename IndexType, int Dim, bool Order>
-__global__ void gatherTopK(hipLaunchParm lp, TensorInfo<float, IndexType> input,
+__global__ void gatherTopK(TensorInfo<float, IndexType> input,
                            IndexType inputSliceSize,
                            IndexType outputSliceSize, // aka `k`
 
@@ -408,7 +408,7 @@ THC_API void THCudaTensor_topk(THCState* state,
   THLongStorage_free(topKSize);
 
 #define RUN_K(INDEX_T, DIM, DIR)                                        \
-  hipLaunchKernel(HIP_KERNEL_NAME(gatherTopK<INDEX_T, DIM, DIR>),                                         \
+  hipLaunchKernelGGL((gatherTopK<INDEX_T, DIM, DIR>),                                         \
       grid, block, 0, THCState_getCurrentStream(state),             \
       inputInfo,                                                        \
       sliceSize,                                                        \

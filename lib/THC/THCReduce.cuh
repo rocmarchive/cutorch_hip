@@ -31,7 +31,7 @@ template <typename ModifyOp,
 __launch_bounds__(16 * 16, 4)
 #endif
 __global__ void
-kernelReduceNoncontigDim(hipLaunchParm lp, 
+kernelReduceNoncontigDim(
                          T* outData,
                          IndexType* outSizes,
                          IndexType* outStrides,
@@ -86,7 +86,7 @@ template <typename ModifyOp,
           typename IndexType,
           int ADims, int BDims>
 __global__ void
-kernelReduceContigDim(hipLaunchParm lp, 
+kernelReduceContigDim(
                       T* outData,
                       IndexType* outSizes,
                       IndexType* outStrides,
@@ -238,14 +238,14 @@ bool THC_reduceDim(THCState* state,
   // index can be similarly collapsed. That is what this unrolling is for.
 #define HANDLE_CASE(TYPE, OUT, IN)                                      \
   if (contigReduction) {                                                \
-    hipLaunchKernel(HIP_KERNEL_NAME(kernelReduceContigDim<ModifyOp, ReduceOp,                           \
+    hipLaunchKernelGGL((kernelReduceContigDim<ModifyOp, ReduceOp,                           \
                           typename TensorUtils<TensorType>::DataType,   \
                           TYPE, OUT, IN>),                                \
         grid, block, smemSize, THCState_getCurrentStream(state),    \
         outData, outSizes, outStrides, outDims, inData, inSizes, inStrides, inDims,  reductionSize,                                 \
         (TYPE) outElements, init, modifyOp, reduceOp);                  \
   } else {                                                              \
-    hipLaunchKernel(HIP_KERNEL_NAME(kernelReduceNoncontigDim<ModifyOp, ReduceOp,                        \
+    hipLaunchKernelGGL((kernelReduceNoncontigDim<ModifyOp, ReduceOp,                        \
                              typename TensorUtils<TensorType>::DataType, \
                              TYPE, OUT, IN>),                             \
         grid, block, 0, THCState_getCurrentStream(state),          \

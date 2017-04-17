@@ -21,7 +21,7 @@
 // indexCopyLargeIndex kernel is a better choice to increase
 // parallelism.
 template <typename T, typename IndexType, int DstDim, int SrcDim, int IdxDim>
-__global__ void indexCopySmallIndex(hipLaunchParm lp, 
+__global__ void indexCopySmallIndex(
                                     T* dstData, IndexType* dstSizes, IndexType* dstStrides, int dstDims,
                                     T* srcData, IndexType* srcSizes, IndexType* srcStrides, int srcDims,
                                     long* indicesData, IndexType* indicesSizes, IndexType* indicesStrides, int indicesDims,
@@ -67,7 +67,7 @@ __global__ void indexCopySmallIndex(hipLaunchParm lp,
 // indexCopySmallIndex kernel is a better choice to reduce memory
 // accesses.
 template <typename T, typename IndexType, int DstDim, int SrcDim, int IdxDim>
-__global__ void indexCopyLargeIndex(hipLaunchParm lp, 
+__global__ void indexCopyLargeIndex(
                                     T* dstData, IndexType* dstSizes, IndexType* dstStrides, int dstDims,
                                     T* srcData, IndexType* srcSizes, IndexType* srcStrides, int srcDims,
                                     long* indicesData, IndexType* indicesSizes, IndexType* indicesStrides, int indicesDims,
@@ -108,7 +108,7 @@ __global__ void indexCopyLargeIndex(hipLaunchParm lp,
 // indexAddLargeIndex kernel is a better choice to increase
 // parallelism.
 template <typename T, typename IndexType, int DstDim, int SrcDim, int IdxDim>
-__global__ void indexAddSmallIndex(hipLaunchParm lp,
+__global__ void indexAddSmallIndex(
                                     T* dstData, IndexType* dstSizes, IndexType* dstStrides, int dstDims,
                                     T* srcData, IndexType* srcSizes, IndexType* srcStrides, int srcDims,
                                     long* indicesData, IndexType* indicesSizes, IndexType* indicesStrides, int indicesDims,
@@ -152,7 +152,7 @@ __global__ void indexAddSmallIndex(hipLaunchParm lp,
 // indexAddSmallIndex kernel is a better choice to reduce memory
 // accesses.
 template <typename T, typename IndexType, int DstDim, int SrcDim, int IdxDim>
-__global__ void indexAddLargeIndex(hipLaunchParm lp, 
+__global__ void indexAddLargeIndex(
                                     T* dstData, IndexType* dstSizes, IndexType* dstStrides, int dstDims,
                                     T* srcData, IndexType* srcSizes, IndexType* srcStrides, int srcDims,
                                     long* indicesData, IndexType* indicesSizes, IndexType* indicesStrides, int indicesDims,
@@ -193,7 +193,7 @@ __global__ void indexAddLargeIndex(hipLaunchParm lp,
 // indexFillLargeIndex kernel is a better choice to increase
 // parallelism.
 template <typename T, typename IndexType, int DstDim, int IdxDim>
-__global__ void indexFillSmallIndex(hipLaunchParm lp,
+__global__ void indexFillSmallIndex(
                                     T* dstData, IndexType* dstSizes, IndexType* dstStrides, int dstDims,
                                     long* indicesData, IndexType* indicesSizes, IndexType* indicesStrides, int indicesDims,
                                     int dstFillDim,
@@ -233,7 +233,7 @@ __global__ void indexFillSmallIndex(hipLaunchParm lp,
 // indexFillSmallIndex kernel is a better choice to reduce memory
 // accesses.
 template <typename T, typename IndexType, int DstDim, int IdxDim>
-__global__ void indexFillLargeIndex(hipLaunchParm lp, 
+__global__ void indexFillLargeIndex(
                                     T* dstData, IndexType* dstSizes, IndexType* dstStrides, int dstDims,
                                     long* indicesData, IndexType* indicesSizes, IndexType* indicesStrides, int indicesDims,
                                     int dstFillDim,
@@ -269,7 +269,7 @@ __global__ void indexFillLargeIndex(hipLaunchParm lp,
 // indexSelectLargeIndex kernel is a better choice to increase
 // parallelism.
 template <typename T, typename IndexType, int DstDim, int SrcDim, int IdxDim>
-__global__ void indexSelectSmallIndex(hipLaunchParm lp, 
+__global__ void indexSelectSmallIndex(
                                     T* dstData, IndexType* dstSizes, IndexType* dstStrides, int dstDims,
                                     T* srcData, IndexType* srcSizes, IndexType* srcStrides, int srcDims,
                                     long* indicesData, IndexType* indicesSizes, IndexType* indicesStrides, int indicesDims,
@@ -314,7 +314,7 @@ __global__ void indexSelectSmallIndex(hipLaunchParm lp,
 // indexSelectSmallIndex kernel is a better choice to reduce memory
 // accesses.
 template <typename T, typename IndexType, int DstDim, int SrcDim, int IdxDim>
-__global__ void indexSelectLargeIndex(hipLaunchParm lp, 
+__global__ void indexSelectLargeIndex(
                                     T* dstData, IndexType* dstSizes, IndexType* dstStrides, int dstDims,
                                     T* srcData, IndexType* srcSizes, IndexType* srcStrides, int srcDims,
                                     long* indicesData, IndexType* indicesSizes, IndexType* indicesStrides, int indicesDims,

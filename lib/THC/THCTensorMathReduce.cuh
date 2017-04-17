@@ -130,7 +130,7 @@ struct LogicalAny {
 };
 
 template<typename Real>
-__global__ void THCTensor_kernel_renorm(hipLaunchParm lp, Real *data, const Real value, const ptrdiff_t size, const Real maxnorm)
+__global__ void THCTensor_kernel_renorm(Real *data, const Real value, const ptrdiff_t size, const Real maxnorm)
 {
   __shared__ Real buffer[32];
   long tx = hipThreadIdx_x;
@@ -303,7 +303,7 @@ __forceinline__ __device__ Real THCTensor_computeVar(Real sum, Real sum2, unsign
  * Each thread processes a single inner row at a time.
  */
 template<typename Real, bool flag, bool apply_sqrt>
-__global__ void THCTensor_kernel_varOuterDim(hipLaunchParm lp, Real *tgt, Real *src_, unsigned num_orows, unsigned num_irows, unsigned row_size)
+__global__ void THCTensor_kernel_varOuterDim(Real *tgt, Real *src_, unsigned num_orows, unsigned num_irows, unsigned row_size)
 {
   for (unsigned orow = hipBlockIdx_x; orow < num_orows; orow += hipGridDim_x) {
     for (unsigned irow = hipBlockIdx_y * hipBlockDim_x + hipThreadIdx_x; irow < num_irows; irow += hipGridDim_y * hipBlockDim_x) {
@@ -347,10 +347,10 @@ void THCTensor_varOuterDim(THCState *state, TensorTypeK *tgt, TensorTypeK *src, 
   dim3 grid(min(maxGridDim, num_orows), min(maxGridDim, THCCeilDiv(num_irows, threads.x)));
 
   if (flag) {
-    hipLaunchKernel(HIP_KERNEL_NAME(THCTensor_kernel_varOuterDim<Real, true, apply_sqrt>), dim3(grid), dim3(threads), 0, THCState_getCurrentStream(state), 
+    hipLaunchKernelGGL((THCTensor_kernel_varOuterDim<Real, true, apply_sqrt>), dim3(grid), dim3(threads), 0, THCState_getCurrentStream(state), 
         TensorUtils<TensorTypeK>::getData(state, tgt), TensorUtils<TensorTypeK>::getData(state, src), num_orows, num_irows, row_size);
   } else {
-    hipLaunchKernel(HIP_KERNEL_NAME(THCTensor_kernel_varOuterDim<Real, false, apply_sqrt>), dim3(grid), dim3(threads), 0, THCState_getCurrentStream(state), 
+    hipLaunchKernelGGL((THCTensor_kernel_varOuterDim<Real, false, apply_sqrt>), dim3(grid), dim3(threads), 0, THCState_getCurrentStream(state), 
         TensorUtils<TensorTypeK>::getData(state, tgt), TensorUtils<TensorTypeK>::getData(state, src), num_orows, num_irows, row_size);
   }
   hipError_t errcode = hipGetLastError();
@@ -372,7 +372,7 @@ void THCTensor_varOuterDim(THCState *state, TensorTypeK *tgt, TensorTypeK *src, 
  * per thread block is quicker than processing a single row, especially for short rows).
  */
 template<typename Real, bool flag, bool apply_sqrt>
-__global__ void THCTensor_kernel_varInnermostDim(hipLaunchParm lp, Real *tgt, Real *src_, unsigned num_rows, unsigned row_size)
+__global__ void THCTensor_kernel_varInnermostDim(Real *tgt, Real *src_, unsigned num_rows, unsigned row_size)
 {
   __shared__ Real ssum[32][16];
   __shared__ Real ssum2[32][16];
@@ -429,10 +429,10 @@ void THCTensor_varInnermostDim(THCState *state, TensorTypeK *tgt, TensorTypeK *s
   dim3 grid(min(1024, THCCeilDiv(num_rows, threads.y)));
 
   if (flag) {
-    hipLaunchKernel(HIP_KERNEL_NAME(THCTensor_kernel_varInnermostDim<Real, true, apply_sqrt>), dim3(grid), dim3(threads), 0, THCState_getCurrentStream(state), 
+    hipLaunchKernelGGL((THCTensor_kernel_varInnermostDim<Real, true, apply_sqrt>), dim3(grid), dim3(threads), 0, THCState_getCurrentStream(state), 
         TensorUtils<TensorTypeK>::getData(state, tgt), TensorUtils<TensorTypeK>::getData(state, src), num_rows, row_size);
   } else {
-    hipLaunchKernel(HIP_KERNEL_NAME(THCTensor_kernel_varInnermostDim<Real, false, apply_sqrt>), dim3(grid), dim3(threads), 0, THCState_getCurrentStream(state), 
+    hipLaunchKernelGGL((THCTensor_kernel_varInnermostDim<Real, false, apply_sqrt>), dim3(grid), dim3(threads), 0, THCState_getCurrentStream(state), 
         TensorUtils<TensorTypeK>::getData(state, tgt), TensorUtils<TensorTypeK>::getData(state, src), num_rows, row_size);
   }
   hipError_t errcode = hipGetLastError();
@@ -449,7 +449,7 @@ void THCTensor_varInnermostDim(THCState *state, TensorTypeK *tgt, TensorTypeK *s
 */
 template <typename K, typename Index, class BinaryFunction>
 __global__ void
-kernelTransformReduceOuterDimIndex(hipLaunchParm lp, K *tgt1,
+kernelTransformReduceOuterDimIndex(K *tgt1,
                                    Index *tgt2,
                                    K *src_,
                                    unsigned num_orows,
@@ -522,7 +522,7 @@ THC_transformReduceOuterDimIndex(THCState *state,
   dim3 grid(min(maxGridDim, num_orows),
             min(maxGridDim, THCCeilDiv(num_irows, threads.x)));
 
-  hipLaunchKernel(HIP_KERNEL_NAME(kernelTransformReduceOuterDimIndex), dim3(grid), dim3(threads), 0, THCState_getCurrentStream(state), 
+  hipLaunchKernelGGL((kernelTransformReduceOuterDimIndex), dim3(grid), dim3(threads), 0, THCState_getCurrentStream(state), 
       TensorUtils<TensorTypeK>::getData(state, tgt1),
       TensorUtils<TensorTypeIndex>::getData(state, tgt2),
       TensorUtils<TensorTypeK>::getData(state, src),
@@ -542,7 +542,7 @@ THC_transformReduceOuterDimIndex(THCState *state,
  */
 template <typename K, typename Index, class BinaryFunction>
 __global__ void
-kernelTransformReduceInnermostDimIndex(hipLaunchParm lp, K *tgt1,
+kernelTransformReduceInnermostDimIndex(K *tgt1,
                                        Index* tgt2,
                                        K *src_,
                                        unsigned num_rows,
@@ -637,7 +637,7 @@ THC_transformReduceInnermostDimIndex(THCState *state,
   dim3 threads(16, 32);
   dim3 grid(min(1024, THCCeilDiv(num_rows, threads.y)));
 
-  hipLaunchKernel(HIP_KERNEL_NAME(kernelTransformReduceInnermostDimIndex), dim3(grid), dim3(threads), 0, THCState_getCurrentStream(state), 
+  hipLaunchKernelGGL((kernelTransformReduceInnermostDimIndex), dim3(grid), dim3(threads), 0, THCState_getCurrentStream(state), 
       TensorUtils<TensorTypeK>::getData(state, tgt1),
       TensorUtils<TensorTypeIndex>::getData(state, tgt2),
       TensorUtils<TensorTypeK>::getData(state, src),

@@ -25,7 +25,7 @@
  * Each thread processes a single inner row at a time.
  */
 template<class BinaryOp>
-__global__ void THCudaTensor_kernel_scanOuterDim(hipLaunchParm lp, float *tgt_, float *src_,
+__global__ void THCudaTensor_kernel_scanOuterDim(float *tgt_, float *src_,
                                                  unsigned num_orows, unsigned num_irows, unsigned row_size,
                                                  float init, BinaryOp binary_op)
 {
@@ -67,7 +67,7 @@ void THCudaTensor_scanOuterDim(THCState *state, THCudaTensor *tgt, THCudaTensor 
   unsigned maxGridDim = 1024;
   dim3 grid(min(maxGridDim, num_orows), min(maxGridDim, THCCeilDiv(num_irows, threads.x)));
 
-  hipLaunchKernel(HIP_KERNEL_NAME(THCudaTensor_kernel_scanOuterDim), dim3(grid), dim3(threads), 0, THCState_getCurrentStream(state), 
+  hipLaunchKernelGGL((THCudaTensor_kernel_scanOuterDim), dim3(grid), dim3(threads), 0, THCState_getCurrentStream(state), 
       THCudaTensor_data(state, tgt), THCudaTensor_data(state, src), num_orows, num_irows, row_size, init, binary_op);
   hipError_t errcode = hipGetLastError();
   if (errcode != hipSuccess) {
@@ -87,7 +87,7 @@ void THCudaTensor_scanOuterDim(THCState *state, THCudaTensor *tgt, THCudaTensor 
  * per thread block is quicker than processing a single row, especially for short rows).
  */
 template<int num_threads_x, int num_threads_y, class BinaryFunction>
-__global__ void THCudaTensor_kernel_scanInnermostDim(hipLaunchParm lp, float *tgt_, float *src_,
+__global__ void THCudaTensor_kernel_scanInnermostDim(float *tgt_, float *src_,
                                                      unsigned num_rows, unsigned row_size,
                                                      float init, BinaryFunction binary_op)
 {
@@ -173,7 +173,7 @@ void THCudaTensor_scanInnermostDim(THCState *state, THCudaTensor *tgt, THCudaTen
   dim3 threads(16, 16);
   dim3 grid(min(1024, THCCeilDiv(num_rows, threads.y)));
 
-  hipLaunchKernel(HIP_KERNEL_NAME(THCudaTensor_kernel_scanInnermostDim<16, 16>), dim3(grid), dim3(threads), 0, THCState_getCurrentStream(state), 
+  hipLaunchKernelGGL((THCudaTensor_kernel_scanInnermostDim<16, 16>), dim3(grid), dim3(threads), 0, THCState_getCurrentStream(state), 
       THCudaTensor_data(state, tgt), THCudaTensor_data(state, src), num_rows, row_size, init, binary_op);
   hipError_t errcode = hipGetLastError();
   if (errcode != hipSuccess) {

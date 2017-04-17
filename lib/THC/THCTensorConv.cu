@@ -29,7 +29,7 @@
  *     but can be set to 0 to allow arbitrary kernel sizes
  */
 template <bool swapkernel, int T_kernel_h, int T_kernel_w>
-  __global__ void conv2generic(hipLaunchParm lp, float *input, float *kernel, float *output,
+  __global__ void conv2generic(float *input, float *kernel, float *output,
                                int input_n, int input_h, int input_w,
                                int kernel_n, int kernel_h, int kernel_w,
                                int stride_h, int stride_w)
@@ -195,7 +195,7 @@ template <bool swapkernel, int T_kernel_h, int T_kernel_w>
  *   - all chunks of data should be contiguous
  *   - the swapkernel flag can be used to generate a conv2 instead of xcorr2
  */
-__global__ void conv2genericrev(hipLaunchParm lp, float *input, float *kernel, float *output,
+__global__ void conv2genericrev(float *input, float *kernel, float *output,
                                 int input_n, int input_h, int input_w,
                                 int kernel_n, int kernel_h, int kernel_w,
                                 float alpha, int stride_h, int stride_w)
@@ -377,7 +377,7 @@ THC_API void THCudaTensor_conv2Dmv(THCState *state, THCudaTensor *output, float 
   // convolution: xcorr2 or conv2
   if (type[1] == 'x') {
 #define X_CONV_KERNEL(dim)                                              \
-    hipLaunchKernel(HIP_KERNEL_NAME(conv2generic<false, (dim), (dim)>), dim3(blocks), dim3(threads), 0, THCState_getCurrentStream(state),  \
+    hipLaunchKernelGGL((conv2generic<false, (dim), (dim)>), dim3(blocks), dim3(threads), 0, THCState_getCurrentStream(state),  \
         input_data, weight_data, output_data,                           \
         nInputPlane, nInputRows, nInputCols,                            \
         nOutputPlane*nInputPlane, nKernelRows, nKernelCols,             \
@@ -387,7 +387,7 @@ THC_API void THCudaTensor_conv2Dmv(THCState *state, THCudaTensor *output, float 
 #undef X_CONV_KERNEL
   } else { // 'c'
 #define C_CONV_KERNEL(dim)                                              \
-    hipLaunchKernel(HIP_KERNEL_NAME(conv2generic<true, (dim), (dim)>), dim3(blocks), dim3(threads), 0, THCState_getCurrentStream(state),            \
+    hipLaunchKernelGGL((conv2generic<true, (dim), (dim)>), dim3(blocks), dim3(threads), 0, THCState_getCurrentStream(state),            \
         input_data, weight_data, output_data,                           \
         nInputPlane, nInputRows, nInputCols,                            \
         nOutputPlane*nInputPlane, nKernelRows, nKernelCols,             \
@@ -498,7 +498,7 @@ THC_API void THCudaTensor_conv2Dmm(THCState *state, THCudaTensor *output, float 
   // convolution: xcorr2 or conv2
   if (type[1] == 'x') {
 #define X_CONV_KERNEL(dim)                                              \
-    hipLaunchKernel(HIP_KERNEL_NAME(conv2generic<false, (dim), (dim)>), dim3(blocks), dim3(threads), 0, THCState_getCurrentStream(state),  \
+    hipLaunchKernelGGL((conv2generic<false, (dim), (dim)>), dim3(blocks), dim3(threads), 0, THCState_getCurrentStream(state),  \
       input_data, weight_data, output_data,                             \
       nInputPlane, nInputRows, nInputCols,                              \
       nOutputPlane*nInputPlane, nKernelRows, nKernelCols,               \
@@ -508,7 +508,7 @@ THC_API void THCudaTensor_conv2Dmm(THCState *state, THCudaTensor *output, float 
 #undef X_CONV_KERNEL
   } else { // 'c'
 #define C_CONV_KERNEL(dim)                                              \
-    hipLaunchKernel(HIP_KERNEL_NAME(conv2generic<true, (dim), (dim)>), dim3(blocks), dim3(threads), 0, THCState_getCurrentStream(state),  \
+    hipLaunchKernelGGL((conv2generic<true, (dim), (dim)>), dim3(blocks), dim3(threads), 0, THCState_getCurrentStream(state),  \
       input_data, weight_data, output_data,                             \
       nInputPlane, nInputRows, nInputCols,                              \
       nOutputPlane*nInputPlane, nKernelRows, nKernelCols,               \
@@ -595,7 +595,7 @@ THC_API void THCudaTensor_conv2DRevger(THCState *state, THCudaTensor *output, fl
   dim3 threads(128/nOutputRows, nOutputRows);
 
   // compute rev conv
-  hipLaunchKernel(HIP_KERNEL_NAME(conv2genericrev), dim3(blocks), dim3(threads), 0, THCState_getCurrentStream(state), 
+  hipLaunchKernelGGL((conv2genericrev), dim3(blocks), dim3(threads), 0, THCState_getCurrentStream(state), 
     input_data, kernel_data, output_data,
     nInputPlane, nInputRows, nInputCols,
     nKernelPlane, nKernelRows, nKernelCols,
@@ -674,7 +674,7 @@ THC_API void THCudaTensor_conv2DRevgerm(THCState *state, THCudaTensor *output, f
     dim3 threads(cst, nOutputRows, subbatch);
 
     // compute rev conv
-    hipLaunchKernel(HIP_KERNEL_NAME(conv2genericrev), dim3(blocks), dim3(threads), 0, THCState_getCurrentStream(state), 
+    hipLaunchKernelGGL((conv2genericrev), dim3(blocks), dim3(threads), 0, THCState_getCurrentStream(state), 
       input_data + input->stride[0]*sl,
       kernel_data + kernel->stride[0]*sl,
       output_data,
@@ -710,7 +710,7 @@ THC_API void THCudaTensor_conv2DRevgerm(THCState *state, THCudaTensor *output, f
  *   ---- should have a fanin set of inputs contiguously
  */
 template <bool swapkernel, int T_kernel_h, int T_kernel_w>
-  __global__ void conv2mapgeneric(hipLaunchParm lp, float *input, float *kernel, float *output,
+  __global__ void conv2mapgeneric(float *input, float *kernel, float *output,
                                   int input_n, int input_h, int input_w,
                                   int kernel_n, int kernel_h, int kernel_w,
                                   int stride_w, int stride_h,
@@ -931,7 +931,7 @@ THC_API void THCudaTensor_conv2Dmap(THCState *state, THCudaTensor *output, THCud
   dim3 threads(nthreads_x,nthreads_y);
 
 #define GENERIC_MAP_KERNEL(dim)                                         \
-  hipLaunchKernel(HIP_KERNEL_NAME(conv2mapgeneric<false, (dim), (dim)>), dim3(blocks), dim3(threads), 0, THCState_getCurrentStream(state),  \
+  hipLaunchKernelGGL((conv2mapgeneric<false, (dim), (dim)>), dim3(blocks), dim3(threads), 0, THCState_getCurrentStream(state),  \
       input_data, kernel_data, output_data, nInputPlane, nInputRows,    \
       nInputCols, nOutputPlane*fanin, nKernelRows, nKernelCols,         \
       stride_x, stride_y, table_data, fanin);

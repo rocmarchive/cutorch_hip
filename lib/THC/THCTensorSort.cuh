@@ -35,7 +35,7 @@ struct ThrustLTOp {
 // `sliceSize - 1`.
 template <typename IndexType, int Dim>
 __global__ void
-fillSliceWithIndex(hipLaunchParm lp, long* outData, IndexType* outSizes, IndexType* outStrides, int outDims,
+fillSliceWithIndex(long* outData, IndexType* outSizes, IndexType* outStrides, int outDims,
                    IndexType totalSlices,
                    IndexType sliceSize,
                    IndexType sliceStride) {

@@ -27,7 +27,7 @@ template <typename ModifyOp,
           typename IndexType,
           int ADims>
 __global__ void
-kernelReduceAll(hipLaunchParm lp, 
+kernelReduceAll(
                 InT* inData, 
                 IndexType* inSizes, 
                 IndexType* inStrides,
@@ -77,7 +77,7 @@ template <typename ModifyOp,
           typename IndexType,
           int ADims>
 __global__ void
-kernelReduceAllPass1(hipLaunchParm lp, 
+kernelReduceAllPass1(
                      InT* inData, 
                      IndexType* inSizes, 
                      IndexType* inStrides,
@@ -111,7 +111,7 @@ kernelReduceAllPass1(hipLaunchParm lp,
 
 template <typename ReduceOp, typename T, typename IndexType>
 __global__ void
-kernelReduceAllPass2(hipLaunchParm lp, int numPass1Blocks,
+kernelReduceAllPass2(int numPass1Blocks,
                      T init,
                      ReduceOp reduceOp,
                      T* scratchSpace,
@@ -208,14 +208,14 @@ void callReduceAll(THCState* state,
 
     getPass1ReduceBlockGrid<InT, AccT>(state, totalElements, grid, block);
     size_t smemSize = block.x * sizeof(AccT);
-    hipLaunchKernel(HIP_KERNEL_NAME(kernelReduceAllPass1<ModifyOp, ReduceOp, ReduceAccOp, InT, AccT, IndexType, ADims>), dim3(grid), dim3(block), smemSize, THCState_getCurrentStream(state), 
+    hipLaunchKernelGGL((kernelReduceAllPass1<ModifyOp, ReduceOp, ReduceAccOp, InT, AccT, IndexType, ADims>), dim3(grid), dim3(block), smemSize, THCState_getCurrentStream(state), 
         inData, inSizes, inStrides, inDims, (IndexType) totalElements, init, modifyOp, reduceOp, reduceAccOp,
         (AccT*) scratchSpace);
 
     int numPass1Blocks = grid.x;
     getPass2ReduceBlockGrid<InT, AccT>(state, totalElements, grid, block);
     smemSize = block.x * sizeof(AccT);
-    hipLaunchKernel(HIP_KERNEL_NAME(kernelReduceAllPass2<ReduceAccOp, AccT, IndexType>), dim3(grid), dim3(block), smemSize, THCState_getCurrentStream(state), 
+    hipLaunchKernelGGL((kernelReduceAllPass2<ReduceAccOp, AccT, IndexType>), dim3(grid), dim3(block), smemSize, THCState_getCurrentStream(state), 
         numPass1Blocks, init, reduceAccOp,
         (AccT*) scratchSpace, devOut);
     if (freeScratchSpace) {
@@ -224,7 +224,7 @@ void callReduceAll(THCState* state,
   } else {
     getSinglePassReduceBlockGrid<InT, AccT>(totalElements, grid, block);
     size_t smemSize = block.x * sizeof(AccT);
-    hipLaunchKernel(HIP_KERNEL_NAME(kernelReduceAll<ModifyOp, ReduceOp, ReduceAccOp, InT, AccT, IndexType, ADims>), dim3(grid), dim3(block), smemSize, THCState_getCurrentStream(state), 
+    hipLaunchKernelGGL((kernelReduceAll<ModifyOp, ReduceOp, ReduceAccOp, InT, AccT, IndexType, ADims>), dim3(grid), dim3(block), smemSize, THCState_getCurrentStream(state), 
         inData, inSizes, inStrides, inDims, (IndexType) totalElements, init, modifyOp, reduceOp, reduceAccOp, devOut);
   }
 }
