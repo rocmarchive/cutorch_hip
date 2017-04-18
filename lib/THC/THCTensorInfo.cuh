@@ -93,6 +93,7 @@ void
 TensorInfo<T, IndexType>::reduceDim(int dim) {
   assert(dim < dims && dim >= 0);
   sizes[dim] = 1;
+  THCudaCheck(hipMemcpy(dSizes, sizes, sizeof(IndexType) * MAX_CUTORCH_DIMS, hipMemcpyHostToDevice));
 }
 
 template <typename T, typename IndexType>

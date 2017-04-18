@@ -77,8 +77,6 @@ void THCStorage_(resize)(THCState *state, THCStorage *self, ptrdiff_t size)
         if(self->data) {
           THCudaCheck(
           (*self->allocator->free)(self->allocatorContext, self->data));
-          // Reset the deleted pointer to NULL
-          self->data = NULL;
         }
         THCHeapUpdate(state, -self->size * sizeof(real));
       }
