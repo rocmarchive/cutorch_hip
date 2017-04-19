@@ -43,8 +43,8 @@ void THCStorage_(resize)(THCState *state, THCStorage *self, ptrdiff_t size)
   if(size == 0)
   {
     if(self->flag & TH_STORAGE_FREEMEM) {
-      if(self->data)
-         THCudaCheck(hipFree(self->data));
+      THCudaCheck(
+        (*self->allocator->free)(self->allocatorContext, self->data));
       THCHeapUpdate(state, -self->size * sizeof(real));
     }
     self->data = NULL;

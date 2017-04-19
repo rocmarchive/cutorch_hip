@@ -10,7 +10,6 @@
         #include <bolt/amp/iterator/counting_iterator.h>
     #endif
 
-#if TO_DEBUG
 // In alignment with default sort on a c++ map, this function
 // will permute key and value tensors identically, and
 // in such a way that the 'key' tensor is ordered numerically
@@ -71,8 +70,8 @@ THC_API void THCTensor_(sortKeyValueInplace)(THCState* state,
                                                            GTComp<real>,\
                                                            TYPE,        \
                                                            SIZE>),      \
-                      dim3{grid},                                       \
-                      dim3{block},                                      \
+                      grid,                                       \
+                      block,                                      \
                       0,                                                \
                       THCState_getCurrentStream(state),                 \
                       keyInfo.data,                                     \
@@ -81,12 +80,12 @@ THC_API void THCTensor_(sortKeyValueInplace)(THCState* state,
                       keyInfo.dims,                                     \
                       keySlices,                                        \
                       (TYPE) keySliceSize,                              \
-                      (TYPE) keyInfo.strides[collapseKeyDim],           \
+                      (TYPE) keyInfo.dStrides[collapseKeyDim],           \
                       valueInfo.data,                                   \
                       valueInfo.dSizes,                                 \
                       valueInfo.dStrides,                               \
                       valueInfo.dims,                                   \
-                      (TYPE) valueInfo.strides[collapseValueDim],       \
+                      (TYPE) valueInfo.dStrides[collapseValueDim],       \
                       GTComp<real>());                                  \
     } else {                                                            \
      hipLaunchKernelGGL((bitonicSortKVInPlace<real,         \
@@ -96,8 +95,8 @@ THC_API void THCTensor_(sortKeyValueInplace)(THCState* state,
                                                           LTComp<real>, \
                                                           TYPE,         \
                                                           SIZE>),       \
-                      dim3{grid},                                       \
-                      dim3{block},                                      \
+                      grid,                                       \
+                      block,                                      \
                       0,                                                \
                       THCState_getCurrentStream(state),                 \
                       keyInfo.data,                                     \
@@ -106,12 +105,12 @@ THC_API void THCTensor_(sortKeyValueInplace)(THCState* state,
                       keyInfo.dims,                                     \
                       keySlices,                                        \
                       (TYPE) keySliceSize,                              \
-                      (TYPE) keyInfo.strides[collapseKeyDim],           \
+                      (TYPE) keyInfo.dStrides[collapseKeyDim],           \
                       valueInfo.data,                                   \
                       valueInfo.dSizes,                                 \
                       valueInfo.dStrides,                               \
                       valueInfo.dims,                                   \
-                      (TYPE) valueInfo.strides[collapseValueDim],       \
+                      (TYPE) valueInfo.dStrides[collapseValueDim],       \
                       LTComp<real>());                                  \
     }                                                                   \
   } while (0)
@@ -202,7 +201,7 @@ void sortViaThrust(THCState* state,
 
   ptrdiff_t totalElements = THCTensor_(nElement)(state, input);
   long sliceSize = THCTensor_(size)(state, input, dim);
-  //long sliceStride = THCTensor_(stride)(state, input, dim);
+  long sliceStride = THCTensor_(stride)(state, input, dim);
 
   // We perform a vectorized segmented sort in Thrust.
   // Say we are sorting a (2, 3) tensor. We have in flattened form:
@@ -396,5 +395,4 @@ THC_API void THCTensor_(sort)(THCState* state,
   THCudaCheck(hipGetLastError());
 }
 
-#endif
 #endif
