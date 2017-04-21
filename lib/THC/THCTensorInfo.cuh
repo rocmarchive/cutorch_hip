@@ -67,6 +67,8 @@ TensorInfo<T, IndexType>::TensorInfo(T* p,
   // Allocate to accomodate device strides and sizes for the tensor
   THCudaCheck(hipMalloc((void **)&dSizes, sizeof(IndexType) * MAX_CUTORCH_DIMS));
   THCudaCheck(hipMalloc((void **)&dStrides, sizeof(IndexType) * MAX_CUTORCH_DIMS));
+  THCudaCheck(hipMemset(dSizes, 0, sizeof(IndexType) * MAX_CUTORCH_DIMS));
+  THCudaCheck(hipMemset(dStrides, 0, sizeof(IndexType) * MAX_CUTORCH_DIMS));
 
   for (int i = 0; i < dim; ++i) {
     sizes[i] = sz[i];

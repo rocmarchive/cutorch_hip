@@ -25,7 +25,7 @@ template <typename Op,
 __launch_bounds__(16 * 16, 4)
 #endif
 __global__ void
-kernelPointwiseApply1(Ta* Adata, IndexType* Asizes, 
+kernelPointwiseApply1(int adims, Ta* Adata, IndexType* Asizes, 
                       IndexType* Astrides,
                       IndexType totalElements,
                       Op op) {
@@ -34,7 +34,7 @@ kernelPointwiseApply1(Ta* Adata, IndexType* Asizes,
        linearIndex += hipGridDim_x * hipBlockDim_x) {
     // Convert `linearIndex` into an offset of `a`
     const IndexType aOffset =
-      IndexToOffset<Ta, IndexType, ADims>::get(linearIndex, Asizes, Astrides, ADims);
+      IndexToOffset<Ta, IndexType, ADims>::get(linearIndex, Asizes, Astrides, adims);
 
     op(&Adata[aOffset]);
   }
@@ -48,8 +48,9 @@ template <typename Op,
 __launch_bounds__(16 * 16, 4)
 #endif
 __global__ void
-kernelPointwiseApply2(Ta* Adata, IndexType* Asizes,
+kernelPointwiseApply2(int adims, Ta* Adata, IndexType* Asizes,
                       IndexType* Astrides,
+                      int bdims,
                       Tb* Bdata,
                       IndexType* Bsizes,
                       IndexType* Bstrides,
@@ -60,11 +61,11 @@ kernelPointwiseApply2(Ta* Adata, IndexType* Asizes,
        linearIndex += hipGridDim_x * hipBlockDim_x) {
     // Convert `linearIndex` into an offset of `a`
     const IndexType aOffset =
-      IndexToOffset<Ta, IndexType, ADims>::get(linearIndex, Asizes, Astrides, ADims);
+      IndexToOffset<Ta, IndexType, ADims>::get(linearIndex, Asizes, Astrides, adims);
 
     // Convert `linearIndex` into an offset of `b`
     const IndexType bOffset =
-      IndexToOffset<Tb, IndexType, BDims>::get(linearIndex, Bsizes, Bstrides, BDims);
+      IndexToOffset<Tb, IndexType, BDims>::get(linearIndex, Bsizes, Bstrides, bdims);
 
     op(&Adata[aOffset], &Bdata[bOffset]);
   }
@@ -78,9 +79,9 @@ template <typename Op,
 __launch_bounds__(16 * 16, 4)
 #endif
 __global__ void
-kernelPointwiseApply3(Ta* Adata, IndexType* Asizes, IndexType* Astrides,
-                      Tb* Bdata, IndexType* Bsizes, IndexType* Bstrides,
-                      Tc* Cdata, IndexType* Csizes, IndexType* Cstrides,
+kernelPointwiseApply3(int adims, Ta* Adata, IndexType* Asizes, IndexType* Astrides,
+                      int bdims, Tb* Bdata, IndexType* Bsizes, IndexType* Bstrides,
+                      int cdims, Tc* Cdata, IndexType* Csizes, IndexType* Cstrides,
                       IndexType totalElements,
                       Op op) {
   for (IndexType linearIndex = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;
@@ -88,15 +89,15 @@ kernelPointwiseApply3(Ta* Adata, IndexType* Asizes, IndexType* Astrides,
        linearIndex += hipGridDim_x * hipBlockDim_x) {
     // Convert `linearIndex` into an offset of `a`
     const IndexType aOffset =
-      IndexToOffset<Ta, IndexType, ADims>::get(linearIndex, Asizes, Astrides, ADims);
+      IndexToOffset<Ta, IndexType, ADims>::get(linearIndex, Asizes, Astrides, adims);
 
     // Convert `linearIndex` into an offset of `b`
     const IndexType bOffset =
-      IndexToOffset<Tb, IndexType, BDims>::get(linearIndex, Bsizes, Bstrides, BDims);
+      IndexToOffset<Tb, IndexType, BDims>::get(linearIndex, Bsizes, Bstrides, bdims);
 
     // Convert `linearIndex` into an offset of `c`
     const IndexType cOffset =
-      IndexToOffset<Tc, IndexType, CDims>::get(linearIndex, Csizes, Cstrides, CDims);
+      IndexToOffset<Tc, IndexType, CDims>::get(linearIndex, Csizes, Cstrides, cdims);
 
     op(&Adata[aOffset], &Bdata[bOffset], &Cdata[cOffset]);
   }
@@ -181,7 +182,7 @@ bool THC_pointwiseApply1(THCState* state,
                         typename TensorUtils<TensorTypeA>::DataType,   \
                         TYPE, A>),                                        \
     grid, block, 0, THCState_getCurrentStream(state),             \
-      aInfo.data, aInfo.dSizes, aInfo.dStrides, (TYPE) totalElements, op);
+      aInfo.dims, aInfo.data, aInfo.dSizes, aInfo.dStrides, (TYPE) totalElements, op);
 
 #define HANDLE_A_CASE(TYPE, A)                  \
   {                                             \
@@ -225,13 +226,13 @@ bool THC_pointwiseApply1(THCState* state,
                             typename TensorUtils<TensorTypeA>::DataType,
                             unsigned long, -2>),
           grid, block, 0, THCState_getCurrentStream(state),
-          aInfo.data, aInfo.dSizes, aInfo.dStrides, (unsigned long) totalElements, op);
+          aInfo.dims, aInfo.data, aInfo.dSizes, aInfo.dStrides, (unsigned long) totalElements, op);
     } else {
       hipLaunchKernelGGL((kernelPointwiseApply1<Op,
                             typename TensorUtils<TensorTypeA>::DataType,
                             unsigned long, -1>),
         grid, block, 0, THCState_getCurrentStream(state),
-          aInfo.data, aInfo.dSizes, aInfo.dStrides, (unsigned long) totalElements, op);
+          aInfo.dims, aInfo.data, aInfo.dSizes, aInfo.dStrides, (unsigned long) totalElements, op);
     }
   }
 #undef HANDLE_CASE
@@ -320,7 +321,7 @@ bool THC_pointwiseApply2(THCState* state,
                         typename TensorUtils<TensorTypeB>::DataType,    \
                         TYPE, A, B>),                                     \
       grid, block, 0, THCState_getCurrentStream(state),             \
-      aInfo.data, aInfo.dSizes, aInfo.dStrides, bInfo.data, bInfo.dSizes, bInfo.dStrides, (TYPE) totalElements, op);
+      aInfo.dims, aInfo.data, aInfo.dSizes, aInfo.dStrides, bInfo.dims, bInfo.data, bInfo.dSizes, bInfo.dStrides, (TYPE) totalElements, op);
 
 #define HANDLE_B_CASE(TYPE, A, B)               \
   {                                             \
@@ -389,14 +390,14 @@ bool THC_pointwiseApply2(THCState* state,
                             typename TensorUtils<TensorTypeB>::DataType,
                             unsigned long, -2, -2>),
           grid, block, 0, THCState_getCurrentStream(state),
-          aInfo.data, aInfo.dSizes, aInfo.dStrides, bInfo.data, bInfo.dSizes, bInfo.dStrides, (unsigned long) totalElements, op);
+          aInfo.dims, aInfo.data, aInfo.dSizes, aInfo.dStrides, bInfo.dims, bInfo.data, bInfo.dSizes, bInfo.dStrides, (unsigned long) totalElements, op);
     } else {
       hipLaunchKernelGGL((kernelPointwiseApply2<Op,
                             typename TensorUtils<TensorTypeA>::DataType,
                             typename TensorUtils<TensorTypeB>::DataType,
                             unsigned long, -1, -1>),
           grid, block, 0, THCState_getCurrentStream(state),
-          aInfo.data, aInfo.dSizes, aInfo.dStrides, bInfo.data, bInfo.dSizes, bInfo.dStrides, (unsigned long) totalElements, op);
+          aInfo.dims, aInfo.data, aInfo.dSizes, aInfo.dStrides, bInfo.dims, bInfo.data, bInfo.dSizes, bInfo.dStrides, (unsigned long) totalElements, op);
     }
   }
 #undef HANDLE_CASE
@@ -499,8 +500,8 @@ bool THC_pointwiseApply3(THCState* state,
                         typename TensorUtils<TensorTypeC>::DataType,    \
                         TYPE, A, B, C>),                                  \
       grid, block, 0, THCState_getCurrentStream(state),             \
-      aInfo.data, aInfo.dSizes, aInfo.dStrides, bInfo.data, bInfo.dSizes, bInfo.dStrides, \
-      cInfo.data, cInfo.dSizes, cInfo.dStrides, (TYPE) totalElements, op); \
+      aInfo.dims, aInfo.data, aInfo.dSizes, aInfo.dStrides, bInfo.dims, bInfo.data, bInfo.dSizes, bInfo.dStrides, \
+      cInfo.dims, cInfo.data, cInfo.dSizes, cInfo.dStrides, (TYPE) totalElements, op); \
 
 #define HANDLE_C_CASE(TYPE, A, B, C)            \
   {                                             \
@@ -598,8 +599,8 @@ bool THC_pointwiseApply3(THCState* state,
                             typename TensorUtils<TensorTypeC>::DataType,
                             unsigned long, -2, -2, -2>),
           grid, block, 0, THCState_getCurrentStream(state),
-          aInfo.data, aInfo.dSizes, aInfo.dStrides, bInfo.data, bInfo.dSizes, bInfo.dStrides, 
-          cInfo.data, cInfo.dSizes, cInfo.dStrides, (unsigned long) totalElements, op);
+          aInfo.dims, aInfo.data, aInfo.dSizes, aInfo.dStrides, bInfo.dims, bInfo.data, bInfo.dSizes, bInfo.dStrides, 
+          cInfo.dims, cInfo.data, cInfo.dSizes, cInfo.dStrides, (unsigned long) totalElements, op);
     } else {
       hipLaunchKernelGGL((kernelPointwiseApply3<Op,
                             typename TensorUtils<TensorTypeA>::DataType,
@@ -607,8 +608,8 @@ bool THC_pointwiseApply3(THCState* state,
                             typename TensorUtils<TensorTypeC>::DataType,
                             unsigned long, -1, -1, -1>),
           grid, block, 0, THCState_getCurrentStream(state),
-          aInfo.data, aInfo.dSizes, aInfo.dStrides, bInfo.data, bInfo.dSizes, bInfo.dStrides, 
-          cInfo.data, cInfo.dSizes, cInfo.dStrides, (unsigned long) totalElements, op);
+          aInfo.dims, aInfo.data, aInfo.dSizes, aInfo.dStrides, bInfo.dims, bInfo.data, bInfo.dSizes, bInfo.dStrides, 
+          cInfo.dims, cInfo.data, cInfo.dSizes, cInfo.dStrides, (unsigned long) totalElements, op);
     }
   }
 #undef HANDLE_CASE
