@@ -296,15 +296,14 @@ struct IndexToOffset<T, IndexType, -1> {
 
         operator const T&() const [[hc]] { return d_[0]; }
     };
-#else
-  template<typename T>
-  using Magic_wrapper = const T&;
-#endif
 
-template<typename T>
-Magic_wrapper<T> make_magic_wrapper(const T& x)
-{
-  return Magic_wrapper<T>{x};
-}
+  template<typename T>
+  Magic_wrapper<T> make_magic_wrapper(const T& x)
+  {
+    return Magic_wrapper<T>{x};
+  }
+#else
+  #define make_magic_wrapper(x) x
+#endif
 
 #endif // THC_TENSOR_INFO_INC
