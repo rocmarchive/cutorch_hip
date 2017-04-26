@@ -10,8 +10,6 @@
 #include "THCDeviceUtils.cuh"
 #include "THCTensorInfo.cuh"
 
-#define WARPSIZE 32
-
 // Enum that indicates whether tensor arguments are read/write or
 // read-only
 enum TensorArgType { ReadWrite, ReadOnly };
@@ -41,10 +39,10 @@ __device__ T reduceBlock(T* smem,
 
   // First warp will perform reductions across warps
   __syncthreads();
-  if ((hipThreadIdx_x / WARPSIZE) == 0) {
+  if ((hipThreadIdx_x / warpSize) == 0) {
     T r = hipThreadIdx_x < numVals ? smem[hipThreadIdx_x] : init;
 
-    for (int i = WARPSIZE + hipThreadIdx_x; i < numVals; i += WARPSIZE) {
+    for (int i = warpSize + hipThreadIdx_x; i < numVals; i += warpSize) {
       r = reduceOp(r, smem[i]);
     }
 
@@ -58,9 +56,9 @@ __device__ T reduceBlock(T* smem,
   if (hipThreadIdx_x == 0) {
     r = smem[0];
 
-    int numLanesParticipating = min(numVals, WARPSIZE);
+    int numLanesParticipating = min(numVals, warpSize);
 
-    if (numLanesParticipating == 32) {
+    if (numLanesParticipating == warpSize) {
       // Unroll for WARPSIZE == 32 and numVals >= 32
 #pragma unroll
       for (int i = 1; i < 32; ++i) {

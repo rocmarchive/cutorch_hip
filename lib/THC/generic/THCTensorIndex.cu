@@ -49,22 +49,35 @@ void THCTensor_(indexCopy)(THCState *state, THCTensor *dst, int dim, THCudaLongT
 
   int mpc = THCState_getCurrentDeviceProperties(state)->multiProcessorCount;
 
-#define SMALL_INDEX(TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM) \
-  hipLaunchKernelGGL((indexCopySmallIndex<TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM>),       \
-    smallIndexGrid, smallIndexBlock, 0, stream,           \
-      dstData, dstSizes, dstStrides, dstDims, \
-      srcData, srcSizes, srcStrides, srcDims,   \
-      indicesData, indicesSizes, indicesStrides, indicesDims,                            \
-      dstCopyDim, srcCopyDim, sliceSize, dstCopyDimSize);
+#define SMALL_INDEX(TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM)\
+  hipLaunchKernelGGL(\
+    (indexCopySmallIndex<TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM>),\
+    dim3{smallIndexGrid},\
+    dim3{smallIndexBlock},\
+    0,\
+    stream,\
+    make_magic_wrapper(dstInfo),\
+    make_magic_wrapper(srcInfo),\
+    make_magic_wrapper(indicesInfo),\
+    dstCopyDim,\
+    srcCopyDim,\
+    sliceSize,\
+    dstCopyDimSize);
 
-
-#define LARGE_INDEX(TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM) \
-  hipLaunchKernelGGL((indexCopyLargeIndex<TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM>),       \
-      largeIndexGrid, largeIndexBlock, 0, stream,          \
-      dstData, dstSizes, dstStrides, dstDims, \
-      srcData, srcSizes, srcStrides, srcDims,   \
-      indicesData, indicesSizes, indicesStrides, indicesDims,                            \
-      dstCopyDim, srcCopyDim, sliceSize, dstCopyDimSize); 
+#define LARGE_INDEX(TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM)\
+  hipLaunchKernelGGL(\
+    (indexCopyLargeIndex<TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM>),\
+    dim3{largeIndexGrid},\
+    dim3{largeIndexBlock},\
+    0,\
+    stream,\
+    make_magic_wrapper(dstInfo),\
+    make_magic_wrapper(srcInfo),\
+    make_magic_wrapper(indicesInfo),\
+    dstCopyDim,\
+    srcCopyDim,\
+    sliceSize,\
+    dstCopyDimSize);
 
 
   dim3 smallIndexGrid(std::min(THCCeilDiv(sliceSize, (ptrdiff_t)128), (ptrdiff_t)(mpc * 8)));
@@ -89,21 +102,6 @@ void THCTensor_(indexCopy)(THCState *state, THCTensor *dst, int dim, THCudaLongT
     TensorInfo<long, unsigned int> indicesInfo =
       getTensorInfo<THCudaLongTensor, unsigned int>(state, indices);
     indicesInfo.collapseDims();
-    
-    // Peeled out TensorInfo field parameters
-    real* dstData = dstInfo.data;
-    unsigned int* dstSizes = dstInfo.dSizes; 
-    unsigned int* dstStrides = dstInfo.dStrides;
-    int dstDims = dstInfo.dims;
-    real* srcData = srcInfo.data;
-    unsigned int* srcSizes = srcInfo.dSizes; 
-    unsigned int* srcStrides = srcInfo.dStrides;
-    int srcDims = srcInfo.dims;
-    long* indicesData = indicesInfo.data;
-    unsigned int* indicesSizes = indicesInfo.dSizes;
-    unsigned int* indicesStrides = indicesInfo.dStrides;
-    int indicesDims = indicesInfo.dims; 
-    
 
     // A reasonable choice for when to have each thread iterate over
     // indices to choose
@@ -142,20 +140,7 @@ void THCTensor_(indexCopy)(THCState *state, THCTensor *dst, int dim, THCudaLongT
     TensorInfo<long, unsigned long> indicesInfo =
       getTensorInfo<THCudaLongTensor, unsigned long>(state, indices);
     indicesInfo.collapseDims();
-   
-    // Peeled out TensorInfo field parameters
-    real* dstData = dstInfo.data;
-    unsigned long* dstSizes = dstInfo.dSizes; 
-    unsigned long* dstStrides = dstInfo.dStrides;
-    int dstDims = dstInfo.dims;
-    real* srcData = srcInfo.data;
-    unsigned long* srcSizes = srcInfo.dSizes; 
-    unsigned long* srcStrides = srcInfo.dStrides;
-    int srcDims = srcInfo.dims;
-    long* indicesData = indicesInfo.data;
-    unsigned long* indicesSizes = indicesInfo.dSizes;
-    unsigned long* indicesStrides = indicesInfo.dStrides;
-    int indicesDims = indicesInfo.dims; 
+
     LARGE_INDEX(real, unsigned long, -1, -1, -1);
   }
 
@@ -212,22 +197,34 @@ void THCTensor_(indexAdd)(THCState *state, THCTensor *dst, int dim, THCudaLongTe
   int mpc = THCState_getCurrentDeviceProperties(state)->multiProcessorCount;
 
 #define SMALL_INDEX(TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM) \
-  hipLaunchKernelGGL((indexAddSmallIndex<TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM>), \
-      smallIndexGrid, smallIndexBlock, 0, stream,   \
-      dstData, dstSizes, dstStrides, dstDims, \
-      srcData, srcSizes, srcStrides, srcDims,   \
-      indicesData, indicesSizes, indicesStrides, indicesDims,                            \
-      dstAddDim, srcAddDim, sliceSize, dstAddDimSize);
- 
+  hipLaunchKernelGGL(\
+    (indexAddSmallIndex<TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM>),\
+    dim3{smallIndexGrid},\
+    dim3{smallIndexBlock},\
+    0,\
+    stream,\
+    make_magic_wrapper(dstInfo),\
+    make_magic_wrapper(srcInfo),\
+    make_magic_wrapper(indicesInfo),\
+    dstAddDim,\
+    srcAddDim,\
+    sliceSize,\
+    dstAddDimSize);
 
-#define LARGE_INDEX(TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM) \
-  hipLaunchKernelGGL((indexAddLargeIndex<TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM>), \
-      largeIndexGrid, largeIndexBlock, 0, stream,   \
-      dstData, dstSizes, dstStrides, dstDims, \
-      srcData, srcSizes, srcStrides, srcDims,   \
-      indicesData, indicesSizes, indicesStrides, indicesDims,                            \
-      dstAddDim, srcAddDim, sliceSize, dstAddDimSize); 
-
+#define LARGE_INDEX(TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM)\
+  hipLaunchKernelGGL(\
+    (indexAddLargeIndex<TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM>),\
+    dim3{largeIndexGrid},\
+    dim3{largeIndexBlock},\
+    0,\
+    stream,\
+    make_magic_wrapper(dstInfo),\
+    make_magic_wrapper(srcInfo),\
+    make_magic_wrapper(indicesInfo),\
+    dstAddDim,\
+    srcAddDim,\
+    sliceSize,\
+    dstAddDimSize);
 
   dim3 smallIndexGrid(std::min(THCCeilDiv(sliceSize, (ptrdiff_t)128), (ptrdiff_t)(mpc * 8)));
   dim3 smallIndexBlock(std::min(sliceSize, (ptrdiff_t)128));
@@ -251,21 +248,6 @@ void THCTensor_(indexAdd)(THCState *state, THCTensor *dst, int dim, THCudaLongTe
     TensorInfo<long, unsigned int> indicesInfo =
       getTensorInfo<THCudaLongTensor, unsigned int>(state, indices);
     indicesInfo.collapseDims();
-
-    // Peeled out TensorInfo field parameters
-    real* dstData = dstInfo.data;
-    unsigned int* dstSizes = dstInfo.dSizes; 
-    unsigned int* dstStrides = dstInfo.dStrides;
-    int dstDims = dstInfo.dims;
-    real* srcData = srcInfo.data;
-    unsigned int* srcSizes = srcInfo.dSizes; 
-    unsigned int* srcStrides = srcInfo.dStrides;
-    int srcDims = srcInfo.dims;
-    long* indicesData = indicesInfo.data;
-    unsigned int* indicesSizes = indicesInfo.dSizes;
-    unsigned int* indicesStrides = indicesInfo.dStrides;
-    int indicesDims = indicesInfo.dims; 
-    
 
     // A reasonable choice for when to have each thread iterate over
     // indices to choose
@@ -304,21 +286,7 @@ void THCTensor_(indexAdd)(THCState *state, THCTensor *dst, int dim, THCudaLongTe
     TensorInfo<long, unsigned long> indicesInfo =
       getTensorInfo<THCudaLongTensor, unsigned long>(state, indices);
     indicesInfo.collapseDims();
-   
-    // Peeled out TensorInfo field parameters
-    real* dstData = dstInfo.data;
-    unsigned long* dstSizes = dstInfo.dSizes; 
-    unsigned long* dstStrides = dstInfo.dStrides;
-    int dstDims = dstInfo.dims;
-    real* srcData = srcInfo.data;
-    unsigned long* srcSizes = srcInfo.dSizes; 
-    unsigned long* srcStrides = srcInfo.dStrides;
-    int srcDims = srcInfo.dims;
-    long* indicesData = indicesInfo.data;
-    unsigned long* indicesSizes = indicesInfo.dSizes;
-    unsigned long* indicesStrides = indicesInfo.dStrides;
-    int indicesDims = indicesInfo.dims; 
-    
+
     LARGE_INDEX(real, unsigned long, -1, -1, -1);
   }
 #undef SMALL_INDEX
@@ -369,21 +337,33 @@ void THCTensor_(indexFill)(THCState *state, THCTensor *dst, int dim, THCudaLongT
 
   int mpc = THCState_getCurrentDeviceProperties(state)->multiProcessorCount;
 
-#define SMALL_INDEX(TENSOR_TYPE, TYPE, DST_DIM, IDX_DIM)  \
-  hipLaunchKernelGGL((indexFillSmallIndex<TENSOR_TYPE, TYPE, DST_DIM, IDX_DIM>), \
-      smallIndexGrid, smallIndexBlock, 0, stream,   \
-      dstData, dstSizes, dstStrides, dstDims, \
-      indicesData, indicesSizes, indicesStrides, indicesDims,                            \
-      dstFillDim, sliceSize, dstFillDimSize, val);
- 
+#define SMALL_INDEX(TENSOR_TYPE, TYPE, DST_DIM, IDX_DIM)\
+  hipLaunchKernelGGL(\
+    (indexFillSmallIndex<TENSOR_TYPE, TYPE, DST_DIM, IDX_DIM>),\
+    dim3{smallIndexGrid},\
+    dim3{smallIndexBlock},\
+    0,\
+    stream,\
+    make_magic_wrapper(dstInfo),\
+    make_magic_wrapper(indicesInfo),\
+    dstFillDim,\
+    sliceSize,\
+    dstFillDimSize,\
+    val);
 
-#define LARGE_INDEX(TENSOR_TYPE, TYPE, DST_DIM, IDX_DIM)  \
-  hipLaunchKernelGGL((indexFillLargeIndex<TENSOR_TYPE, TYPE, DST_DIM, IDX_DIM>), \
-      largeIndexGrid, largeIndexBlock, 0, stream,   \
-      dstData, dstSizes, dstStrides, dstDims, \
-      indicesData, indicesSizes, indicesStrides, indicesDims,                            \
-      dstFillDim, sliceSize, dstFillDimSize, val); 
-
+#define LARGE_INDEX(TENSOR_TYPE, TYPE, DST_DIM, IDX_DIM)\
+  hipLaunchKernelGGL(\
+    (indexFillLargeIndex<TENSOR_TYPE, TYPE, DST_DIM, IDX_DIM>),\
+    dim3{largeIndexGrid},\
+    dim3{largeIndexBlock},\
+    0,\
+    stream,\
+    make_magic_wrapper(dstInfo),\
+    make_magic_wrapper(indicesInfo),\
+    dstFillDim,\
+    sliceSize,\
+    dstFillDimSize,\
+    val);
 
   dim3 smallIndexGrid(std::min(THCCeilDiv(sliceSize, (ptrdiff_t)128), (ptrdiff_t)(mpc * 8)));
   dim3 smallIndexBlock(std::min(sliceSize, (ptrdiff_t)128));
@@ -402,16 +382,6 @@ void THCTensor_(indexFill)(THCState *state, THCTensor *dst, int dim, THCudaLongT
       getTensorInfo<THCudaLongTensor, unsigned int>(state, indices);
     indicesInfo.collapseDims();
 
-    // Peeled out TensorInfo field parameters
-    real* dstData = dstInfo.data;
-    unsigned int* dstSizes = dstInfo.dSizes; 
-    unsigned int* dstStrides = dstInfo.dStrides;
-    int dstDims = dstInfo.dims;
-    long* indicesData = indicesInfo.data;
-    unsigned int* indicesSizes = indicesInfo.dSizes;
-    unsigned int* indicesStrides = indicesInfo.dStrides;
-    int indicesDims = indicesInfo.dims; 
-    
     // A reasonable choice for when to have each thread iterate over
     // indices to choose
     if (numIndices <= 16) {
@@ -444,17 +414,7 @@ void THCTensor_(indexFill)(THCState *state, THCTensor *dst, int dim, THCudaLongT
     TensorInfo<long, unsigned long> indicesInfo =
       getTensorInfo<THCudaLongTensor, unsigned long>(state, indices);
     indicesInfo.collapseDims();
-    
-    // Peeled out TensorInfo field parameters
-    real* dstData = dstInfo.data;
-    unsigned long* dstSizes = dstInfo.dSizes; 
-    unsigned long* dstStrides = dstInfo.dStrides;
-    int dstDims = dstInfo.dims;
-    long* indicesData = indicesInfo.data;
-    unsigned long* indicesSizes = indicesInfo.dSizes;
-    unsigned long* indicesStrides = indicesInfo.dStrides;
-    int indicesDims = indicesInfo.dims; 
- 
+
     LARGE_INDEX(real, unsigned long, -1, -1);
   }
 #undef SMALL_INDEX
@@ -514,23 +474,36 @@ void THCTensor_(indexSelect)(THCState *state, THCTensor *dst, THCTensor *src, in
 
   int mpc = THCState_getCurrentDeviceProperties(state)->multiProcessorCount;
 
-#define SMALL_INDEX(TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM) \
-  hipLaunchKernelGGL((indexSelectSmallIndex<TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM>),     \
-      smallIndexGrid, smallIndexBlock, 0, stream,          \
-      dstData, dstSizes, dstStrides, dstDims, \
-      srcData, srcSizes, srcStrides, srcDims,   \
-      indicesData, indicesSizes, indicesStrides, indicesDims,                            \
-      dstSelectDim, srcSelectDim, sliceSize, srcSelectDimSize);
+#define SMALL_INDEX(TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM)\
+  hipLaunchKernelGGL(\
+    (indexSelectSmallIndex<TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM>),\
+    dim3{smallIndexGrid},\
+    dim3{smallIndexBlock},\
+    0,\
+    stream,\
+    make_magic_wrapper(dstInfo),\
+    make_magic_wrapper(srcInfo),\
+    make_magic_wrapper(indicesInfo),\
+    dstSelectDim,\
+    srcSelectDim,\
+    sliceSize,\
+    srcSelectDimSize);
 
-
-#define LARGE_INDEX(TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM)         \
-  hipLaunchKernelGGL((indexSelectLargeIndex<TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM>),     \
-      largeIndexGrid, largeIndexBlock, 0, stream,                  \
-      dstData, dstSizes, dstStrides, dstDims, \
-      srcData, srcSizes, srcStrides, srcDims,   \
-      indicesData, indicesSizes, indicesStrides, indicesDims,                            \
-      dstSelectDim, srcSelectDim, dstTotalSize, sliceSize, srcSelectDimSize);
- 
+#define LARGE_INDEX(TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM)\
+  hipLaunchKernelGGL(\
+    (indexSelectLargeIndex<TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM>),\
+    dim3{largeIndexGrid},\
+    dim3{largeIndexBlock},\
+    0,\
+    stream,\
+    make_magic_wrapper(dstInfo),\
+    make_magic_wrapper(srcInfo),\
+    make_magic_wrapper(indicesInfo),\
+    dstSelectDim,\
+    srcSelectDim,\
+    dstTotalSize,\
+    sliceSize,\
+    srcSelectDimSize);
 
   dim3 smallIndexGrid(std::min(THCCeilDiv(sliceSize, (ptrdiff_t)128), (ptrdiff_t)(mpc * 8)));
   dim3 smallIndexBlock(std::min(sliceSize, (ptrdiff_t)128));
@@ -554,21 +527,6 @@ void THCTensor_(indexSelect)(THCState *state, THCTensor *dst, THCTensor *src, in
     TensorInfo<long, unsigned int> indicesInfo =
       getTensorInfo<THCudaLongTensor, unsigned int>(state, indices);
     indicesInfo.collapseDims();
-
-    // Peeled out TensorInfo field parameters
-    real* dstData = dstInfo.data;
-    unsigned int* dstSizes = dstInfo.dSizes; 
-    unsigned int* dstStrides = dstInfo.dStrides;
-    int dstDims = dstInfo.dims;
-    real* srcData = srcInfo.data;
-    unsigned int* srcSizes = srcInfo.dSizes; 
-    unsigned int* srcStrides = srcInfo.dStrides;
-    int srcDims = srcInfo.dims;
-    long* indicesData = indicesInfo.data;
-    unsigned int* indicesSizes = indicesInfo.dSizes;
-    unsigned int* indicesStrides = indicesInfo.dStrides;
-    int indicesDims = indicesInfo.dims; 
-    
 
     // A reasonable choice for when to have each thread iterate over
     // indices to choose
@@ -607,22 +565,6 @@ void THCTensor_(indexSelect)(THCState *state, THCTensor *dst, THCTensor *src, in
     TensorInfo<long, unsigned long> indicesInfo =
       getTensorInfo<THCudaLongTensor, unsigned long>(state, indices);
     indicesInfo.collapseDims();
-
-    // Peeled out TensorInfo field parameters
-    real* dstData = dstInfo.data;
-    unsigned long* dstSizes = dstInfo.dSizes; 
-    unsigned long* dstStrides = dstInfo.dStrides;
-    int dstDims = dstInfo.dims;
-    real* srcData = srcInfo.data;
-    unsigned long* srcSizes = srcInfo.dSizes; 
-    unsigned long* srcStrides = srcInfo.dStrides;
-    int srcDims = srcInfo.dims;
-    long* indicesData = indicesInfo.data;
-    unsigned long* indicesSizes = indicesInfo.dSizes;
-    unsigned long* indicesStrides = indicesInfo.dStrides;
-    int indicesDims = indicesInfo.dims; 
-    
-
 
     LARGE_INDEX(real, unsigned long, -1, -1, -1);
   }
