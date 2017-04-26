@@ -279,8 +279,6 @@ void sortViaThrust(THCState* state,
 #endif
   }
 
-  }
-
   // Then, re-sort according to slice that each index is
   // in. This completes the segment sort in Thrust, since we're
   // stably sorting here, preserving the relative order of values
@@ -297,8 +295,7 @@ void sortViaThrust(THCState* state,
                                   indexIter + totalElements,
                                   keyIter,
                                   SliceComp{sliceSize});
-    SliceComp(sliceSize));
-
+#endif
   // Translate the global integer 0-based index to a per-slice real
   // Lua index
 #if defined(THRUST_PATH)
@@ -367,5 +364,4 @@ THC_API void THCTensor_(sort)(THCState* state,
 
   THCudaCheck(hipGetLastError());
 }
-#endif
 #endif
