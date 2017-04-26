@@ -13,10 +13,10 @@
 #include "THCReduceApplyUtils.cuh"
 
 // Size per each reduction block
-#define THC_REDUCE_ALL_BLOCK_SIZE 256L
+#define THC_REDUCE_ALL_BLOCK_SIZE 1024L
 
 // Cutoff size for two-pass reduction
-#define THC_TWO_PASS_REDUCTION_SIZE 256L
+#define THC_TWO_PASS_REDUCTION_SIZE 2048L
 
 // Kernel that handles an entire reduction of a tensor in one pass
 template <typename ModifyOp,
@@ -27,11 +27,7 @@ template <typename ModifyOp,
           typename IndexType,
           int ADims>
 __global__ void
-kernelReduceAll(
-                InT* inData, 
-                IndexType* inSizes, 
-                IndexType* inStrides,
-                int inDims, 
+kernelReduceAll(TensorInfo<InT, IndexType> in,
                 IndexType totalElements,
                 AccT init,
                 ModifyOp modifyOp,
@@ -41,8 +37,8 @@ kernelReduceAll(
   // With a block-wide stride, have each thread perform its own reduction.
   AccT r = init;
   for (IndexType i = hipThreadIdx_x; i < totalElements; i += hipBlockDim_x) {
-    const IndexType inOffset = IndexToOffset<InT, IndexType, ADims>::get(i, inSizes, inStrides, inDims);
-    r = reduceOp(r, modifyOp(inData[inOffset]));
+    const IndexType inOffset = IndexToOffset<InT, IndexType, ADims>::get(i, in);
+    r = reduceOp(r, modifyOp(in.data[inOffset]));
   }
 
   // Reduce within the block
@@ -77,11 +73,7 @@ template <typename ModifyOp,
           typename IndexType,
           int ADims>
 __global__ void
-kernelReduceAllPass1(
-                     InT* inData, 
-                     IndexType* inSizes, 
-                     IndexType* inStrides,
-                     int inDims, 
+kernelReduceAllPass1(TensorInfo<InT, IndexType> in,
                      IndexType totalElements,
                      AccT init,
                      ModifyOp modifyOp,
@@ -94,8 +86,8 @@ kernelReduceAllPass1(
   // With a block-wide stride, have each thread perform its own reduction.
   AccT r = init;
   for (IndexType i = startIndex + hipThreadIdx_x; i < endIndex; i += hipBlockDim_x) {
-    const IndexType inOffset = IndexToOffset<InT, IndexType, ADims>::get(i, inSizes, inStrides, inDims);
-    r = reduceOp(r, modifyOp(inData[inOffset]));
+    const IndexType inOffset = IndexToOffset<InT, IndexType, ADims>::get(i, in);
+    r = reduceOp(r, modifyOp(in.data[inOffset]));
   }
 
   // Reduce within the block
@@ -193,10 +185,7 @@ void callReduceAll(THCState* state,
                    AccT* devOut) {
   dim3 grid;
   dim3 block;
-  InT* inData = in.data;
-  IndexType* inSizes = in.dSizes;
-  IndexType* inStrides = in.dSizes;
-  int inDims = in.dims;
+
   if (isTwoPassReductionSize(totalElements)) {
     bool freeScratchSpace = false;
     void* scratchSpace = THCState_getCurrentDeviceScratchSpace(state);
@@ -208,24 +197,55 @@ void callReduceAll(THCState* state,
 
     getPass1ReduceBlockGrid<InT, AccT>(state, totalElements, grid, block);
     size_t smemSize = block.x * sizeof(AccT);
-    hipLaunchKernelGGL((kernelReduceAllPass1<ModifyOp, ReduceOp, ReduceAccOp, InT, AccT, IndexType, ADims>), dim3(grid), dim3(block), smemSize, THCState_getCurrentStream(state), 
-        inData, inSizes, inStrides, inDims, (IndexType) totalElements, init, modifyOp, reduceOp, reduceAccOp,
+    hipLaunchKernelGGL(
+        (kernelReduceAllPass1<
+            ModifyOp, ReduceOp, ReduceAccOp, InT, AccT, IndexType, ADims>),
+        dim3(grid),
+        dim3(block),
+        smemSize,
+        THCState_getCurrentStream(state),
+        make_magic_wrapper(in),
+        (IndexType) totalElements,
+        init,
+        modifyOp,
+        reduceOp,
+        reduceAccOp,
         (AccT*) scratchSpace);
 
     int numPass1Blocks = grid.x;
     getPass2ReduceBlockGrid<InT, AccT>(state, totalElements, grid, block);
     smemSize = block.x * sizeof(AccT);
-    hipLaunchKernelGGL((kernelReduceAllPass2<ReduceAccOp, AccT, IndexType>), dim3(grid), dim3(block), smemSize, THCState_getCurrentStream(state), 
-        numPass1Blocks, init, reduceAccOp,
-        (AccT*) scratchSpace, devOut);
+    hipLaunchKernelGGL(
+        (kernelReduceAllPass2<ReduceAccOp, AccT, IndexType>),
+        dim3(grid),
+        dim3(block),
+        smemSize,
+        THCState_getCurrentStream(state),
+        numPass1Blocks,
+        init,
+        reduceAccOp,
+        (AccT*) scratchSpace,
+        devOut);
     if (freeScratchSpace) {
       THCudaCheck(THCudaFree(state, scratchSpace));
     }
   } else {
     getSinglePassReduceBlockGrid<InT, AccT>(totalElements, grid, block);
     size_t smemSize = block.x * sizeof(AccT);
-    hipLaunchKernelGGL((kernelReduceAll<ModifyOp, ReduceOp, ReduceAccOp, InT, AccT, IndexType, ADims>), dim3(grid), dim3(block), smemSize, THCState_getCurrentStream(state), 
-        inData, inSizes, inStrides, inDims, (IndexType) totalElements, init, modifyOp, reduceOp, reduceAccOp, devOut);
+    hipLaunchKernelGGL(
+        (kernelReduceAll<
+            ModifyOp, ReduceOp, ReduceAccOp, InT, AccT, IndexType, ADims>),
+        dim3(grid),
+        dim3(block),
+        smemSize,
+        THCState_getCurrentStream(state),
+        make_magic_wrapper(in),
+        (IndexType) totalElements,
+        init,
+        modifyOp,
+        reduceOp,
+        reduceAccOp,
+        devOut);
   }
 }
 

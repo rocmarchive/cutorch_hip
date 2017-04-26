@@ -2,10 +2,18 @@
 #define THC_GENERIC_FILE "generic/THCTensorScatterGather.cu"
 #else
 
-#define RUN(TYPE, DIMS, REAL)                                           \
-  hipLaunchKernelGGL((THCudaTensor_gatherKernel<TYPE, REAL, DIMS>),                                \
-    grid, block, 0, THCState_getCurrentStream(state),               \
-    tensorData, tensorStrides, srcData, srcStrides, indexData, indexSizes, indexStrides, dim, (TYPE)totalElements);
+#define RUN(TYPE, DIMS, REAL)\
+  hipLaunchKernelGGL(\
+    (THCudaTensor_gatherKernel<TYPE, REAL, DIMS>),\
+    grid,\
+    block,\
+    0,\
+    THCState_getCurrentStream(state),\
+    make_magic_wrapper(tensorInfo),\
+    make_magic_wrapper(srcInfo),\
+    make_magic_wrapper(indexInfo),\
+    dim,\
+    (TYPE)totalElements);
 
 void THCTensor_(gather)(THCState* state, THCTensor *tensor,
                          THCTensor *src, int dim, THCudaLongTensor *index) {
@@ -55,15 +63,6 @@ void THCTensor_(gather)(THCState* state, THCTensor *tensor,
     TensorInfo<long, unsigned int> indexInfo =
       getTensorInfo<THCudaLongTensor, unsigned int>(state, index);
 
-    real* tensorData = tensorInfo.data;
-    unsigned int* tensorStrides = tensorInfo.dStrides;
-    long* indexData = indexInfo.data;
-    real* srcData = srcInfo.data;
-    unsigned int* srcStrides = srcInfo.dStrides;
-    unsigned int* indexSizes = indexInfo.dSizes;
-    unsigned int* indexStrides = indexInfo.dStrides;
-    int indexDimensions = indexInfo.dims;
-    
     // Specialize for a small number of dimensions.
     switch (indexInfo.dims) {
       case 1:
@@ -90,15 +89,7 @@ void THCTensor_(gather)(THCState* state, THCTensor *tensor,
       getTensorInfo<THCTensor, unsigned long>(state, src);
     TensorInfo<long, unsigned long> indexInfo =
       getTensorInfo<THCudaLongTensor, unsigned long>(state, index);
-    real* tensorData = tensorInfo.data;
-    unsigned long* tensorStrides = tensorInfo.dStrides;
-    long* indexData = indexInfo.data;
-    real* srcData = srcInfo.data;
-    unsigned long* srcStrides = srcInfo.dStrides;
-    unsigned long* indexSizes = indexInfo.dSizes;
-    unsigned long* indexStrides = indexInfo.dStrides;
-    int indexDimensions = indexInfo.dims;
-     RUN(unsigned long, -1, real);
+    RUN(unsigned long, -1, real);
     THCudaCheck(hipGetLastError());
   }
 
@@ -113,10 +104,18 @@ void THCTensor_(gather)(THCState* state, THCTensor *tensor,
 #undef RUN
 
 
-#define RUN(TYPE, DIMS, REAL)                                           \
-  hipLaunchKernelGGL((THCudaTensor_scatterKernel<TYPE, REAL, DIMS>),                               \
-  grid, block, 0, THCState_getCurrentStream(state),              \
-    tensorData, tensorStrides, srcData, srcStrides, indexData, indexSizes, indexStrides,  dim, (TYPE)totalElements);
+#define RUN(TYPE, DIMS, REAL)\
+  hipLaunchKernelGGL(\
+    (THCudaTensor_scatterKernel<TYPE, REAL, DIMS>),\
+    grid,\
+    block,\
+    0,\
+    THCState_getCurrentStream(state),\
+    make_magic_wrapper(tensorInfo),\
+    make_magic_wrapper(srcInfo),\
+    make_magic_wrapper(indexInfo),\
+    dim,\
+    (TYPE)totalElements);
 
 void THCTensor_(scatter)(THCState* state, THCTensor *tensor, int dim, THCudaLongTensor *index, THCTensor *src) {
   THAssert(THCTensor_(checkGPU)(state, 2, tensor, src));
@@ -163,16 +162,7 @@ void THCTensor_(scatter)(THCState* state, THCTensor *tensor, int dim, THCudaLong
       getTensorInfo<THCTensor, unsigned int>(state, src);
     TensorInfo<long, unsigned int> indexInfo =
       getTensorInfo<THCudaLongTensor, unsigned int>(state, index);
-    
-    real* tensorData = tensorInfo.data;
-    unsigned int* tensorStrides = tensorInfo.dStrides;
-    long* indexData = indexInfo.data;
-    real* srcData = srcInfo.data;
-    unsigned int* srcStrides = srcInfo.dStrides;
-    unsigned int* indexSizes = indexInfo.dSizes;
-    unsigned int* indexStrides = indexInfo.dStrides;
-    int indexDimensions = indexInfo.dims;
-    
+
     // Specialize for a small number of dimensions.
     switch (indexInfo.dims) {
       case 1:
@@ -195,14 +185,6 @@ void THCTensor_(scatter)(THCState* state, THCTensor *tensor, int dim, THCudaLong
       getTensorInfo<THCTensor, unsigned long>(state, src);
     TensorInfo<long, unsigned long> indexInfo =
       getTensorInfo<THCudaLongTensor, unsigned long>(state, index);
-    real* tensorData = tensorInfo.data;
-    unsigned long* tensorStrides = tensorInfo.dStrides;
-    long* indexData = indexInfo.data;
-    real* srcData = srcInfo.data;
-    unsigned long* srcStrides = srcInfo.dStrides;
-    unsigned long* indexSizes = indexInfo.dSizes;
-    unsigned long* indexStrides = indexInfo.dStrides;
-    int indexDimensions = indexInfo.dims;
     RUN(unsigned long, -1, real)
   }
 
@@ -216,10 +198,18 @@ void THCTensor_(scatter)(THCState* state, THCTensor *tensor, int dim, THCudaLong
 
 #undef RUN
 
-#define RUN(TYPE, DIMS, REAL)                                           \
-  hipLaunchKernelGGL((THCudaTensor_scatterFillKernel<TYPE, REAL, DIMS>),                           \
-          grid, block, 0, THCState_getCurrentStream(state),      \
-          tensorData, tensorStrides, indexData, indexSizes, indexStrides,  value, dim, (TYPE)totalElements);
+#define RUN(TYPE, DIMS, REAL)\
+  hipLaunchKernelGGL(\
+    (THCudaTensor_scatterFillKernel<TYPE, REAL, DIMS>),\
+    grid,\
+    block,\
+    0,\
+    THCState_getCurrentStream(state),\
+    make_magic_wrapper(tensorInfo),\
+    make_magic_wrapper(indexInfo),\
+    value,\
+    dim,\
+    (TYPE)totalElements);
 
 void
 THCTensor_(scatterFill)(THCState* state, THCTensor *tensor,
@@ -262,13 +252,6 @@ THCTensor_(scatterFill)(THCState* state, THCTensor *tensor,
     TensorInfo<long, unsigned int> indexInfo =
       getTensorInfo<THCudaLongTensor, unsigned int>(state, index);
 
-    real* tensorData = tensorInfo.data;
-    unsigned int* tensorStrides = tensorInfo.dStrides;
-    long* indexData = indexInfo.data;
-    unsigned int* indexSizes = indexInfo.dSizes;
-    unsigned int* indexStrides = indexInfo.dStrides;
-    int indexDimensions = indexInfo.dims;
-
     // Specialize for a small number of dimensions.
     switch (indexInfo.dims) {
       case 1:
@@ -289,12 +272,6 @@ THCTensor_(scatterFill)(THCState* state, THCTensor *tensor,
       getTensorInfo<THCTensor, unsigned long>(state, tensor);
     TensorInfo<long, unsigned long> indexInfo =
       getTensorInfo<THCudaLongTensor, unsigned long>(state, index);
-    real* tensorData = tensorInfo.data;
-    unsigned long* tensorStrides = tensorInfo.dStrides;
-    long* indexData = indexInfo.data;
-    unsigned long* indexSizes = indexInfo.dSizes;
-    unsigned long* indexStrides = indexInfo.dStrides;
-    int indexDimensions = indexInfo.dims;
     RUN(unsigned long, -1, real);
   }
 
