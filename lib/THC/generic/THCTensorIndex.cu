@@ -89,7 +89,6 @@ void THCTensor_(indexCopy)(THCState *state, THCTensor *dst, int dim, THCudaLongT
     TensorInfo<long, unsigned int> indicesInfo =
       getTensorInfo<THCudaLongTensor, unsigned int>(state, indices);
     indicesInfo.collapseDims();
-    
 
     // A reasonable choice for when to have each thread iterate over
     // indices to choose
@@ -128,7 +127,6 @@ void THCTensor_(indexCopy)(THCState *state, THCTensor *dst, int dim, THCudaLongT
     TensorInfo<long, unsigned long> indicesInfo =
       getTensorInfo<THCudaLongTensor, unsigned long>(state, indices);
     indicesInfo.collapseDims();
-   
     LARGE_INDEX(real, unsigned long, -1, -1, -1);
   }
 
@@ -225,7 +223,6 @@ void THCTensor_(indexAdd)(THCState *state, THCTensor *dst, int dim, THCudaLongTe
       getTensorInfo<THCudaLongTensor, unsigned int>(state, indices);
     indicesInfo.collapseDims();
 
-
     // A reasonable choice for when to have each thread iterate over
     // indices to choose
     if (numIndices <= 16) {
@@ -263,8 +260,6 @@ void THCTensor_(indexAdd)(THCState *state, THCTensor *dst, int dim, THCudaLongTe
     TensorInfo<long, unsigned long> indicesInfo =
       getTensorInfo<THCudaLongTensor, unsigned long>(state, indices);
     indicesInfo.collapseDims();
-   
-    
     LARGE_INDEX(real, unsigned long, -1, -1, -1);
   }
 #undef SMALL_INDEX
@@ -513,8 +508,6 @@ void THCTensor_(indexSelect)(THCState *state, THCTensor *dst, THCTensor *src, in
     TensorInfo<long, unsigned long> indicesInfo =
       getTensorInfo<THCudaLongTensor, unsigned long>(state, indices);
     indicesInfo.collapseDims();
-
-
 
     LARGE_INDEX(real, unsigned long, -1, -1, -1);
   }

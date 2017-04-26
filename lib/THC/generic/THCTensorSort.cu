@@ -57,21 +57,21 @@ THC_API void THCTensor_(sortKeyValueInplace)(THCState* state,
     if (dir) {                                                          \
       hipLaunchKernelGGL((bitonicSortKVInPlace<real, long, A, -1, GTComp<real>, TYPE, SIZE>), \
       grid, block, 0, THCState_getCurrentStream(state),        \
-          keyInfo,                                                      \
+          make_magic_wrapper(keyInfo),                                                      \
           keySlices,                                                    \
           (TYPE) keySliceSize,                                          \
           (TYPE) keyInfo.strides[collapseKeyDim],                       \
-          valueInfo,                                                    \
+          make_magic_wrapper(valueInfo),                                                    \
           (TYPE) valueInfo.strides[collapseValueDim],                   \
           GTComp<real>());                                              \
     } else {                                                            \
       hipLaunchKernelGGL((bitonicSortKVInPlace<real, long, A, -1, LTComp<real>, TYPE, SIZE>), \
           grid, block, 0, THCState_getCurrentStream(state),         \
-          keyInfo,                                                      \
+          make_magic_wrapper(keyInfo),                                                      \
           keySlices,                                                    \
           (TYPE) keySliceSize,                                          \
           (TYPE) keyInfo.strides[collapseKeyDim],                       \
-          valueInfo,                                                    \
+          make_magic_wrapper(valueInfo),                                                    \
           (TYPE) valueInfo.strides[collapseValueDim],                   \
           LTComp<real>());                                              \
     }                                                                   \
@@ -162,7 +162,7 @@ void sortViaThrust(THCState* state,
 
   ptrdiff_t totalElements = THCTensor_(nElement)(state, input);
   long sliceSize = THCTensor_(size)(state, input, dim);
-  long sliceStride = THCTensor_(stride)(state, input, dim);
+  //long sliceStride = THCTensor_(stride)(state, input, dim);
 
   // We perform a vectorized segmented sort in Thrust.
   // Say we are sorting a (2, 3) tensor. We have in flattened form:
@@ -316,5 +316,5 @@ THC_API void THCTensor_(sort)(THCState* state,
 
   THCudaCheck(hipGetLastError());
 }
-
 #endif
+

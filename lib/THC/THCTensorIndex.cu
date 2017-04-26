@@ -338,8 +338,6 @@ __global__ void indexSelectLargeIndex(TensorInfo<T, IndexType> dst,
       srcOffset += srcIndex * src.strides[srcSelectDim];
 
       dst.data[dstOffset] = src.data[srcOffset];
-
-      dst.data[dstOffset] = src.data[srcOffset];
     }
   }
 }
