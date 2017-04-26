@@ -91,10 +91,14 @@ __device__ void inclusiveBinaryPrefixSum(T* smem, bool in, T* out) {
 
   // load the carry from the preceding warp
   if (warp >= 1) {
+#ifdef CUDA_PATH
     index += smem[warp - 1];
+#endif
   }
 
+#ifdef CUDA_PATH
   *out = index;
+#endif
 
   if (KillWARDependency) {
     __syncthreads();
