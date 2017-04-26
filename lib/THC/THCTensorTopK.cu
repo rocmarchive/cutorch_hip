@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 #include "THC.h"
 #include "THCReduceApplyUtils.cuh"
 #include "THCTensorCopy.h"
@@ -7,7 +6,7 @@
 #include "THCScanUtils.cuh"
 #include "THCTensorTypeUtils.cuh"
 #include <algorithm> // for std::min
-#ifdef CUDA_PATH
+
 #if CUDA_VERSION >= 7000
 #include <thrust/system/cuda/execution_policy.h>
 #endif
@@ -58,14 +57,14 @@ __device__ void countRadixUsingMask(const RadixConverter& conv,
     counts[i] = 0;
   }
 
-  if (hipThreadIdx_x < RadixSize) {
-    smem[hipThreadIdx_x] = 0;
+  if (threadIdx.x < RadixSize) {
+    smem[threadIdx.x] = 0;
   }
   __syncthreads();
 
   // Scan over all the data. Upon a read, the warp will accumulate
   // counts per each digit in the radix using warp voting.
-  for (IndexType i = hipThreadIdx_x; i < sliceSize; i += hipBlockDim_x) {
+  for (IndexType i = threadIdx.x; i < sliceSize; i += blockDim.x) {
     BitDataType val = conv.convert(doLdg(&data[i * withinSliceStride]));
 
     bool hasVal = ((val & desiredMask) == desired);
@@ -112,14 +111,14 @@ __device__ float findPattern(const RadixConverter& conv,
                              IndexType withinSliceStride,
                              unsigned int desired,
                              unsigned int desiredMask) {
-  if (hipThreadIdx_x < 32) {
-    smem[hipThreadIdx_x] = (DataType) 0;
+  if (threadIdx.x < 32) {
+    smem[threadIdx.x] = (DataType) 0;
   }
   __syncthreads();
 
   // All threads participate in the loop, in order to sync on the flag
-  IndexType numIterations = THCRoundUp(sliceSize, (IndexType) hipBlockDim_x);
-  for (IndexType i = hipThreadIdx_x; i < numIterations; i += hipBlockDim_x) {
+  IndexType numIterations = THCRoundUp(sliceSize, (IndexType) blockDim.x);
+  for (IndexType i = threadIdx.x; i < numIterations; i += blockDim.x) {
     bool inRange = (i < sliceSize);
     DataType v = inRange ? doLdg(&data[i * withinSliceStride]) : (DataType) 0;
 
@@ -275,11 +274,11 @@ __global__ void gatherTopK(TensorInfo<float, IndexType> input,
 
   // Find the start offset for our slice
   IndexType sliceStartIndex =
-    IndexToOffset<float, IndexType, Dim>::get(slice, input.dSizes, input.dStrides, input.dims);
+    IndexToOffset<float, IndexType, Dim>::get(slice, input);
   IndexType topKSliceStartIndex =
-    IndexToOffset<float, IndexType, Dim>::get(slice, topK.dSizes, topK.dStrides, topK.dims);
+    IndexToOffset<float, IndexType, Dim>::get(slice, topK);
   IndexType indicesSliceStartIndex =
-    IndexToOffset<long, IndexType, Dim>::get(slice, indices.dSizes, indices.dStrides, indices.dims);
+    IndexToOffset<long, IndexType, Dim>::get(slice, indices);
 
   float* inputSliceStart = &input.data[sliceStartIndex];
   float* topKSliceStart = &topK.data[topKSliceStartIndex];
@@ -307,10 +306,10 @@ __global__ void gatherTopK(TensorInfo<float, IndexType> input,
   // All threads need to participate in the loop and the prefix sum,
   // but not necessarily in the load; hence loop bounds being rounded
   // up to a multiple of the block dim.
-  IndexType numIterations = THCRoundUp(inputSliceSize, (IndexType) hipBlockDim_x);
+  IndexType numIterations = THCRoundUp(inputSliceSize, (IndexType) blockDim.x);
   IndexType writeIndexStart = 0;
 
-  for (IndexType i = hipThreadIdx_x; i < numIterations; i += hipBlockDim_x) {
+  for (IndexType i = threadIdx.x; i < numIterations; i += blockDim.x) {
     bool inRange = (i < inputSliceSize);
     float v =
       inRange ? doLdg(&inputSliceStart[i * inputWithinSliceStride]) : 0.0f;
@@ -347,7 +346,7 @@ __global__ void gatherTopK(TensorInfo<float, IndexType> input,
   assert(outputSliceSize >= writeIndexStart);
   IndexType topKRemaining = (outputSliceSize - writeIndexStart);
 
-  for (IndexType i = hipThreadIdx_x; i < numIterations; i += hipBlockDim_x) {
+  for (IndexType i = threadIdx.x; i < numIterations; i += blockDim.x) {
     bool inRange = (i < inputSliceSize);
     float v =
       inRange ? doLdg(&inputSliceStart[i * inputWithinSliceStride]) : 0.0f;
@@ -416,12 +415,12 @@ THC_API void THCudaTensor_topk(THCState* state,
       inputSlices,                                                      \
       /* The actual dimension that the k-selection is running in */     \
       /* may have changed from collapseDims() */                        \
-      inputInfo.dStrides[collapseInputDim],                              \
+      inputInfo.strides[collapseInputDim],                              \
       topKInfo,                                                         \
       topKSlices,                                                       \
-      topKInfo.dStrides[collapseTopKDim],                                \
+      topKInfo.strides[collapseTopKDim],                                \
       indicesInfo,                                                      \
-      indicesInfo.dStrides[collapseIndicesDim])
+      indicesInfo.strides[collapseIndicesDim])
 
 #define RUN_DIR(INDEX_T, DIM)                   \
   if (dir) {                                    \
@@ -534,4 +533,3 @@ THC_API void THCudaTensor_topk(THCState* state,
 
   THCudaCheck(hipGetLastError());
 }
-#endif

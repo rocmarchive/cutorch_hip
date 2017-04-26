@@ -110,34 +110,21 @@ static inline  __device__ void atomicAdd(half *address, half val) {
 }
 #endif
 
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ < 600 || defined(__HIP_PLATFORM_HCC__)
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ < 600
 // from CUDA C Programmic Guide
 static inline  __device__  void atomicAdd(double *address, double val) {
-  uint64_t* address_as_ull = (uint64_t*)address;
-//unsigned long long int* address_as_ull = (unsigned long long int*)address;
-//  unsigned long long int old = *address_as_ull;
-//  unsigned long long int assumed;
-//
-//  do {
-//    assumed = old;
-//    //old = atomicCAS(address_as_ull, assumed,
-//    //                __double_as_longlong(val +
-//    //                __longlong_as_double(assumed)));
-//    //old = atomicCAS(address_as_ull, assumed,
-//    //                (unsigned long long)(val +
-//    //                (double)(assumed)));
-//    //double newVal = val + *reinterpret_cast<double*>(&assumed);
-//    //old = atomicCAS(address_as_ull, assumed,
-//    //                *reinterpret_cast<unsigned long long*>(&newVal));
-//
-//    // Note: uses integer comparison to avoid hang in case of NaN (since NaN != NaN)
-//  } while (assumed != old);
+  unsigned long long int* address_as_ull = (unsigned long long int*)address;
+  unsigned long long int old = *address_as_ull;
+  unsigned long long int assumed;
 
-  double old_x = *address;
-  double new_x;
   do {
-      new_x = old_x + val;
-  } while (!hc::atomic_compare_exchange(address_as_ull, reinterpret_cast<uint64_t*>(&old_x), *reinterpret_cast<uint64_t*>(&new_x)));
+    assumed = old;
+    old = atomicCAS(address_as_ull, assumed,
+                    __double_as_longlong(val +
+                    __longlong_as_double(assumed)));
+
+    // Note: uses integer comparison to avoid hang in case of NaN (since NaN != NaN)
+  } while (assumed != old);
 }
 #endif
 
