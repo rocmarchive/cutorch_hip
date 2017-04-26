@@ -366,7 +366,7 @@ bool THC_pointwiseApply2(THCState* state,
       getTensorInfo<TensorTypeB, unsigned int>(state, b);
     bInfo.collapseDims();
 
-    // HANDLE_A_CASE(unsigned int, aInfo.dims, bInfo.dims);
+    HANDLE_A_CASE(unsigned int, aInfo.dims, bInfo.dims);
   } else {
     TensorInfo<typename TensorUtils<TensorTypeA>::DataType, unsigned long> aInfo =
       getTensorInfo<TensorTypeA, unsigned long>(state, a);
