@@ -126,9 +126,9 @@ __global__ void indexAddSmallIndex(TensorInfo<T, IndexType> dst,
     if (dstIndex < dstAddDimSize) {
       // We stride over the output ignoring the indexed dimension
       // (innerSize), whose offset calculation is handled differently
-      for (IndexType linearIndex = blockIdx.x * blockDim.x + threadIdx.x;
+      for (IndexType linearIndex = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;
            linearIndex < innerSize;
-           linearIndex += gridDim.x * blockDim.x) {
+           linearIndex += hipGridDim_x * hipBlockDim_x) {
         IndexType dstOffset =
           IndexToOffset<T, IndexType, DstDim>::get(linearIndex, dst);
         dstOffset += dstIndex * dst.strides[dstAddDim];
@@ -137,7 +137,7 @@ __global__ void indexAddSmallIndex(TensorInfo<T, IndexType> dst,
           IndexToOffset<T, IndexType, SrcDim>::get(linearIndex, src);
         srcOffset += srcIndex * src.strides[srcAddDim];
 
-        atomicAdd(&dst.data[dstOffset], src.data[srcOffset]);
+        atomicAdd_t(&dst.data[dstOffset], src.data[srcOffset]);
       }
     }
   }
@@ -178,7 +178,7 @@ __global__ void indexAddLargeIndex(TensorInfo<T, IndexType> dst,
         IndexToOffset<T, IndexType, SrcDim>::get(elementInSlice, src);
       srcOffset += srcIndex * src.strides[srcAddDim];
 
-      atomicAdd(&dst.data[dstOffset], src.data[srcOffset]);
+      atomicAdd_t(&dst.data[dstOffset], src.data[srcOffset]);
     }
   }
 }
