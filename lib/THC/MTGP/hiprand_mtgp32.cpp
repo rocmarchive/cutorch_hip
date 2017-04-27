@@ -57,29 +57,29 @@ void HipRandStateMtgp32_init(hc::accelerator_view accl_view,
   // kernel params
   // get target accelerator
   hc::accelerator accl = accl_view.get_accelerator();
-  uint32_t* arrP = hc::am_alloc((HcRAND_GROUP_NUM * MTGP32_TS * sizeof(uint32_t)), accl, 0); 
+  uint32_t* arrP = hc::am_alloc((HcRAND_GROUP_NUM * MTGP32_TS * sizeof(uint32_t)), accl, 0);
   s->param_tbl = arrP;
-  uint32_t* arrT = hc::am_alloc((HcRAND_GROUP_NUM * MTGP32_TS * sizeof(uint32_t)), accl, 0); 
+  uint32_t* arrT = hc::am_alloc((HcRAND_GROUP_NUM * MTGP32_TS * sizeof(uint32_t)), accl, 0);
   s->temper_tbl = arrT;
-  uint32_t* arrS = hc::am_alloc((HcRAND_GROUP_NUM * MTGP32_TS * sizeof(uint32_t)), accl, 0); 
+  uint32_t* arrS = hc::am_alloc((HcRAND_GROUP_NUM * MTGP32_TS * sizeof(uint32_t)), accl, 0);
   s->single_temper_tbl = arrS;
-  uint32_t* arrPos = hc::am_alloc(HcRAND_GROUP_NUM * sizeof(uint32_t), accl, 0); 
+  uint32_t* arrPos = hc::am_alloc(HcRAND_GROUP_NUM * sizeof(uint32_t), accl, 0);
   s->pos_tbl = arrPos;
-  uint32_t* arrSh1 = hc::am_alloc(HcRAND_GROUP_NUM * sizeof(uint32_t), accl, 0); 
+  uint32_t* arrSh1 = hc::am_alloc(HcRAND_GROUP_NUM * sizeof(uint32_t), accl, 0);
   s->sh1_tbl = arrSh1;
-  uint32_t* arrSh2 = hc::am_alloc(HcRAND_GROUP_NUM * sizeof(uint32_t), accl, 0); 
+  uint32_t* arrSh2 = hc::am_alloc(HcRAND_GROUP_NUM * sizeof(uint32_t), accl, 0);
   s->sh2_tbl = arrSh2;
-  uint32_t* arrMask = hc::am_alloc(1 * sizeof(uint32_t), accl, 0); 
+  uint32_t* arrMask = hc::am_alloc(1 * sizeof(uint32_t), accl, 0);
   s->mask = arrMask;
   // Redundant member
-  uint32_t* arrMexp = hc::am_alloc((HcRAND_GROUP_NUM * sizeof(uint32_t)), accl, 0); 
+  uint32_t* arrMexp = hc::am_alloc((HcRAND_GROUP_NUM * sizeof(uint32_t)), accl, 0);
   s->mexp_tbl = arrMexp;
   // states
-  uint32_t* arrStatus = hc::am_alloc((USER_GROUP_NUM * MTGP32_STATE_SIZE * sizeof(uint32_t)), accl, 0); 
+  uint32_t* arrStatus = hc::am_alloc((USER_GROUP_NUM * MTGP32_STATE_SIZE * sizeof(uint32_t)), accl, 0);
   s->d_status = arrStatus;
-  uint32_t* arrOffset = hc::am_alloc((USER_GROUP_NUM * sizeof(uint32_t)), accl, 0); 
+  uint32_t* arrOffset = hc::am_alloc((USER_GROUP_NUM * sizeof(uint32_t)), accl, 0);
   s->offset = arrOffset;
-  uint32_t* arrIndex = hc::am_alloc((USER_GROUP_NUM * sizeof(uint32_t)), accl, 0); 
+  uint32_t* arrIndex = hc::am_alloc((USER_GROUP_NUM * sizeof(uint32_t)), accl, 0);
   s->index = arrIndex;
 }
 
@@ -106,9 +106,11 @@ void HipRandStateMtgp32_release(HipRandStateMtgp32* s) {
 // The following are device APIs
 
 // Copy param constants onto device
-int mtgp32_init_params_kernel(hc::accelerator_view accl_view,
-                              mtgp32_params_fast_t* params,
-                              HipRandStateMtgp32*& s) {
+int mtgp32_init_params_kernel(
+    hc::accelerator_view accl_view,
+    const mtgp32_params_fast_t* params,
+    HipRandStateMtgp32*& s)
+{
   const uint32_t* av_param_tbl = (s->param_tbl);
   const uint32_t* av_temper_tbl = (s->temper_tbl);
   const uint32_t* av_single_temper_tbl = (s->single_temper_tbl);
@@ -152,8 +154,11 @@ int mtgp32_init_params_kernel(hc::accelerator_view accl_view,
 }
 
 // Initialize HipRandStateMtgp32 by seed
-int mtgp32_init_seed_kernel(hc::accelerator_view accl_view,
-                            HipRandStateMtgp32* s, unsigned long seed) {
+int mtgp32_init_seed_kernel(
+    hc::accelerator_view accl_view,
+    const HipRandStateMtgp32* s,
+    unsigned long seed)
+{
   seed = seed ^ (seed >> 32);
   int nGroups = USER_GROUP_NUM;
   const uint32_t* av_param_tbl = (s->param_tbl);
@@ -162,7 +167,7 @@ int mtgp32_init_seed_kernel(hc::accelerator_view accl_view,
   const uint32_t* av_mexp_tbl = (s->mexp_tbl);
   uint32_t* av_d_status = (s->d_status);
   hc::extent<1> ext(nGroups);
-  hc::parallel_for_each(accl_view, ext, [ = ] (hc::index<1> idx) __attribute__((hc, cpu)) {
+  hc::parallel_for_each(accl_view, ext, [=](hc::index<1> idx) [[hc]] {
     const int id = idx[0];
 
     if (id >= nGroups) {
@@ -176,7 +181,8 @@ int mtgp32_init_seed_kernel(hc::accelerator_view accl_view,
     int i;
     uint32_t hidden_seed;
     uint32_t tmp;
-    hidden_seed = av_param_tbl[id * MTGP32_TS + 4] ^ (av_param_tbl[id * MTGP32_TS + 8] << 16);
+    hidden_seed =
+        av_param_tbl[id * MTGP32_TS + 4] ^ (av_param_tbl[id * MTGP32_TS + 8] << 16);
     tmp = hidden_seed;
     tmp += tmp >> 16;
     tmp += tmp >> 8;

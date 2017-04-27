@@ -322,103 +322,82 @@ GENERATE_KERNEL2(generate_cauchy, double median, double sigma, curand_uniform, (
 
 // Adding All HC based constructors
 
-struct user_uniform_functor {
+class user_uniform_functor {
   double _a;
   double _b;
-  user_uniform_functor(double a, double b) __attribute__((hc, cpu)) : _a(a), _b(b) {}
-  inline double operator()(const float& x) const __attribute__((hc, cpu)) {
-    return x * (_b - _a) + _a;
-  }
-  // User should provide copy ctor
-  user_uniform_functor(const user_uniform_functor&other) __attribute__((hc, cpu)) : _a(other._a), _b(other._b) { }
-  // User should provide copy assign ctor
-  user_uniform_functor& operator = (const user_uniform_functor&other) __attribute__((hc, cpu)) {
-    _a = other._a;
-    _b = other._b;
-    return *this;
-  }
+public:
+  __host__ __device__
+  user_uniform_functor(double a, double b) : _a(a), _b(b) {}
+
+  __host__ __device__
+  double operator()(float x) const { return x * (_b - _a) + _a; }
 };
 
 
-struct user_bernoulli_functor {
+class user_bernoulli_functor {
   double _p;
-  user_bernoulli_functor(double p) __attribute__((hc, cpu)) : _p(p) {}
-  inline double operator()(const float& x) const __attribute__((hc, cpu)) {
-    return (double)x <= _p;
-  }
-  // User should provide copy ctor
-  user_bernoulli_functor(const user_bernoulli_functor&other) __attribute__((hc, cpu)) : _p(other._p) { }
-  // User should provide copy assign ctor
-  user_bernoulli_functor& operator = (const user_bernoulli_functor&other) __attribute__((hc, cpu)) {
-    _p = other._p;
-    return *this;
-  }
+public:
+  __host__ __device__
+  explicit
+  user_bernoulli_functor(double p) : _p(p) {}
+
+  __host__ __device__
+  double operator()(float x) const { return static_cast<double>(x) <= _p; }
 };
 
 
-struct user_normal_functor {
+class user_normal_functor {
   double _stdv;
   double _mean;
-  user_normal_functor(double stdv, double mean) __attribute__((hc, cpu)) : _stdv(stdv), _mean(mean) {}
-  inline double operator()(const float& x) const __attribute__((hc, cpu)) {
-    return (x * _stdv) + _mean;
-  }
-  // User should provide copy ctor
-  user_normal_functor(const user_normal_functor&other) __attribute__((hc, cpu))
-    : _stdv(other._stdv), _mean(other._mean) { }
-  // User should provide copy assign ctor
-  user_normal_functor& operator = (const user_normal_functor&other) __attribute__((hc, cpu)) {
-    _stdv = other._stdv;
-    _mean = other._mean;
-    return *this;
-  }
+public:
+  __host__ __device__
+  user_normal_functor(double stdv, double mean) : _stdv(stdv), _mean(mean) {}
+
+  __host__ __device__
+  double operator()(float x) const { return (x * _stdv) + _mean; }
 };
 
-struct user_geometric_functor {
+class user_geometric_functor {
   double _p;
-  user_geometric_functor(double p) __attribute__((hc, cpu)) : _p(p) {}
-  inline double operator()(const float& x) const __attribute__((hc, cpu)) {
-    return (hc::precise_math::log((double)(1 - x)) / hc::precise_math::log(_p)) + 1;
-  }
-  // User should provide copy ctor
-  user_geometric_functor(const user_geometric_functor&other) __attribute__((hc, cpu)) : _p(other._p) { }
-  // User should provide copy assign ctor
-  user_geometric_functor& operator = (const user_geometric_functor&other) __attribute__((hc, cpu)) {
-    _p = other._p;
-    return *this;
+public:
+  __host__ __device__
+  explicit
+  user_geometric_functor(double p) : _p(p) {}
+
+  __device__
+  double operator()(float x) const
+  {
+      return (log((double)(1 - x)) / log(_p)) + 1;
   }
 };
 
-struct user_exponential_functor {
+class user_exponential_functor {
   double _lambda;
-  user_exponential_functor(double lambda) __attribute__((hc, cpu)) : _lambda(lambda) {}
-  inline double operator()(const float& x) const __attribute__((hc, cpu)) {
-    return (double)(-1. / _lambda * hc::precise_math::log((double)(1 - x)));
-  }
-  // User should provide copy ctor
-  user_exponential_functor(const user_exponential_functor&other) __attribute__((hc, cpu)) : _lambda(other._lambda) { }
-  // User should provide copy assign ctor
-  user_exponential_functor& operator = (const user_exponential_functor&other) __attribute__((hc, cpu)) {
-    _lambda = other._lambda;
-    return *this;
+public:
+  __host__ __device__
+  explicit
+  user_exponential_functor(double lambda) : _lambda(lambda) {}
+
+  __device__
+  double operator()(float x) const
+  {
+    return (double)(-1. / _lambda * log((double)(1 - x)));
   }
 };
 
-struct user_cauchy_functor {
+class user_cauchy_functor {
   double _median;
   double _sigma;
-  user_cauchy_functor(double median, double sigma) __attribute__((hc, cpu)) : _median(median), _sigma(sigma) {}
-  inline double operator()(const float& x) const __attribute__((hc, cpu)) {
-    return (double)(_median + _sigma * hc::precise_math::tan((double)M_PI * (x - 0.5)));
-  }
-  // User should provide copy ctor
-  user_cauchy_functor(const user_cauchy_functor&other) __attribute__((hc, cpu))
-    : _median(other._median), _sigma(other._sigma) { }
-  // User should provide copy assign ctor
-  user_cauchy_functor& operator = (const user_cauchy_functor&other) __attribute__((hc, cpu)) {
-    _median = other._median;
-    _sigma = other._sigma;
-    return *this;
+public:
+  __host__ __device__
+  user_cauchy_functor(double median, double sigma)
+      : _median(median), _sigma(sigma)
+  {}
+
+  __device__
+  double operator()(float x) const
+  {
+    return (double)(_median + _sigma * tan((double)M_PI * (x - 0.5)));
   }
 };
 
