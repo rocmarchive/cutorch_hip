@@ -47,7 +47,7 @@ void bitonicSwap(K& kA,
   // Invalid entries always sort to the end
   // TODO: the comparison causes a Promote pass failure, trace the root cause,
   //       which might be one of the comparison functors.
-  bool swap = (/*comp(kA, kB) &&*/ validA) || !validB;
+  bool swap = (comp(kA, kB) && validA) || !validB;
   if (swap == dir) {
     swapVars(kA, kB);
     swapVars(vA, vB);
@@ -75,14 +75,14 @@ void bitonicSort(K (&keys)[Power2SortSize],
       }
 
       unsigned int pos = 2 * hipThreadIdx_x - (hipThreadIdx_x & (stride - 1));
-      /*bitonicSwap(keys[pos],
+      bitonicSwap(keys[pos],
                   values[pos],
                   valid[pos],
                   keys[pos + stride],
                   values[pos + stride],
                   valid[pos + stride],
                   flag,
-                  comp);*/
+                  comp);
     }
   }
 
@@ -94,18 +94,18 @@ void bitonicSort(K (&keys)[Power2SortSize],
     }
 
     unsigned int pos = 2 * hipThreadIdx_x - (hipThreadIdx_x & (stride - 1));
-    /*bitonicSwap(keys[pos],
+    bitonicSwap(keys[pos],
                 values[pos],
                 valid[pos],
                 keys[pos + stride],
                 values[pos + stride],
                 valid[pos + stride],
                 false,
-                comp);*/
+                comp);
   }
 
   // Single warp per slice is completely synchronous
-  if (Power2SortSize > warpSize) {
+  if (Power2SortSize > 2 * warpSize) {
     __syncthreads();
   }
 }
@@ -122,20 +122,11 @@ template <typename K,
 __global__
 inline
 void
-bitonicSortKVInPlace(
-                     K* keysData,
-                     IndexType* keysSizes,
-                     IndexType* keysStrides,
-                     int keysDims,
-                     //TensorInfo<K, IndexType> keys,
+bitonicSortKVInPlace(TensorInfo<K, IndexType> keys,
                      IndexType keySlices,
                      IndexType keySliceSize,
                      IndexType keySliceStride,
-                     //TensorInfo<V, IndexType> values,
-                     V* valuesData,
-                     IndexType* valuesSizes,
-                     IndexType* valuesStrides,
-                     int valuesDims,
+                     TensorInfo<V, IndexType> values,
                      IndexType valueSliceStride,
                      Comparator comp)
 {
@@ -152,15 +143,9 @@ bitonicSortKVInPlace(
   __shared__ bool sharedValid[Power2SortSize];
 
   const IndexType keyStartOffset =
-    IndexToOffset<K, IndexType, KeyDims>::get(linearIndex,
-                                              keysSizes,
-                                              keysStrides,
-                                              keysDims);
+    IndexToOffset<K, IndexType, KeyDims>::get(linearIndex, keys);
   const IndexType valueStartOffset =
-    IndexToOffset<V, IndexType, ValueDims>::get(linearIndex,
-                                                valuesSizes,
-                                                valuesStrides,
-                                                valuesDims);
+    IndexToOffset<V, IndexType, ValueDims>::get(linearIndex, values);
 
   // If the sort size is 1, the data is already sorted
   if (Power2SortSize == 1) {
@@ -173,18 +158,19 @@ bitonicSortKVInPlace(
 
     bool valid1 = (elem1 < keySliceSize);
     K k1 = valid1 ?
-      keysData[keyStartOffset + elem1 * keySliceStride] : ScalarConvert<int, K>::to(0);
+      keys.data[keyStartOffset + elem1 * keySliceStride] : ScalarConvert<int, K>::to(0);
     V v1 = valid1 ?
-      valuesData[valueStartOffset + elem1 * valueSliceStride] : ScalarConvert<int, V>::to(0);
+      values.data[valueStartOffset + elem1 * valueSliceStride] : ScalarConvert<int, V>::to(0);
 
     sharedKeys[elem1] = k1;
     sharedValues[elem1] = v1;
     sharedValid[elem1] = valid1;
 
     bool valid2 = (elem2 < keySliceSize);
-    K k2 = /*valid2 ?*/ keysData[keyStartOffset + elem2 * keySliceStride];// : ScalarConvert<int, K>::to(0);
+    K k2 = valid2 ?
+      keys.data[keyStartOffset + elem2 * keySliceStride] : ScalarConvert<int, K>::to(0);
     V v2 = valid2 ?
-      valuesData[valueStartOffset + elem2 * valueSliceStride] : ScalarConvert<int, V>::to(0);
+      values.data[valueStartOffset + elem2 * valueSliceStride] : ScalarConvert<int, V>::to(0);
 
     sharedKeys[elem2] = k2;
     sharedValues[elem2] = v2;
@@ -196,16 +182,16 @@ bitonicSortKVInPlace(
     // elem1 and elem2 values might be out-of-range, if the data size we are
     // sorting is smaller than half the power2 size
     if (valid1) {
-      keysData[keyStartOffset + elem1 * keySliceStride] =
+      keys.data[keyStartOffset + elem1 * keySliceStride] =
         sharedKeys[elem1];
-      valuesData[valueStartOffset + elem1 * valueSliceStride] =
+      values.data[valueStartOffset + elem1 * valueSliceStride] =
         sharedValues[elem1];
     }
 
     if (valid2) {
-      keysData[keyStartOffset + elem2 * keySliceStride] =
+      keys.data[keyStartOffset + elem2 * keySliceStride] =
         sharedKeys[elem2];
-      valuesData[valueStartOffset + elem2 * valueSliceStride] =
+      values.data[valueStartOffset + elem2 * valueSliceStride] =
         sharedValues[elem2];
     }
   }

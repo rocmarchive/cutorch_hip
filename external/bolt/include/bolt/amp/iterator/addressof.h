@@ -44,7 +44,7 @@ namespace amp{
 	template <typename Iterator>
     static
     inline
-    typename bolt::amp::device_vector<typename Iterator::value_type>::iterator
+    Iterator
     create_mapped_iterator(bolt::amp::device_vector_tag, Iterator itr, int sz, bool var, ::bolt::amp::control &ctl)
     {
         return itr;

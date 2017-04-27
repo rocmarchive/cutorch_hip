@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 #include "THC.h"
 #include "THCReduceApplyUtils.cuh"
 #include "THCTensorCopy.h"
@@ -7,9 +6,11 @@
 #include "THCScanUtils.cuh"
 #include "THCTensorTypeUtils.cuh"
 #include <algorithm> // for std::min
+
 #ifdef CUDA_PATH
 #if CUDA_VERSION >= 7000
 #include <thrust/system/cuda/execution_policy.h>
+#endif
 #endif
 
 // Converts a float to an integer representation with the same
@@ -275,11 +276,11 @@ __global__ void gatherTopK(TensorInfo<float, IndexType> input,
 
   // Find the start offset for our slice
   IndexType sliceStartIndex =
-    IndexToOffset<float, IndexType, Dim>::get(slice, input.dSizes, input.dStrides, input.dims);
+    IndexToOffset<float, IndexType, Dim>::get(slice, input);
   IndexType topKSliceStartIndex =
-    IndexToOffset<float, IndexType, Dim>::get(slice, topK.dSizes, topK.dStrides, topK.dims);
+    IndexToOffset<float, IndexType, Dim>::get(slice, topK);
   IndexType indicesSliceStartIndex =
-    IndexToOffset<long, IndexType, Dim>::get(slice, indices.dSizes, indices.dStrides, indices.dims);
+    IndexToOffset<long, IndexType, Dim>::get(slice, indices);
 
   float* inputSliceStart = &input.data[sliceStartIndex];
   float* topKSliceStart = &topK.data[topKSliceStartIndex];
@@ -410,18 +411,18 @@ THC_API void THCudaTensor_topk(THCState* state,
 #define RUN_K(INDEX_T, DIM, DIR)                                        \
   hipLaunchKernelGGL((gatherTopK<INDEX_T, DIM, DIR>),                                         \
       grid, block, 0, THCState_getCurrentStream(state),             \
-      inputInfo,                                                        \
+      make_magic_wrapper(inputInfo),                                                        \
       sliceSize,                                                        \
       k,                                                                \
       inputSlices,                                                      \
       /* The actual dimension that the k-selection is running in */     \
       /* may have changed from collapseDims() */                        \
-      inputInfo.dStrides[collapseInputDim],                              \
-      topKInfo,                                                         \
+      inputInfo.strides[collapseInputDim],                              \
+      make_magic_wrapper(topKInfo),                                                         \
       topKSlices,                                                       \
-      topKInfo.dStrides[collapseTopKDim],                                \
-      indicesInfo,                                                      \
-      indicesInfo.dStrides[collapseIndicesDim])
+      topKInfo.strides[collapseTopKDim],                                \
+      make_magic_wrapper(indicesInfo),                                                      \
+      indicesInfo.strides[collapseIndicesDim])
 
 #define RUN_DIR(INDEX_T, DIM)                   \
   if (dir) {                                    \
@@ -534,4 +535,3 @@ THC_API void THCudaTensor_topk(THCState* state,
 
   THCudaCheck(hipGetLastError());
 }
-#endif

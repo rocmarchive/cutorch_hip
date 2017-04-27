@@ -21,11 +21,11 @@ struct TensorInfo {
   // constructor
   TensorInfo(T* p,
              int dim,
-             IndexType sz[MAX_CUTORCH_DIMS],
-             IndexType st[MAX_CUTORCH_DIMS]);
+             const IndexType (&sz)[MAX_CUTORCH_DIMS],
+             const IndexType (&st)[MAX_CUTORCH_DIMS]);
 
   // Destructor
-  ~TensorInfo(void); 
+  //~TensorInfo(void);
 
   // Set the size of the given dimension to 1, as if it were a
   // reduction dim (allows you to calculate offsets of the reduction
@@ -50,57 +50,38 @@ struct TensorInfo {
   T* data;
   IndexType sizes[MAX_CUTORCH_DIMS];
   IndexType strides[MAX_CUTORCH_DIMS];
-  IndexType* dSizes;
-  IndexType* dStrides;
+  //IndexType* dSizes;
+  //IndexType* dStrides;
   int dims;
 };
 
 template <typename T, typename IndexType>
-TensorInfo<T, IndexType>::TensorInfo(T* p,
-                                     int dim,
-                                     IndexType sz[MAX_CUTORCH_DIMS],
-                                     IndexType st[MAX_CUTORCH_DIMS]) {
+TensorInfo<T, IndexType>::TensorInfo(
+    T* p,
+    int dim,
+    const IndexType (&sz)[MAX_CUTORCH_DIMS],
+    const IndexType (&st)[MAX_CUTORCH_DIMS])
+{
   data = p;
   dims = dim;
-  //assert(dims > 0 && dims < MAX_CUTORCH_DIMS);
-
-  // Allocate to accomodate device strides and sizes for the tensor
-  THCudaCheck(hipMalloc((void **)&dSizes, sizeof(IndexType) * MAX_CUTORCH_DIMS));
-  THCudaCheck(hipMalloc((void **)&dStrides, sizeof(IndexType) * MAX_CUTORCH_DIMS));
-  THCudaCheck(hipMemset(dSizes, 0, sizeof(IndexType) * MAX_CUTORCH_DIMS));
-  THCudaCheck(hipMemset(dStrides, 0, sizeof(IndexType) * MAX_CUTORCH_DIMS));
+  assert(dims > 0 && dims < MAX_CUTORCH_DIMS);
 
   for (int i = 0; i < dim; ++i) {
     sizes[i] = sz[i];
     strides[i] = st[i];
   }
-
-  // Copy the size and strides to the device pointer
-  THCudaCheck(hipMemcpy(dSizes, sizes, sizeof(IndexType) * MAX_CUTORCH_DIMS, hipMemcpyHostToDevice));
-  THCudaCheck(hipMemcpy(dStrides, strides, sizeof(IndexType) * MAX_CUTORCH_DIMS, hipMemcpyHostToDevice));
-}
-
-
-//Destructor
-template <typename T, typename IndexType>
-TensorInfo<T, IndexType>::~TensorInfo(void) {
-
-   // Free up allocated resource
-   //THCudaCheck(hipFree(dStrides));
-   //THCudaCheck(hipFree(dSizes));
 }
 
 template <typename T, typename IndexType>
-void
-TensorInfo<T, IndexType>::reduceDim(int dim) {
+void TensorInfo<T, IndexType>::reduceDim(int dim)
+{
   assert(dim < dims && dim >= 0);
   sizes[dim] = 1;
-  THCudaCheck(hipMemcpy(dSizes, sizes, sizeof(IndexType) * MAX_CUTORCH_DIMS, hipMemcpyHostToDevice));
 }
 
 template <typename T, typename IndexType>
-int
-TensorInfo<T, IndexType>::collapseDims(int excludeDim) {
+int TensorInfo<T, IndexType>::collapseDims(int excludeDim)
+{
   // Find the innermost dimension not of size 1, since dimensions of size 1 are
   // collapsible.
   int firstNonOneDim = -1;
@@ -243,10 +224,6 @@ TensorInfo<T, IndexType>::collapseDims(int excludeDim) {
     sizes[i] = newSizes[i];
     strides[i] = newStrides[i];
   }
-  // Update the deviceSizes and deviceStrides with new sizes and strides informations
-  THCudaCheck(hipMemcpy(dSizes, sizes, sizeof(IndexType) * MAX_CUTORCH_DIMS, hipMemcpyHostToDevice));
-  THCudaCheck(hipMemcpy(dStrides, strides, sizeof(IndexType) * MAX_CUTORCH_DIMS, hipMemcpyHostToDevice));
-  
 
   // After collapsing, the original `excludeDim` may have been
   // renumbered to this new `returnDim`, since some dimensions could
@@ -260,17 +237,17 @@ template <typename T, typename IndexType, int Dims>
 struct IndexToOffset {
   static __host__ __device__ IndexType get(
     IndexType linearId,
-    IndexType* sizes, IndexType* strides, int dims) {
+    const TensorInfo<T, IndexType>& info) {
     IndexType offset = 0;
 
     // Use static dims
     for (int i = Dims - 1; i >= 0; --i) {
-      IndexType curDimIndex = linearId % sizes[i];
-      IndexType curDimOffset = curDimIndex * strides[i];
+      IndexType curDimIndex = linearId % info.sizes[i];
+      IndexType curDimOffset = curDimIndex * info.strides[i];
       offset += curDimOffset;
 
       if (i > 0) {
-        linearId /= sizes[i];
+        linearId /= info.sizes[i];
       }
     }
 
@@ -281,7 +258,7 @@ struct IndexToOffset {
 template <typename T, typename IndexType>
 struct IndexToOffset<T, IndexType, -2> {
   static inline __host__ __device__ IndexType
-    get(IndexType linearId, IndexType* sizes, IndexType* strides, int dims) {
+    get(IndexType linearId, const TensorInfo<T, IndexType>& info) {
     return linearId;
   }
 };
@@ -290,21 +267,43 @@ template <typename T, typename IndexType>
 struct IndexToOffset<T, IndexType, -1> {
   static inline __host__ __device__ IndexType get(
     IndexType linearId,
-    IndexType* sizes, IndexType* strides, int dims) {
+    const TensorInfo<T, IndexType>& info) {
 
     IndexType offset = 0;
 
     // Use dynamic dims
-    for (int i = dims - 1; i >= 0; --i) {
-      IndexType curDimIndex = linearId % sizes[i];
-      IndexType curDimOffset = curDimIndex * strides[i];
+    for (int i = info.dims - 1; i >= 0; --i) {
+      IndexType curDimIndex = linearId % info.sizes[i];
+      IndexType curDimOffset = curDimIndex * info.strides[i];
       offset += curDimOffset;
 
-      linearId /= sizes[i];
+      linearId /= info.sizes[i];
     }
 
     return offset;
   }
 };
+
+#if defined(__HIP_PLATFORM_HCC__)
+  #include <hip/hip_hcc.h>
+
+  template<typename T>
+    class Magic_wrapper {
+        hc::array_view<const T> d_;
+    public:
+        explicit
+        Magic_wrapper(const T& x) : d_(1, &x) {}
+
+        operator const T&() const [[hc]] { return d_[0]; }
+    };
+
+  template<typename T>
+  Magic_wrapper<T> make_magic_wrapper(const T& x)
+  {
+    return Magic_wrapper<T>{x};
+  }
+#else
+  #define make_magic_wrapper(x) x
+#endif
 
 #endif // THC_TENSOR_INFO_INC
