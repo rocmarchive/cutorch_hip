@@ -347,10 +347,10 @@ void THCTensor_varOuterDim(THCState *state, TensorTypeK *tgt, TensorTypeK *src, 
   dim3 grid(min(maxGridDim, num_orows), min(maxGridDim, THCCeilDiv(num_irows, threads.x)));
 
   if (flag) {
-    hipLaunchKernelGGL((THCTensor_kernel_varOuterDim<Real, true, apply_sqrt>), dim3(grid), dim3(threads), 0, THCState_getCurrentStream(state), 
+    hipLaunchKernelGGL((THCTensor_kernel_varOuterDim<Real, true, apply_sqrt>), dim3(grid), dim3(threads), 0, THCState_getCurrentStream(state),
         TensorUtils<TensorTypeK>::getData(state, tgt), TensorUtils<TensorTypeK>::getData(state, src), num_orows, num_irows, row_size);
   } else {
-    hipLaunchKernelGGL((THCTensor_kernel_varOuterDim<Real, false, apply_sqrt>), dim3(grid), dim3(threads), 0, THCState_getCurrentStream(state), 
+    hipLaunchKernelGGL((THCTensor_kernel_varOuterDim<Real, false, apply_sqrt>), dim3(grid), dim3(threads), 0, THCState_getCurrentStream(state),
         TensorUtils<TensorTypeK>::getData(state, tgt), TensorUtils<TensorTypeK>::getData(state, src), num_orows, num_irows, row_size);
   }
   hipError_t errcode = hipGetLastError();
@@ -424,15 +424,17 @@ void THCTensor_varInnermostDim(THCState *state, TensorTypeK *tgt, TensorTypeK *s
   }
   unsigned row_size = TensorUtils<TensorTypeK>::getSize(state, src, ndim - 1);
 
-  // From limited testing, 16x32 seemed a good compromise for handling both long and short dimensions.
-  dim3 threads(16, 32);
+  // From limited testing, (512 / warpSize) * warpSize seemed a good compromise
+  // for handling both long and short dimensions.
+  constexpr int block_sz = 512;
+  dim3 threads(block_sz / warpSize, warpSize);
   dim3 grid(min(1024, THCCeilDiv(num_rows, threads.y)));
 
   if (flag) {
-    hipLaunchKernelGGL((THCTensor_kernel_varInnermostDim<Real, true, apply_sqrt>), dim3(grid), dim3(threads), 0, THCState_getCurrentStream(state), 
+    hipLaunchKernelGGL((THCTensor_kernel_varInnermostDim<Real, true, apply_sqrt>), dim3(grid), dim3(threads), 0, THCState_getCurrentStream(state),
         TensorUtils<TensorTypeK>::getData(state, tgt), TensorUtils<TensorTypeK>::getData(state, src), num_rows, row_size);
   } else {
-    hipLaunchKernelGGL((THCTensor_kernel_varInnermostDim<Real, false, apply_sqrt>), dim3(grid), dim3(threads), 0, THCState_getCurrentStream(state), 
+    hipLaunchKernelGGL((THCTensor_kernel_varInnermostDim<Real, false, apply_sqrt>), dim3(grid), dim3(threads), 0, THCState_getCurrentStream(state),
         TensorUtils<TensorTypeK>::getData(state, tgt), TensorUtils<TensorTypeK>::getData(state, src), num_rows, row_size);
   }
   hipError_t errcode = hipGetLastError();
@@ -522,7 +524,7 @@ THC_transformReduceOuterDimIndex(THCState *state,
   dim3 grid(min(maxGridDim, num_orows),
             min(maxGridDim, THCCeilDiv(num_irows, threads.x)));
 
-  hipLaunchKernelGGL((kernelTransformReduceOuterDimIndex), dim3(grid), dim3(threads), 0, THCState_getCurrentStream(state), 
+  hipLaunchKernelGGL((kernelTransformReduceOuterDimIndex), dim3(grid), dim3(threads), 0, THCState_getCurrentStream(state),
       TensorUtils<TensorTypeK>::getData(state, tgt1),
       TensorUtils<TensorTypeIndex>::getData(state, tgt2),
       TensorUtils<TensorTypeK>::getData(state, src),
@@ -637,7 +639,7 @@ THC_transformReduceInnermostDimIndex(THCState *state,
   dim3 threads(16, 32);
   dim3 grid(min(1024, THCCeilDiv(num_rows, threads.y)));
 
-  hipLaunchKernelGGL((kernelTransformReduceInnermostDimIndex), dim3(grid), dim3(threads), 0, THCState_getCurrentStream(state), 
+  hipLaunchKernelGGL((kernelTransformReduceInnermostDimIndex), dim3(grid), dim3(threads), 0, THCState_getCurrentStream(state),
       TensorUtils<TensorTypeK>::getData(state, tgt1),
       TensorUtils<TensorTypeIndex>::getData(state, tgt2),
       TensorUtils<TensorTypeK>::getData(state, src),

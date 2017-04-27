@@ -150,7 +150,7 @@ inline dim3 getContigReduceBlock(ptrdiff_t numSlices, long reductionSize) {
   int numWarps = warpsInReductionSize > (long) maxWarps ?
     maxWarps : (int) warpsInReductionSize;
 
-  return dim3(numWarps * 32);
+  return dim3(numWarps * warpSize);
 }
 
 inline bool getNoncontigReduceGrid(ptrdiff_t elements, dim3& grid) {
