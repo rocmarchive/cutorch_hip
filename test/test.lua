@@ -1015,7 +1015,7 @@ function test.mean()
    checkMultiDevice(x, 'mean', 1)
 end
 
---[[function test.max()
+function test.max()
    local sz1 = chooseInt(minsize, maxsize)
    local sz2 = chooseInt(minsize, maxsize)
    local x = torch.randperm(sz1 * sz2):view(sz1, sz2):float()
@@ -1059,7 +1059,7 @@ function test.min()
    end
    checkMultiDevice(x, 'min')
    checkMultiDevice(x, 'min', 1)
-end]]--
+end
 
 function test.cmax()
   local sz1 = chooseInt(minsize, maxsize)
@@ -1820,7 +1820,7 @@ function test.indexCopy2()
 end
 
 -- TODO: Need to fix occasional runtime error at hipFree / allocator_free at line 184 generic/THCStorage.c
---[[function test.indexAdd2()
+function test.indexAdd2()
    for tries = 1, 5 do
       local t = createTestTensor(1000000)
       local selectdim = chooseInt(1, t:nDimension())
@@ -1829,7 +1829,7 @@ end
       compareFloatAndCudaTensorArgs(
           t, 'indexAdd', selectdim, indices, t:clone())
    end
-end]]--
+end
 
 -- TODO: Need to fix occasional runtime error at hipFree / allocator_free at line 184 generic/THCStorage.c
 function test.indexFill2()
@@ -2703,7 +2703,7 @@ function test.get_device()
     cutorch.setDevice(1) -- reset device
 end
 
---[[function test.multi_gpu_copy_noncontig()
+function test.multi_gpu_copy_noncontig()
    local srcDevice = 1
    local dstDevice = cutorch.getDeviceCount()
 
@@ -2747,7 +2747,7 @@ end
                " transposeDst= " .. transposeDst .. ". t2:max() = " .. t2_max)
       end
    end
-end]]--
+end
 
 function test.cudaTypeCopy()
 
@@ -3252,7 +3252,7 @@ function test.topk()
    end
 end
 
---[[function test.cat()
+function test.cat()
    for k, typename in ipairs(typenames) do
       for dim = 1, 3 do
 	 local x = torch.Tensor(13, minsize, minsize):uniform()
@@ -3290,7 +3290,7 @@ function test.catArray()
 	 tester:assertTensorEq(mx, mxx, 0, 'torch.cat value')
       end
    end
-end]]--
+end
 
 function test.streamWaitFor()
    local size = 2000000

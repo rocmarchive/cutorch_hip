@@ -76,39 +76,24 @@ struct AtomicAddIntegerImpl<T, 8> {
   }
 };
 
-static inline __device__ void atomicAdd_t(unsigned char *address, unsigned char val) {
+static inline __device__ void atomicAdd(unsigned char *address, unsigned char val) {
   AtomicAddIntegerImpl<unsigned char, sizeof(unsigned char)>()(address, val);
 }
 
-static inline  __device__ void atomicAdd_t(char *address, char val) {
+static inline  __device__ void atomicAdd(char *address, char val) {
   AtomicAddIntegerImpl<char, sizeof(char)>()(address, val);
 }
 
-static inline  __device__ void atomicAdd_t(short *address, short val) {
+static inline  __device__ void atomicAdd(short *address, short val) {
   AtomicAddIntegerImpl<short, sizeof(short)>()(address, val);
 }
 
-static inline __device__ void atomicAdd_t(long *address, long val) {
+static inline __device__ void atomicAdd(long *address, long val) {
   AtomicAddIntegerImpl<long, sizeof(long)>()(address, val);
 }
 
-static inline __device__ void atomicAdd_t(float *address, float val) {
-  AtomicAddIntegerImpl<float, sizeof(float)>()(address, val);
-}
-
-
-static inline __device__ void atomicAdd_t(int *address, int val) {
-  AtomicAddIntegerImpl<int, sizeof(int)>()(address, val);
-}
-
-#ifdef __HCC__
-static inline __device__ void atomicAdd_t(double *address, double val) {
-  AtomicAddIntegerImpl<double, sizeof(double)>()(address, val);
-}
-#endif
-
 #ifdef CUDA_HALF_TENSOR
-static inline  __device__ void atomicAdd_t(half *address, half val) {
+static inline  __device__ void atomicAdd(half *address, half val) {
   unsigned int * address_as_ui =
       (unsigned int *) ((char *)address - ((size_t)address & 2));
   unsigned int old = *address_as_ui;
@@ -127,7 +112,7 @@ static inline  __device__ void atomicAdd_t(half *address, half val) {
 
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ < 600
 // from CUDA C Programmic Guide
-static inline  __device__  void atomicAdd_t(double *address, double val) {
+static inline  __device__  void atomicAdd(double *address, double val) {
   unsigned long long int* address_as_ull = (unsigned long long int*)address;
   unsigned long long int old = *address_as_ull;
   unsigned long long int assumed;
