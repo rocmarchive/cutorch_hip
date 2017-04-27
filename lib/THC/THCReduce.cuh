@@ -30,15 +30,17 @@ template <typename ModifyOp,
 #if __CUDA_ARCH__ >= 350
 __launch_bounds__(32 * 16, 4)
 #endif
-__global__ void
-kernelReduceNoncontigDim(TensorInfo<T, IndexType> out,
-                         TensorInfo<T, IndexType> in,
-                         IndexType reductionStride,
-                         IndexType reductionSize,
-                         IndexType totalSlices,
-                         T init,
-                         ModifyOp modifyOp,
-                         ReduceOp reduceOp) {
+__global__
+void kernelReduceNoncontigDim(
+    reference_to_const(TensorInfo<T, IndexType>) out,
+    reference_to_const(TensorInfo<T, IndexType>) in,
+    IndexType reductionStride,
+    IndexType reductionSize,
+    IndexType totalSlices,
+    T init,
+    ModifyOp modifyOp,
+    ReduceOp reduceOp)
+{
   const IndexType sliceIndex = getReduceNoncontigDimSliceIndex<IndexType>();
 
   if (sliceIndex >= totalSlices) {
@@ -78,14 +80,16 @@ template <typename ModifyOp,
           typename T,
           typename IndexType,
           int ADims, int BDims>
-__global__ void
-kernelReduceContigDim(TensorInfo<T, IndexType> out,
-                      TensorInfo<T, IndexType> in,
-                      IndexType reductionSize,
-                      IndexType totalSlices,
-                      T init,
-                      ModifyOp modifyOp,
-                      ReduceOp reduceOp) {
+__global__
+void kernelReduceContigDim(
+    reference_to_const(TensorInfo<T, IndexType>) out,
+    reference_to_const(TensorInfo<T, IndexType>) in,
+    IndexType reductionSize,
+    IndexType totalSlices,
+    T init,
+    ModifyOp modifyOp,
+    ReduceOp reduceOp)
+{
   const IndexType sliceIndex = getReduceContigDimSliceIndex<IndexType>();
 
   if (sliceIndex >= totalSlices) {

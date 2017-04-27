@@ -122,11 +122,11 @@ template <typename K,
 __global__
 inline
 void
-bitonicSortKVInPlace(TensorInfo<K, IndexType> keys,
+bitonicSortKVInPlace(reference_to_const(TensorInfo<K, IndexType>) keys,
                      IndexType keySlices,
                      IndexType keySliceSize,
                      IndexType keySliceStride,
-                     TensorInfo<V, IndexType> values,
+                     reference_to_const(TensorInfo<V, IndexType>) values,
                      IndexType valueSliceStride,
                      Comparator comp)
 {

@@ -26,14 +26,16 @@ template <typename ModifyOp,
           typename AccT,
           typename IndexType,
           int ADims>
-__global__ void
-kernelReduceAll(TensorInfo<InT, IndexType> in,
-                IndexType totalElements,
-                AccT init,
-                ModifyOp modifyOp,
-                ReduceOp reduceOp,
-                ReduceAccOp reduceAccOp,
-                AccT* out) {
+__global__
+void kernelReduceAll(
+    reference_to_const(TensorInfo<InT, IndexType>) in,
+    IndexType totalElements,
+    AccT init,
+    ModifyOp modifyOp,
+    ReduceOp reduceOp,
+    ReduceAccOp reduceAccOp,
+    AccT* out)
+{
   // With a block-wide stride, have each thread perform its own reduction.
   AccT r = init;
   for (IndexType i = hipThreadIdx_x; i < totalElements; i += hipBlockDim_x) {
@@ -72,14 +74,16 @@ template <typename ModifyOp,
           typename AccT,
           typename IndexType,
           int ADims>
-__global__ void
-kernelReduceAllPass1(TensorInfo<InT, IndexType> in,
-                     IndexType totalElements,
-                     AccT init,
-                     ModifyOp modifyOp,
-                     ReduceOp reduceOp,
-                     ReduceAccOp reduceAccOp,
-                     AccT* scratchSpace) {
+__global__
+void kernelReduceAllPass1(
+    reference_to_const(TensorInfo<InT, IndexType>) in,
+    IndexType totalElements,
+    AccT init,
+    ModifyOp modifyOp,
+    ReduceOp reduceOp,
+    ReduceAccOp reduceAccOp,
+    AccT* scratchSpace)
+{
   const IndexType startIndex = getStartIndex<IndexType>(totalElements);
   const IndexType endIndex = getEndIndex<IndexType>(totalElements);
 

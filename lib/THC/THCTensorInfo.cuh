@@ -289,12 +289,18 @@ struct IndexToOffset<T, IndexType, -1> {
 
   template<typename T>
     class Magic_wrapper {
-        hc::array_view<const T> d_;
+        // TODO: this is temporary, and it has the unpleasant property of
+        //       leaking memory.
+        T* p_ = nullptr;
     public:
+        Magic_wrapper() = default;
         explicit
-        Magic_wrapper(const T& x) : d_(1, &x) {}
+        Magic_wrapper(const T& x)
+        {
+            hipHostMalloc(&p_, sizeof(T)); new (p_) T{x};
+        }
 
-        operator const T&() const [[hc]] { return d_[0]; }
+        operator const T&() const [[hc]] { return p_[0]; }
     };
 
   template<typename T>
@@ -302,8 +308,10 @@ struct IndexToOffset<T, IndexType, -1> {
   {
     return Magic_wrapper<T>{x};
   }
+  #define reference_to_const(...) __VA_ARGS__ const&
 #else
   #define make_magic_wrapper(x) x
+  #define reference_to_const(...) __VA_ARGS__
 #endif
 
 #endif // THC_TENSOR_INFO_INC
