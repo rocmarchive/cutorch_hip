@@ -58,17 +58,21 @@ typedef struct HOSTRandStateMtgp32 {
   uint32_t mask[1];             // size: 1
 } HOSTRandStateMtgp32;
 
-void HipRandStateMtgp32_init(hc::accelerator_view accl_view,
-                             HipRandStateMtgp32* s);
+void HipRandStateMtgp32_init(
+    hc::accelerator_view accl_view, HipRandStateMtgp32* s);
 void HipRandStateMtgp32_release(HipRandStateMtgp32* s);
 void HipRandStateMtgp32_copy_D2H(void* src, void* dst);
 void HipRandStateMtgp32_copy_H2D(void* src, void* dst);
 
 // Device APIs
-int mtgp32_init_params_kernel(hc::accelerator_view accl_view,
-                              mtgp32_params_fast_t * params, HipRandStateMtgp32*& s);
-int mtgp32_init_seed_kernel(hc::accelerator_view accl_view,
-                            HipRandStateMtgp32* s, unsigned long seed);
+int mtgp32_init_params_kernel(
+    hc::accelerator_view accl_view,
+    const mtgp32_params_fast_t* params,
+    HipRandStateMtgp32*& s);
+int mtgp32_init_seed_kernel(
+    hc::accelerator_view accl_view,
+    const HipRandStateMtgp32* s,
+    unsigned long seed);
 /**
  * The function of the recursion formula calculation.
  *
@@ -77,8 +81,17 @@ int mtgp32_init_seed_kernel(hc::accelerator_view accl_view,
  * @param[in] Y a part of state array.
  * @return output
  */
-static inline uint32_t para_rec(uint32_t* param_tbl, uint32_t sh1, uint32_t sh2,
-                            uint32_t X1, uint32_t X2, uint32_t Y, uint32_t mask) __attribute__((hc, cpu)) {
+static
+inline
+uint32_t para_rec(
+    uint32_t* param_tbl,
+    uint32_t sh1,
+    uint32_t sh2,
+    uint32_t X1,
+    uint32_t X2,
+    uint32_t Y,
+    uint32_t mask) [[cpu]][[hc]]
+{
   uint32_t X = (X1 & mask) ^ X2;
   uint32_t MAT;
 
@@ -96,7 +109,10 @@ static inline uint32_t para_rec(uint32_t* param_tbl, uint32_t sh1, uint32_t sh2,
  * @param[in] T the tempering helper value.
  * @return the tempered value.
  */
-static inline uint32_t temper(uint32_t* temper_tbl, uint32_t V, uint32_t T) __attribute__((hc, cpu)) {
+static
+inline
+uint32_t temper(uint32_t* temper_tbl, uint32_t V, uint32_t T) [[cpu]][[hc]]
+{
   uint32_t MAT;
 
   T ^= T >> 16;
@@ -115,7 +131,11 @@ static inline uint32_t temper(uint32_t* temper_tbl, uint32_t V, uint32_t T) __at
  * @return the tempered and converted value.
  */
 #if 0
-static inline uint32_t temper_single(uint32_t* single_temper_tbl, uint32_t V, uint32_t T) __attribute__((hc, cpu)) {
+static
+inline
+uint32_t temper_single(
+  uint32_t* single_temper_tbl, uint32_t V, uint32_t T) [[cpu]][[hc]]
+{
   uint32_t MAT;
   uint32_t r;
 
@@ -127,16 +147,20 @@ static inline uint32_t temper_single(uint32_t* single_temper_tbl, uint32_t V, ui
 }
 #endif
 // in one workgroup
-static inline unsigned int hiprand(const uint32_t* av_param_tbl,
-                            const uint32_t* av_temper_tbl,
-                            const uint32_t* av_sh1_tbl,
-                            const uint32_t* av_sh2_tbl,
-                            uint32_t* av_offset,
-                            const uint32_t* av_index,
-                            const uint32_t* av_pos_tbl,
-                            const uint32_t* av_mask,
-                            const uint32_t* av_d_status,
-                            hc::tiled_index<1> tidx) __attribute__((hc, cpu)) {
+static
+inline
+unsigned int hiprand(
+    const uint32_t* av_param_tbl,
+    const uint32_t* av_temper_tbl,
+    const uint32_t* av_sh1_tbl,
+    const uint32_t* av_sh2_tbl,
+    uint32_t* av_offset,
+    const uint32_t* av_index,
+    const uint32_t* av_pos_tbl,
+    const uint32_t* av_mask,
+    const uint32_t* av_d_status,
+    const hc::tiled_index<1>& tidx) [[hc]]
+{
   int groupId = tidx.tile[0];
   unsigned int t = tidx.local[0];
   unsigned int d = BLOCK_SIZE * 1 * 1;
@@ -168,41 +192,58 @@ static inline unsigned int hiprand(const uint32_t* av_param_tbl,
 #define HcRAND_2POW32_INV (2.3283064e-10f)
 #define HcRAND_SQRT2 (-1.4142135f)
 #define HcRAND_SQRT2_DOUBLE (-1.4142135623730951)
-static inline float _hiprand_uniform(unsigned int x) __attribute__((hc, cpu)) {
+static
+inline
+float _hiprand_uniform(unsigned int x) [[cpu]][[hc]]
+{
   return x * HcRAND_2POW32_INV + (HcRAND_2POW32_INV/2.0f);
 }
 
-inline float hiprand_uniform(const uint32_t* av_param_tbl,
-                      const uint32_t* av_temper_tbl,
-                      const uint32_t* av_sh1_tbl,
-                      const uint32_t* av_sh2_tbl,
-                      const uint32_t* av_offset,
-                      const uint32_t* av_index,
-                      const uint32_t* av_pos_tbl,
-                      const uint32_t* av_mask,
-                      const uint32_t* av_d_status,
-                      hc::tiled_index<1> tidx) __attribute__((hc, cpu)) {
-  unsigned int x = hiprand(av_param_tbl, av_temper_tbl, av_sh1_tbl, av_sh2_tbl, const_cast<uint32_t*>(av_offset),
-                    av_index, av_pos_tbl, av_mask, av_d_status, tidx);
+inline
+float hiprand_uniform(
+    const uint32_t* av_param_tbl,
+    const uint32_t* av_temper_tbl,
+    const uint32_t* av_sh1_tbl,
+    const uint32_t* av_sh2_tbl,
+    const uint32_t* av_offset,
+    const uint32_t* av_index,
+    const uint32_t* av_pos_tbl,
+    const uint32_t* av_mask,
+    const uint32_t* av_d_status,
+    const hc::tiled_index<1>& tidx) [[hc]]
+{
+  unsigned int x = hiprand(
+      av_param_tbl,
+      av_temper_tbl,
+      av_sh1_tbl,
+      av_sh2_tbl,
+      const_cast<uint32_t*>(av_offset),
+      av_index,
+      av_pos_tbl,
+      av_mask,
+      av_d_status,
+      tidx);
   return _hiprand_uniform(x);
 }
 // http://hg.savannah.gnu.org/hgweb/octave/rev/cb85e836d035
-static inline double do_erfcinv( float x, bool refine) __attribute__((hc, cpu))
+static
+inline
+double do_erfcinv(float x, bool refine) [[cpu]][[hc]]
 {
   // Coefficients of rational approximation.
-  static const double a[] =
+  const double a[] =
     { -2.806989788730439e+01,  1.562324844726888e+02,
       -1.951109208597547e+02,  9.783370457507161e+01,
       -2.168328665628878e+01,  1.772453852905383e+00 };
-  static const double b[] =
+  const double b[] =
     { -5.447609879822406e+01,  1.615858368580409e+02,
       -1.556989798598866e+02,  6.680131188771972e+01,
       -1.328068155288572e+01 };
-  static const double c[] =
+  const double c[] =
     { -5.504751339936943e-03, -2.279687217114118e-01,
       -1.697592457770869e+00, -1.802933168781950e+00,
        3.093354679843505e+00,  2.077595676404383e+00 };
-  static const double d[] =
+  const double d[] =
     {  7.784695709041462e-03,  3.224671290700398e-01,
        2.445134137142996e+00,  3.754408661907416e+00 };
 
@@ -215,13 +256,16 @@ static inline double do_erfcinv( float x, bool refine) __attribute__((hc, cpu))
   if (x <= 1+pbreak && x >= 1-pbreak) {
     // Middle region.
     const double q = 0.5*(1-x), r = q*q;
-    const double yn = (((((a[0]*r + a[1])*r + a[2])*r + a[3])*r + a[4])*r + a[5])*q;
-    const double yd = ((((b[0]*r + b[1])*r + b[2])*r + b[3])*r + b[4])*r + 1.0;
+    const double yn =
+        (((((a[0]*r + a[1])*r + a[2])*r + a[3])*r + a[4])*r + a[5])*q;
+    const double yd =
+        ((((b[0]*r + b[1])*r + b[2])*r + b[3])*r + b[4])*r + 1.0;
     y = yn / yd;
   } else if (x < 2.0 && x > 0.0) {
     // Tail region.
-    const double q = x < 1 ? hc::precise_math::sqrt(-2*hc::precise_math::log ((double)0.5*x)) 
-                     : hc::precise_math::sqrt(-2*hc::precise_math::log ((double)0.5*(2-x)));
+    const double q =
+        x < 1 ? hc::precise_math::sqrt(-2*hc::precise_math::log((double)0.5*x))
+              : hc::precise_math::sqrt(-2*hc::precise_math::log((double)0.5*(2-x)));
     const double yn = ((((c[0]*q + c[1])*q + c[2])*q + c[3])*q + c[4])*q + c[5];
     const double yd = (((d[0]*q + d[1])*q + d[2])*q + d[3])*q + 1.0;
     y = yn / yd;
@@ -245,11 +289,17 @@ static inline double do_erfcinv( float x, bool refine) __attribute__((hc, cpu))
 }
 
 
-static inline float my_erfcinvf(float x) [[hc, cpu]]{
+static
+inline
+float my_erfcinvf(float x) [[cpu]][[hc]]
+{
   return do_erfcinv (x, false);
 }
 
-static inline float _hiprand_normal_icdf(unsigned int x) [[hc, cpu]]{
+static
+inline
+float _hiprand_normal_icdf(unsigned int x) [[cpu]][[hc]]
+{
   float s = HcRAND_SQRT2;
   // Mirror to avoid loss of precision
   if (x > 0x80000000UL) {
@@ -261,42 +311,74 @@ static inline float _hiprand_normal_icdf(unsigned int x) [[hc, cpu]]{
   return s * my_erfcinvf(2.0f * p);
 }
 
-static inline float hiprand_normal(const uint32_t* av_param_tbl,
-                     const uint32_t* av_temper_tbl,
-                     const uint32_t* av_sh1_tbl,
-                     const uint32_t* av_sh2_tbl,
-                     const uint32_t* av_offset,
-                     const uint32_t* av_index,
-                     const uint32_t* av_pos_tbl,
-                     const uint32_t* av_mask,
-                     const uint32_t* av_d_status,
-                     hc::tiled_index<1> tidx) __attribute__((hc, cpu)) {
-  unsigned int x = hiprand(av_param_tbl, av_temper_tbl, av_sh1_tbl, av_sh2_tbl, const_cast<uint32_t*>(av_offset),
-                   av_index, av_pos_tbl, av_mask, av_d_status, tidx);
+static
+inline
+float hiprand_normal(
+    const uint32_t* av_param_tbl,
+    const uint32_t* av_temper_tbl,
+    const uint32_t* av_sh1_tbl,
+    const uint32_t* av_sh2_tbl,
+    const uint32_t* av_offset,
+    const uint32_t* av_index,
+    const uint32_t* av_pos_tbl,
+    const uint32_t* av_mask,
+    const uint32_t* av_d_status,
+    const hc::tiled_index<1>& tidx) [[hc]]
+{
+  unsigned int x = hiprand(
+      av_param_tbl,
+      av_temper_tbl,
+      av_sh1_tbl,
+      av_sh2_tbl,
+      const_cast<uint32_t*>(av_offset),
+      av_index,
+      av_pos_tbl,
+      av_mask,
+      av_d_status,
+      tidx);
   return _hiprand_normal_icdf(x);
 }
 
-static inline double hiprand_log_normal(const uint32_t* av_param_tbl,
-                         const uint32_t* av_temper_tbl,
-                         const uint32_t* av_sh1_tbl,
-                         const uint32_t* av_sh2_tbl,
-                         const uint32_t* av_offset,
-                         const uint32_t* av_index,
-                         const uint32_t* av_pos_tbl,
-                         const uint32_t* av_mask,
-                         const uint32_t* av_d_status,
-                         hc::tiled_index<1> tidx,
-                         double mean, double stddev) __attribute__((hc, cpu)) {
-  unsigned int x = hiprand(av_param_tbl, av_temper_tbl, av_sh1_tbl, av_sh2_tbl, const_cast<uint32_t*>(av_offset),
-                   av_index, av_pos_tbl, av_mask, av_d_status, tidx);
+static
+inline
+double hiprand_log_normal(
+    const uint32_t* av_param_tbl,
+    const uint32_t* av_temper_tbl,
+    const uint32_t* av_sh1_tbl,
+    const uint32_t* av_sh2_tbl,
+    const uint32_t* av_offset,
+    const uint32_t* av_index,
+    const uint32_t* av_pos_tbl,
+    const uint32_t* av_mask,
+    const uint32_t* av_d_status,
+    const hc::tiled_index<1>& tidx,
+    double mean,
+    double stddev) [[hc]]
+{
+  unsigned int x = hiprand(
+      av_param_tbl,
+      av_temper_tbl,
+      av_sh1_tbl,
+      av_sh2_tbl,
+      const_cast<uint32_t*>(av_offset),
+      av_index,
+      av_pos_tbl,
+      av_mask,
+      av_d_status,
+      tidx);
   return hc::precise_math::exp(mean + ((double)stddev * _hiprand_normal_icdf(x)));
 }
 
 // User defined wrappers
-static inline void user_log_normal_kernel(hc::accelerator_view accl_view,
-                         HipRandStateMtgp32 *s,
-                         float* &av_result,
-                         double mean, double stddev) {
+static
+inline
+void user_log_normal_kernel(
+    hc::accelerator_view accl_view,
+    HipRandStateMtgp32 *s,
+    float* &av_result,
+    double mean,
+    double stddev)
+{
   hc::accelerator accl = accl_view.get_accelerator();
   hc::AmPointerInfo resInfo(0, 0, 0, accl, 0, 0);
   hc::am_memtracker_getinfo(&resInfo, av_result);
@@ -315,14 +397,26 @@ static inline void user_log_normal_kernel(hc::accelerator_view accl_view,
   const uint32_t* av_mask = (s->mask);
   const uint32_t* av_d_status = (s->d_status);
 
-  hc::parallel_for_each(accl_view, t_ext, [=] (hc::tiled_index<1> tidx) __attribute__((hc, cpu)) {
+  hc::parallel_for_each(
+      accl_view, t_ext, [=] (const hc::tiled_index<1>& tidx) [[hc]] {
     int threadId = tidx.global[0];
     int groupId = tidx.tile[0];
     if (groupId >= USER_GROUP_NUM)
       return;
     for (int i = threadId; i < rounded_size; i += BLOCK_SIZE * MAX_NUM_BLOCKS) {
-      double x = hiprand_log_normal(av_param_tbl, av_temper_tbl, av_sh1_tbl, av_sh2_tbl, av_offset,
-                 av_index, av_pos_tbl, av_mask, av_d_status, tidx, mean, stddev);
+      double x = hiprand_log_normal(
+          av_param_tbl,
+          av_temper_tbl,
+          av_sh1_tbl,
+          av_sh2_tbl,
+          av_offset,
+          av_index,
+          av_pos_tbl,
+          av_mask,
+          av_d_status,
+          tidx,
+          mean,
+          stddev);
       if (i < size) {
         av_result[i] = x;
       }
@@ -332,10 +426,13 @@ static inline void user_log_normal_kernel(hc::accelerator_view accl_view,
 
 // User defined wrappers
 template <typename UnaryFunction>
-inline void user_uniform_kernel(hc::accelerator_view accl_view,
-                         HipRandStateMtgp32 *s,
-                         float* &av_result,
-                         UnaryFunction f) {
+inline
+void user_uniform_kernel(
+    hc::accelerator_view accl_view,
+    HipRandStateMtgp32 *s,
+    float* &av_result,
+    UnaryFunction f)
+{
   hc::accelerator accl = accl_view.get_accelerator();
   hc::AmPointerInfo resInfo(0, 0, 0, accl, 0, 0);
   hc::am_memtracker_getinfo(&resInfo, av_result);
@@ -353,14 +450,24 @@ inline void user_uniform_kernel(hc::accelerator_view accl_view,
   const uint32_t* av_pos_tbl = (s->pos_tbl);
   const uint32_t* av_mask = (s->mask);
   const uint32_t* av_d_status = (s->d_status);
-  hc::parallel_for_each(accl_view, t_ext, [=] (hc::tiled_index<1> tidx) __attribute__((hc, cpu)) {
+  hc::parallel_for_each(
+      accl_view, t_ext, [=] (const hc::tiled_index<1>& tidx) [[hc]] {
     int threadId = tidx.global[0];
     int groupId = tidx.tile[0];
     if (groupId >= USER_GROUP_NUM)
       return;
     for (int i = threadId; i < rounded_size; i += BLOCK_SIZE * MAX_NUM_BLOCKS) {
-      float x = hiprand_uniform(av_param_tbl, av_temper_tbl, av_sh1_tbl, av_sh2_tbl, av_offset,
-                av_index, av_pos_tbl, av_mask, av_d_status, tidx);
+      float x = hiprand_uniform(
+          av_param_tbl,
+          av_temper_tbl,
+          av_sh1_tbl,
+          av_sh2_tbl,
+          av_offset,
+          av_index,
+          av_pos_tbl,
+          av_mask,
+          av_d_status,
+          tidx);
       if (i < size) {
         double y = f(x);
         av_result[i] = y;
@@ -370,10 +477,12 @@ inline void user_uniform_kernel(hc::accelerator_view accl_view,
 }
 
 template <typename UnaryFunction>
-void user_normal_kernel(hc::accelerator_view accl_view, 
-                        HipRandStateMtgp32 *s,
-                        float* &av_result,
-                        UnaryFunction f) {
+void user_normal_kernel(
+    hc::accelerator_view accl_view,
+    HipRandStateMtgp32 *s,
+    float* &av_result,
+    UnaryFunction f)
+{
   hc::accelerator accl = accl_view.get_accelerator();
   hc::AmPointerInfo resInfo(0, 0, 0, accl, 0, 0);
   hc::am_memtracker_getinfo(&resInfo, av_result);
@@ -391,14 +500,24 @@ void user_normal_kernel(hc::accelerator_view accl_view,
   const uint32_t* av_pos_tbl = (s->pos_tbl);
   const uint32_t* av_mask = (s->mask);
   const uint32_t* av_d_status = (s->d_status);
-  hc::parallel_for_each(accl_view, t_ext, [=] (hc::tiled_index<1> tidx) __attribute__((hc, cpu)) {
+  hc::parallel_for_each(
+      accl_view, t_ext, [=] (const hc::tiled_index<1>& tidx) [[hc]] {
     int threadId = tidx.global[0];
     int groupId = tidx.tile[0];
     if (groupId >= USER_GROUP_NUM)
       return;
     for (int i = threadId; i < rounded_size; i += BLOCK_SIZE * MAX_NUM_BLOCKS) {
-      float x = hiprand_normal(av_param_tbl, av_temper_tbl, av_sh1_tbl, av_sh2_tbl, av_offset,
-              av_index, av_pos_tbl, av_mask, av_d_status, tidx);
+      float x = hiprand_normal(
+          av_param_tbl,
+          av_temper_tbl,
+          av_sh1_tbl,
+          av_sh2_tbl,
+          av_offset,
+          av_index,
+          av_pos_tbl,
+          av_mask,
+          av_d_status,
+          tidx);
       if (i < size) {
         double y = f(x);
         av_result[i] = y;
