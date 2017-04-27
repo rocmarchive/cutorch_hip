@@ -10,8 +10,7 @@ extern "C"
 };
 
 int main(int argc, char* argv[]) {
-  lua_State* L;
-  L = lua_open();
+  lua_State* L = luaL_newstate();
   luaopen_base(L);
   luaopen_table(L);
   luaL_openlibs(L);
@@ -23,22 +22,22 @@ int main(int argc, char* argv[]) {
   // FIXME: when build dir changed, need manually specify this path
   const char* Script = luafile.c_str();
   int ret = luaL_loadfile(L, Script);
-  
+
   if (ret) {
     std::cout << "Failed to load scipt: " << Script << "\n" << lua_tostring(L, -1) << std::endl;
     lua_close(L);
     return 1;
   }
-  
+
   // launch the script
   ret = lua_pcall( L, 0, 0, 0);
-  
+
   if( ret ) {
     std::cout << "Failed to runscipt: " << Script << "\n" << lua_tostring(L, -1) << std::endl;
     lua_close(L);
     return 1;
   }
-  
+
   lua_close(L);
   return 0;
 }
