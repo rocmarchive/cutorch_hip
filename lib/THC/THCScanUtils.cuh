@@ -40,7 +40,9 @@ __device__ void inclusivePrefixSum(T* smem, T in, T* out) {
 
 // Exclusive prefix sum using shared memory
 template <typename T, bool KillWARDependency>
-__device__ void exclusivePrefixSum(T* smem, T in, T* out, T* carry) {
+__device__
+void exclusivePrefixSum(T* smem, T in, T* out, T* carry)
+{
   // FIXME: crappy implementation
   // We kill write-after-read dependencies separately below, hence the `false`
   inclusivePrefixSum<T, false>(smem, in, out);
@@ -60,19 +62,20 @@ template <typename T, bool KillWARDependency>
 __device__ void inclusiveBinaryPrefixSum(T* smem, bool in, T* out) {
   // Within-warp, we use warp voting.
   T vote = __ballot(in);
-#ifdef CUDA_PATH
-  T index = __popc(getLaneMaskLe() & vote);
-#endif
-  T carry = __popc(vote);
+  #if defined(__HIP_PLATFORM_HCC__)
+    T index = __popcll(getLaneMaskLe() & vote);
+    T carry = __popcll(vote);
+  #else
+    T index = __popc(getLaneMaskLe() & vote);
+    T carry = __popc(vote);
+  #endif
 
   int warp = hipThreadIdx_x / 32;
 
-#ifdef CUDA_PATH
   // Per each warp, write out a value
   if (getLaneId() == 0) {
     smem[warp] = carry;
   }
-#endif
 
   __syncthreads();
 
@@ -104,7 +107,9 @@ __device__ void inclusiveBinaryPrefixSum(T* smem, bool in, T* out) {
 // Exclusive prefix sum for binary vars using intra-warp voting +
 // shared memory
 template <typename T, bool KillWARDependency>
-__device__ void exclusiveBinaryPrefixSum(T* smem, bool in, T* out, T* carry) {
+__device__
+void exclusiveBinaryPrefixSum(T* smem, bool in, T* out, T* carry)
+{
   inclusiveBinaryPrefixSum<T, false>(smem, in, out);
 
   // Inclusive to exclusive
