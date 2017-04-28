@@ -274,8 +274,10 @@ namespace detail
 			unsigned int tile_index = i*tile_limit;
 				try
 				{
-				  concurrency::parallel_for_each( av, tileK0,
-				  [=](const concurrency::tiled_index<localRange>& t_idx) restrict(amp)
+				  concurrency::parallel_for_each(
+                      av,
+                      tileK0,
+				      [=](const concurrency::tiled_index<localRange>& t_idx) restrict(amp)
 				  {
 					   int gloId = t_idx.global[ 0 ] + index;
 					   int groId = t_idx.tile[ 0 ] + tile_index;
@@ -406,19 +408,11 @@ namespace detail
 
              try
              {
-                concurrency::parallel_for_each( av, globalSizeK1,
-                [
-                  values_first,
-				  keys_first,
-                  &tmpKeyBuffer,
-				  &tmpValueBuffer,
-                  vecSize,
-                  comp,
-                  localRange,
-                  srcLogicalBlockSize,
-			      pass
-                ] ( concurrency::index< 1 > idx ) restrict(amp)
-             {
+                concurrency::parallel_for_each(
+                    av,
+                    globalSizeK1,
+                    [=, &tmpKeyBuffer, &tmpValueBuffer](
+                        concurrency::index<1> idx) restrict(amp) {
                   int gloID = idx[ 0 ];
 
                   //  Abort threads that are passed the end of the input vector
@@ -502,9 +496,9 @@ namespace detail
          //  the results back into the input array
 		if( numMerges & 1 )
 	    {
-		   concurrency::extent< 1 > modified_ext( vecSize );
-		   tmpValueBuffer.section( modified_ext ).copy_to( values_first.getContainer().getBuffer(values_first, vecSize) );
-		   tmpKeyBuffer.section( modified_ext ).copy_to( keys_first.getContainer().getBuffer(keys_first, vecSize) );
+		   concurrency::extent<1> modified_ext(vecSize);
+		   tmpValueBuffer.section(modified_ext).copy_to(values_first.getContainer().getBuffer(values_first, vecSize) );
+		   tmpKeyBuffer.section(modified_ext).copy_to(keys_first.getContainer().getBuffer(keys_first, vecSize) );
 		}
 
         return;

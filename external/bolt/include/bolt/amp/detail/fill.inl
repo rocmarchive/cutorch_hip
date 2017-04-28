@@ -98,8 +98,10 @@ namespace detail {
             template<typename ForwardIterator, typename T>
             static
             inline
-			typename std::enable_if<
-                   !(std::is_base_of<typename device_vector<typename std::iterator_traits<ForwardIterator>::value_type>::iterator,ForwardIterator>::value),void >::type
+            typename std::enable_if<
+                !std::is_same<
+                    typename std::iterator_traits<ForwardIterator>::iterator_category,
+                    bolt::amp::device_vector_tag>::value>::type
             fill_pick_iterator(bolt::amp::control &ctl,  const ForwardIterator &first,
                 const ForwardIterator &last, const T & value)
             {
@@ -138,14 +140,19 @@ namespace detail {
             }
 
             // This template is called by the non-detail versions of fill, it already assumes random access iterators
-            // This is called strictly for iterators that are derived from device_vector< T >::iterator
+            // This is called strictly for iterators that are derived from device_vector<T>::iterator
             template<typename DVForwardIterator, typename T>
             static
             inline
-			typename std::enable_if<
-                   (std::is_base_of<typename device_vector<typename std::iterator_traits< DVForwardIterator>::value_type>::iterator, DVForwardIterator>::value),void >::type
-            fill_pick_iterator( bolt::amp::control &ctl,  const DVForwardIterator &first,
-                const DVForwardIterator &last,  const T & value)
+            typename std::enable_if<
+                std::is_same<
+                    typename std::iterator_traits<DVForwardIterator>::iterator_category,
+                    bolt::amp::device_vector_tag>::value>::type
+            fill_pick_iterator(
+                bolt::amp::control &ctl,
+                const DVForwardIterator &first,
+                const DVForwardIterator &last,
+                const T & value)
             {
 				int sz = static_cast< int >(std::distance( first, last ));
                 if( sz == 0 )
@@ -160,7 +167,7 @@ namespace detail {
 
                 if( runMode == bolt::amp::control::SerialCpu)
                 {
-					typename bolt::amp::device_vector< iType >::pointer fillInputBuffer =  first.getContainer( ).data( );
+					auto fillInputBuffer = first.getContainer().data();
                     std::fill(&fillInputBuffer[first.m_Index], &fillInputBuffer[last.m_Index], (iType) value );
                 }
                 else if(runMode == bolt::amp::control::MultiCoreCpu)
@@ -175,7 +182,6 @@ namespace detail {
                 else
                 {
                     fill_enqueue( ctl, first, last, value);
-
                 }
             }
 
@@ -207,28 +213,30 @@ namespace detail {
         }
 
         // default control, start->stop
-        template< typename ForwardIterator, typename T, typename std::enable_if<sizeof(T) % sizeof(int) == 0>::type* = nullptr>
+        template< typename ForwardIterator, typename T>
         static
         inline
-        void fill( ForwardIterator first,
-            ForwardIterator last,
-            const T & value)
+        void fill(ForwardIterator first, ForwardIterator last, const T& value)
         {
-            detail::fill_detect_random_access( bolt::amp::control::getDefault(), first, last, value
-                ,typename std::iterator_traits< ForwardIterator >::iterator_category( ) );
+            detail::fill_detect_random_access(
+                bolt::amp::control::getDefault(),
+                first,
+                last,
+                value,
+                typename std::iterator_traits<ForwardIterator>::iterator_category());
         }
 
-        template< typename ForwardIterator, typename T, typename std::enable_if<sizeof(T) % sizeof(int) != 0>::type* = nullptr>
-        static
-        inline
-        void fill( ForwardIterator first,
-                ForwardIterator last,
-                const T & value)
-        {   // TODO: temporary workaround until sub-word sizes are supported.
-//            detail::fill_detect_random_access( bolt::amp::control::getDefault(), first, last, value
-//                    ,typename std::iterator_traits< ForwardIterator >::iterator_category( ) );
-            std::fill(first, last, value);
-        }
+//        template< typename ForwardIterator, typename T, typename std::enable_if<sizeof(T) % sizeof(int) != 0>::type* = nullptr>
+//        static
+//        inline
+//        void fill( ForwardIterator first,
+//                ForwardIterator last,
+//                const T & value)
+//        {   // TODO: temporary workaround until sub-word sizes are supported.
+////            detail::fill_detect_random_access( bolt::amp::control::getDefault(), first, last, value
+////                    ,typename std::iterator_traits< ForwardIterator >::iterator_category( ) );
+//            std::fill(first, last, value);
+//        }
 
         // user specified control, start->stop
         template< typename ForwardIterator, typename T >

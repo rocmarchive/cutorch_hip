@@ -820,18 +820,10 @@ void sort_by_key_enqueue_int_uint( control &ctl,
 	if(int_flag)
 	{
 		cdata.m_startBit = bits;
-		concurrency::parallel_for_each( av, tileK0,
-				[
-					keys_first,
-					values_first,
-					dvSwapInputKeys,
-					dvSwapInputValues,
-					dvHistogramBins,
-					cdata,
-					swap,
-					Asc_sort,
-					tileK0
-				] ( concurrency::tiled_index< localSize > t_idx ) restrict(amp)
+		concurrency::parallel_for_each(
+			av,
+			tileK0,
+			[=](const concurrency::tiled_index<localSize>& t_idx) restrict(amp)
 		  {
 
 			tile_static unsigned int ldsSortData[WG_SIZE*ELEMENTS_PER_WORK_ITEM+WG_SIZE];

@@ -50,20 +50,20 @@ namespace amp{
         return itr;
     }
 
-	template <typename Iterator>
-    static
-    inline
-    typename bolt::amp::device_vector<typename Iterator::value_type>::iterator
-    create_mapped_iterator(std::random_access_iterator_tag, Iterator first1, int sz, bool var, ::bolt::amp::control &ctl)
-    {
-        typedef typename std::iterator_traits<Iterator>::value_type  iType;
-        typedef typename std::iterator_traits<Iterator>::pointer pointer1;
-
-        pointer1 first_pointer1 = std::addressof(*first1);
-
-        device_vector< iType, concurrency::array_view > dvInput1( first_pointer1, sz, var, ctl );
-        return dvInput1.begin();
-    }
+//	template<typename Iterator>
+//    static
+//    inline
+//    typename bolt::amp::device_vector<typename Iterator::value_type>::iterator
+//    create_mapped_iterator(std::random_access_iterator_tag, Iterator first1, int sz, bool var, ::bolt::amp::control &ctl)
+//    {
+//        typedef typename std::iterator_traits<Iterator>::value_type  iType;
+//        typedef typename std::iterator_traits<Iterator>::pointer pointer1;
+//
+//        pointer1 first_pointer1 = std::addressof(*first1);
+//
+//        device_vector< iType, concurrency::array_view > dvInput1( first_pointer1, sz, var, ctl );
+//        return dvInput1.begin();
+//    }
 
 
     template <typename T>
@@ -95,7 +95,6 @@ namespace amp{
     }
 
 
-
     template <typename Iterator>
     static
     inline
@@ -118,8 +117,8 @@ namespace amp{
 	template <typename T>
     static
     inline
-    T *
-    create_mapped_iterator(std::random_access_iterator_tag, bolt::amp::control &ctl, T* first1)
+    T* create_mapped_iterator(
+        std::random_access_iterator_tag, bolt::amp::control &ctl, T* first1)
     {
         return first1;
     }
@@ -138,11 +137,10 @@ namespace amp{
     template <typename Iterator>
     static
     inline
-    typename std::iterator_traits<Iterator>::value_type *
-    create_mapped_iterator(bolt::amp::device_vector_tag, bolt::amp::control &ctl, Iterator &itr)
+    typename std::iterator_traits<Iterator>::value_type* create_mapped_iterator(
+        bolt::amp::device_vector_tag, bolt::amp::control& ctl, Iterator& itr)
     {
-        typedef typename std::iterator_traits<Iterator>::value_type iType1;
-        typename bolt::amp::device_vector< iType1 >::pointer first1Ptr = itr.getContainer( ).data( );
+        auto first1Ptr = itr.getContainer().data();
 
         return first1Ptr + itr.m_Index;
     }

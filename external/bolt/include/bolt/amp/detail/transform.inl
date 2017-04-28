@@ -199,29 +199,33 @@ namespace serial{
 	static
     inline
     typename std::enable_if<
-               std::is_same< typename std::iterator_traits< OutputIterator >::iterator_category ,
-                                       bolt::amp::device_vector_tag
-                           >::value
-                           >::type
-    unary_transform( bolt::amp::control &ctl, Iterator first, Iterator last,
-                    OutputIterator result, UnaryFunction f )
+        std::is_same<
+            typename std::iterator_traits< OutputIterator>::iterator_category,
+            bolt::amp::device_vector_tag>::value>::type
+    unary_transform(
+        bolt::amp::control &ctl,
+        Iterator first,
+        Iterator last,
+        OutputIterator result,
+        UnaryFunction f)
     {
         size_t sz = (last - first);
         if (sz == 0)
             return;
 
-		auto mapped_first_itr = create_mapped_iterator(typename std::iterator_traits<Iterator>::iterator_category(),
-                                                        ctl, first);
-        auto mapped_result_itr = create_mapped_iterator(typename std::iterator_traits<OutputIterator>::iterator_category() ,
-                                                        ctl, result);
+		auto mapped_first_itr = create_mapped_iterator(
+            typename std::iterator_traits<Iterator>::iterator_category(),
+            ctl,
+            first);
+        auto mapped_result_itr = create_mapped_iterator(
+            typename std::iterator_traits<OutputIterator>::iterator_category(),
+            ctl,
+            result);
 
 
-        for(int index=0; index < (int)(sz); index++)
-        {
-            *(mapped_result_itr + index) = f( *(mapped_first_itr+index) );
+        for(int index=0; index < (int)(sz); index++) {
+            mapped_result_itr[index] = f(mapped_first_itr[index]);
         }
-
-        return ;
     }
 
 
@@ -438,30 +442,45 @@ namespace amp{
     }
 
 
-	template<typename DVInputIterator, typename DVOutputIterator, typename UnaryFunction>
+	template<
+        typename DVInputIterator,
+        typename DVOutputIterator,
+        typename UnaryFunction>
     static
     inline
-    typename std::enable_if< std::is_same< typename std::iterator_traits< DVOutputIterator >::iterator_category ,
-                                       bolt::amp::device_vector_tag
-                                     >::value
-                       >::type
-    unary_transform( ::bolt::amp::control &ctl,  DVInputIterator first,  DVInputIterator last,
-     DVOutputIterator result,  UnaryFunction f)
+    typename std::enable_if<
+        std::is_same<
+            typename std::iterator_traits<DVOutputIterator>::iterator_category,
+            bolt::amp::device_vector_tag>::value>::type
+    unary_transform(
+        ::bolt::amp::control &ctl,
+        DVInputIterator first,
+        DVInputIterator last,
+        DVOutputIterator result,
+        UnaryFunction f)
     {
 
 //        typedef typename std::iterator_traits< DVInputIterator >::value_type iType;
 //        typedef typename std::iterator_traits< DVOutputIterator >::value_type oType;
 
 
-        const int szElements =  static_cast< int >( std::distance( first, last ) );
-        concurrency::accelerator_view av = ctl.getAccelerator().get_default_view();
+        const int szElements = static_cast<int>(std::distance(first, last));
+        concurrency::accelerator_view av =
+            ctl.getAccelerator().get_default_view();
 
-        const unsigned int leng =  szElements + TRANSFORM_WAVEFRNT_SIZE - (szElements % TRANSFORM_WAVEFRNT_SIZE);
+        const unsigned int leng =
+            szElements + TRANSFORM_WAVEFRNT_SIZE - (szElements % TRANSFORM_WAVEFRNT_SIZE);
 
         concurrency::extent< 1 > inputExtent(leng);
 
 
-		auto dvInput1_itr  = bolt::amp::create_mapped_iterator(typename bolt::amp::iterator_traits< DVInputIterator >::iterator_category( ), first, szElements, false, ctl );
+		auto dvInput1_itr =
+            bolt::amp::create_mapped_iterator(
+                typename bolt::amp::iterator_traits<DVInputIterator>::iterator_category(),
+                first,
+                szElements,
+                false,
+                ctl);
 
         try
         {
@@ -939,33 +958,35 @@ namespace amp{
         // default control, two-input transform, std:: iterator
         template<typename InputIterator,
                  typename OutputIterator,
-                 typename UnaryFunction,
-                 typename std::enable_if<sizeof(typename std::iterator_traits<InputIterator>::value_type) % sizeof(int) == 0 &&
-                                         sizeof(typename std::iterator_traits<OutputIterator>::value_type) % sizeof(int) == 0>::type* = nullptr>
+                 typename UnaryFunction>//,
+                 //typename std::enable_if<sizeof(typename std::iterator_traits<InputIterator>::value_type) % sizeof(int) == 0 &&
+                 //                        sizeof(typename std::iterator_traits<OutputIterator>::value_type) % sizeof(int) == 0>::type* = nullptr>
         static
         inline
-        void transform( InputIterator first1,
-                        InputIterator last1,
-                        OutputIterator result,
-                        UnaryFunction f )
+        void transform(
+            InputIterator first1,
+            InputIterator last1,
+            OutputIterator result,
+            UnaryFunction f)
         {
-              bolt::amp::transform( control::getDefault(), first1, last1, result, f );
+            bolt::amp::transform(
+                control::getDefault(), first1, last1, result, f);
         }
 
-        template<typename InputIterator,
-                 typename OutputIterator,
-                 typename UnaryFunction,
-                 typename std::enable_if<sizeof(typename std::iterator_traits<InputIterator>::value_type) % sizeof(int) != 0 ||
-                                         sizeof(typename std::iterator_traits<OutputIterator>::value_type) % sizeof(int) != 0>::type* = nullptr>
-        static
-        inline
-        void transform( InputIterator first1,
-                        InputIterator last1,
-                        OutputIterator result,
-                        UnaryFunction f )
-        {
-              std::transform( control::getDefault(), first1, last1, result, f );
-        }
+//        template<typename InputIterator,
+//                 typename OutputIterator,
+//                 typename UnaryFunction,
+//                 typename std::enable_if<sizeof(typename std::iterator_traits<InputIterator>::value_type) % sizeof(int) != 0 ||
+//                                         sizeof(typename std::iterator_traits<OutputIterator>::value_type) % sizeof(int) != 0>::type* = nullptr>
+//        static
+//        inline
+//        void transform( InputIterator first1,
+//                        InputIterator last1,
+//                        OutputIterator result,
+//                        UnaryFunction f )
+//        {
+//              std::transform( control::getDefault(), first1, last1, result, f );
+//        }
 
 
 		//////////////////////////////////////////

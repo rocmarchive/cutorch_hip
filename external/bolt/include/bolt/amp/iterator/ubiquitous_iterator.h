@@ -57,6 +57,9 @@ namespace bolt
             }
             T& operator[](std::ptrdiff_t dx) [[cpu]][[hc]] { return p_[dx]; }
 
+            T& operator*() const [[cpu]][[hc]] { return *p_; }
+            T& operator*() [[cpu]][[hc]] { return *p_; }
+
             Ubiquitous_iterator& operator+=(std::ptrdiff_t dx) [[cpu]][[hc]]
             {
                 p_ += dx;
@@ -70,6 +73,17 @@ namespace bolt
 
             T* data() const { return p_; }
             T* data() { return p_; }
+
+            concurrency::array_view<T> getBuffer(
+                const Ubiquitous_iterator&, int sz) const
+            {
+                return concurrency::array_view<T>{sz, p_};
+            }
+            concurrency::array_view<T> getBuffer(
+                const Ubiquitous_iterator&, int sz)
+            {
+                return concurrency::array<T>{sz, p_};
+            }
             // Bolt glue.
         };
         template<typename T>

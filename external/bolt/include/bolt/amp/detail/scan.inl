@@ -360,25 +360,16 @@ aProfiler.set(AsyncProfiler::memory, 2*numElements*sizeof(iType) + 1*sizeScanBuf
 		unsigned int index = i*(tile_limit*kernel0_WgSize);
 		unsigned int tile_index = i*tile_limit;
 
-		  concurrency::parallel_for_each( av, tileK0,
-				[
-					result,
-					first,
-					init,
-					numElements,
-					&preSumArray,
-					&preSumArray1,
-					binary_op,
-					exclusive,
-					index,
-					tile_index,
-					kernel0_WgSize
-				] ( concurrency::tiled_index< kernel0_WgSize > t_idx ) restrict(amp)
+		  concurrency::parallel_for_each(
+			  av,
+			  tileK0,
+			  [=, &preSumArray, &preSumArray1](
+                  const concurrency::tiled_index<kernel0_WgSize>& t_idx) restrict(amp)
 		  {
-				unsigned int gloId = t_idx.global[ 0 ] + index;
-				unsigned int groId = t_idx.tile[ 0 ] + tile_index;
-				unsigned int locId = t_idx.local[ 0 ];
-				int wgSize = kernel0_WgSize;
+              unsigned int gloId = t_idx.global[ 0 ] + index;
+			  unsigned int groId = t_idx.tile[ 0 ] + tile_index;
+			  unsigned int locId = t_idx.local[ 0 ];
+			  int wgSize = kernel0_WgSize;
 
 				tile_static iType lds[ SCAN_WAVESIZE*SCAN_KERNELWAVES*2 ];
 
@@ -452,15 +443,11 @@ aProfiler.set(AsyncProfiler::memory, 4*sizeScanBuff*sizeof(oType));
     concurrency::extent< 1 > globalSizeK1( kernel1_WgSize );
     concurrency::tiled_extent< kernel1_WgSize > tileK1 = globalSizeK1.tile< kernel1_WgSize >();
     //std::cout << "Kernel 1 Launching w/" << sizeScanBuff << " threads for " << numWorkGroupsK0 << " elements. " << std::endl;
-  concurrency::parallel_for_each( av, tileK1,
-        [
-            &preSumArray,
-            numWorkGroupsK0,
-            workPerThread,
-            binary_op,
-            kernel1_WgSize
-        ] ( concurrency::tiled_index< kernel1_WgSize > t_idx ) restrict(amp)
-  {
+  concurrency::parallel_for_each(
+      av,
+      tileK1,
+      [=, &preSumArray](
+          const concurrency::tiled_index<kernel1_WgSize>& t_idx) restrict(amp) {
         unsigned int gloId = t_idx.global[ 0 ];
         int locId = t_idx.local[ 0 ];
         int wgSize = kernel1_WgSize;
@@ -565,19 +552,10 @@ aProfiler.set(AsyncProfiler::memory, 2*numElements*sizeof(oType) + 1*sizeScanBuf
 		unsigned int tile_index = a*tile_limit;
 
 		concurrency::parallel_for_each( av, tileK2,
-				[
-					first,
-					result,
-					&preSumArray,
-					&preSumArray1,
-					numElements,
-					binary_op,
-					init,
-					exclusive,
-					index,
-					tile_index,
-					kernel2_WgSize
-				] ( concurrency::tiled_index< kernel2_WgSize > t_idx ) restrict(amp)
+				[=,
+                 &preSumArray,
+				 &preSumArray1](
+                    const concurrency::tiled_index<kernel2_WgSize>& t_idx) restrict(amp)
 		  {
 				int gloId = t_idx.global[ 0 ] + index;
 				unsigned int groId = t_idx.tile[ 0 ] + tile_index;
