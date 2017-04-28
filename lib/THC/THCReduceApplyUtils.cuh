@@ -58,10 +58,10 @@ __device__ T reduceBlock(T* smem,
 
     int numLanesParticipating = min(numVals, warpSize);
 
-    if (numLanesParticipating == warpSize) {
-      // Unroll for WARPSIZE == 32 and numVals >= 32
+    if (numLanesParticipating == 32) {
+      // Unroll for warpSize == 32 and numVals >= 32
 #pragma unroll
-      for (int i = 1; i < warpSize; ++i) {
+      for (int i = 1; i < 32; ++i) {
         r = reduceOp(r, smem[i]);
       }
     } else {

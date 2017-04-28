@@ -45,8 +45,6 @@ void bitonicSwap(K& kA,
                  bool dir,
                  Comparator comp) {
   // Invalid entries always sort to the end
-  // TODO: the comparison causes a Promote pass failure, trace the root cause,
-  //       which might be one of the comparison functors.
   bool swap = (comp(kA, kB) && validA) || !validB;
   if (swap == dir) {
     swapVars(kA, kB);
@@ -70,7 +68,7 @@ void bitonicSort(K (&keys)[Power2SortSize],
     #pragma unroll
     for (unsigned int stride = size / 2; stride > 0; stride /= 2) {
       // Single warp per slice is completely synchronous
-      if (Power2SortSize > warpSize) {
+      if (Power2SortSize > 64) {
         __syncthreads();
       }
 
@@ -89,7 +87,7 @@ void bitonicSort(K (&keys)[Power2SortSize],
   #pragma unroll
   for (unsigned int stride = Power2SortSize / 2; stride > 0; stride /= 2) {
     // Single warp per slice is completely synchronous
-    if (Power2SortSize > warpSize) {
+    if (Power2SortSize > 64) {
       __syncthreads();
     }
 
@@ -105,7 +103,7 @@ void bitonicSort(K (&keys)[Power2SortSize],
   }
 
   // Single warp per slice is completely synchronous
-  if (Power2SortSize > 2 * warpSize) {
+  if (Power2SortSize > 64) {
     __syncthreads();
   }
 }

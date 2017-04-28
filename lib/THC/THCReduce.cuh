@@ -150,16 +150,20 @@ inline dim3 getContigReduceBlock(ptrdiff_t numSlices, long reductionSize) {
   int numWarps = warpsInReductionSize > (long) maxWarps ?
     maxWarps : (int) warpsInReductionSize;
 
-  return dim3(numWarps * warpSize);
+  return dim3(numWarps * 32);
 }
 
-inline bool getNoncontigReduceGrid(ptrdiff_t elements, dim3& grid) {
+inline
+bool getNoncontigReduceGrid(ptrdiff_t elements, dim3& grid)
+{
   // One output point per thread
-  return THC_getGridFromTiles(THCCeilDiv(elements,
-                                         (ptrdiff_t) THC_NONCONTIG_REDUCE_BLOCK_SIZE), grid);
+  return THC_getGridFromTiles(
+      THCCeilDiv(elements, (ptrdiff_t) THC_NONCONTIG_REDUCE_BLOCK_SIZE), grid);
 }
 
-inline bool getContigReduceGrid(ptrdiff_t elements, dim3& grid) {
+inline
+bool getContigReduceGrid(ptrdiff_t elements, dim3& grid)
+{
   // One output point per block
   return THC_getGridFromTiles(elements, grid);
 }
