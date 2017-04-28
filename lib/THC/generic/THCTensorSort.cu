@@ -6,8 +6,9 @@
     #else
         #include <bolt/amp/copy.h>
         #include <bolt/amp/for_each.h>
-        #include <bolt/amp/stablesort_by_key.h>
         #include <bolt/amp/iterator/counting_iterator.h>
+        #include <bolt/amp/iterator/ubiquitous_iterator.h>
+        #include <bolt/amp/stablesort_by_key.h>
     #endif
 
 // In alignment with default sort on a c++ map, this function
@@ -239,7 +240,8 @@ void sortViaThrust(THCState* state,
 #if defined(THRUST_PATH)
   thrust::device_ptr<real> keyIter(THCTensor_(data)(state, trContigKey));
 #else
-  auto keyIter = THCTensor_(data)(state, trContigKey);
+  auto keyIter =
+    bolt::amp::make_ubiquitous_iterator(THCTensor_(data)(state, trContigKey));
 #endif
   // Since we are composing a global index across all segments rather
   // than a per-segment index, we treat the memory as int so we don't
@@ -249,7 +251,8 @@ void sortViaThrust(THCState* state,
   thrust::device_ptr<long>
     indexIter((long*) THCudaLongTensor_data(state, trContigIndices));
 #else
-  auto indexIter = (long*) THCudaLongTensor_data(state, trContigIndices);
+  auto indexIter = bolt::amp::make_ubiquitous_iterator(
+    THCudaLongTensor_data(state, trContigIndices));
 #endif
   // Fill the indices with a global index across all slices
 #if defined(THRUST_PATH)
