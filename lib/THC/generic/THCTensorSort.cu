@@ -54,84 +54,74 @@ THC_API void THCTensor_(sortKeyValueInplace)(THCState* state,
     THError("Slice to sort is too large");
   }
 
-#define HANDLE_CASE(TYPE, A, SIZE)                                      \
-  do {                                                                  \
-    int blockSize = SIZE / 2;                                           \
-    if (blockSize < 1) {                                                \
-      blockSize = 1;                                                    \
-    }                                                                   \
-                                                                        \
-    dim3 block(blockSize);                                              \
-                                                                        \
-    if (dir) {                                                          \
-      hipLaunchKernelGGL((bitonicSortKVInPlace<real,        \
-                                                           long,        \
-                                                           A,           \
-                                                           -1,          \
-                                                           GTComp<real>,\
-                                                           TYPE,        \
-                                                           SIZE>),      \
-                      grid,                                       \
-                      block,                                      \
-                      0,                                                \
-                      THCState_getCurrentStream(state),                 \
-                      make_magic_wrapper(keyInfo),                      \
-                      keySlices,                                        \
-                      (TYPE) keySliceSize,                              \
-                      (TYPE) keyInfo.strides[collapseKeyDim],           \
-                      make_magic_wrapper(valueInfo),                    \
-                      (TYPE) valueInfo.strides[collapseValueDim],       \
-                      GTComp<real>());                                  \
-    } else {                                                            \
-     hipLaunchKernelGGL((bitonicSortKVInPlace<real,         \
-                                                          long,         \
-                                                          A,            \
-                                                          -1,           \
-                                                          LTComp<real>, \
-                                                          TYPE,         \
-                                                          SIZE>),       \
-                      grid,                                       \
-                      block,                                      \
-                      0,                                                \
-                      THCState_getCurrentStream(state),                 \
-                      make_magic_wrapper(keyInfo),                      \
-                      keySlices,                                        \
-                      (TYPE) keySliceSize,                              \
-                      (TYPE) keyInfo.strides[collapseKeyDim],           \
-                      make_magic_wrapper(valueInfo),                    \
-                      (TYPE) valueInfo.strides[collapseValueDim],       \
-                      LTComp<real>());                                  \
-    }                                                                   \
+#define HANDLE_CASE(TYPE, A, SIZE)\
+  do {\
+    int blockSize = SIZE / 2;\
+    if (blockSize < 1) {\
+      blockSize = 1;\
+    }\
+    \
+    dim3 block(blockSize);\
+    \
+    if (dir) {\
+      hipLaunchKernelGGL(\
+        (bitonicSortKVInPlace<real, long, A, -1, GTComp<real>, TYPE, SIZE>),\
+        grid,\
+        block,\
+        0,\
+        THCState_getCurrentStream(state),\
+        make_magic_wrapper(keyInfo),\
+        keySlices,\
+        (TYPE) keySliceSize,\
+        (TYPE) keyInfo.strides[collapseKeyDim],\
+        make_magic_wrapper(valueInfo),\
+        (TYPE) valueInfo.strides[collapseValueDim],\
+        GTComp<real>());\
+    } else {\
+     hipLaunchKernelGGL(\
+        (bitonicSortKVInPlace<real, long, A, -1, LTComp<real>, TYPE, SIZE>),\
+        grid,\
+        block,\
+        0,\
+        THCState_getCurrentStream(state),\
+        make_magic_wrapper(keyInfo),\
+        keySlices,\
+        (TYPE) keySliceSize,\
+        (TYPE) keyInfo.strides[collapseKeyDim],\
+        make_magic_wrapper(valueInfo),\
+        (TYPE) valueInfo.strides[collapseValueDim],\
+        LTComp<real>());\
+    }\
   } while (0)
 
-#define HANDLE_SORT_CASE(TYPE, A)                       \
-  {                                                     \
-    switch (ceilPowerOf2) {                             \
-      case 2048:                                        \
-      HANDLE_CASE(TYPE, A, 2048);                       \
-      break;                                            \
-      case 1024:                                        \
-      case 512:                                         \
-      case 256:                                         \
-      HANDLE_CASE(TYPE, A, 1024);                       \
-      break;                                            \
-      case 128:                                         \
-      case 64:                                          \
-      HANDLE_CASE(TYPE, A, 128);                        \
-      break;                                            \
-      case 32:                                          \
-      case 16:                                          \
-      case 8:                                           \
-      case 4:                                           \
-      case 2:                                           \
-      HANDLE_CASE(TYPE, A, 32);                         \
-      break;                                            \
-      case 1:                                           \
-      /* Nothing to do, data already sorted */          \
-      break;                                            \
-      default:                                          \
-      assert(false);                                    \
-    }                                                   \
+#define HANDLE_SORT_CASE(TYPE, A)\
+  {\
+    switch (ceilPowerOf2) {\
+      case 2048:\
+      HANDLE_CASE(TYPE, A, 2048);\
+      break;\
+      case 1024:\
+      case 512:\
+      case 256:\
+      HANDLE_CASE(TYPE, A, 1024);\
+      break;\
+      case 128:\
+      case 64:\
+      HANDLE_CASE(TYPE, A, 128);\
+      break;\
+      case 32:\
+      case 16:\
+      case 8:\
+      case 4:\
+      case 2:\
+      HANDLE_CASE(TYPE, A, 32);\
+      break;\
+      case 1:\
+      /* Nothing to do, data already sorted */\
+      break;\
+      default:\
+      assert(false);\
+    }\
   }
 
   // The constructed key/value tensor info is used to select the slice
@@ -180,12 +170,14 @@ THC_API void THCTensor_(sortKeyValueInplace)(THCState* state,
   THCudaCheck(hipGetLastError());
 }
 
-void sortViaThrust(THCState* state,
-                   THCTensor* sorted,
-                   THCudaLongTensor* indices,
-                   THCTensor* input,
-                   int dim,
-                   bool dir) {
+void sortViaThrust(
+    THCState* state,
+    THCTensor* sorted,
+    THCudaLongTensor* indices,
+    THCTensor* input,
+    int dim,
+    bool dir)
+{
   long nDims = THCTensor_(nDimension)(state, input);
 
   ptrdiff_t totalElements = THCTensor_(nElement)(state, input);
@@ -260,7 +252,7 @@ void sortViaThrust(THCState* state,
 
   thrust::copy(
     #if CUDA_VERSION >= 7000
-    thrust::cuda::par.on(THCState_getCurrentStream(state)),
+        thrust::cuda::par.on(THCState_getCurrentStream(state)),
     #endif
     countIter, countIter + totalElements, indexIter);
 #else
@@ -272,30 +264,26 @@ void sortViaThrust(THCState* state,
   // First, we sort globally (across all slices) according to key
   // (the values we're sorting)
   if (dir) {
-#if defined(THRUST_PATH)
-    thrust::stable_sort_by_key(
-    #if CUDA_VERSION >= 7000
-      thrust::cuda::par.on(THCState_getCurrentStream(state)),
+    #if defined(THRUST_PATH)
+      thrust::stable_sort_by_key(
+        #if CUDA_VERSION >= 7000
+          thrust::cuda::par.on(THCState_getCurrentStream(state)),
+        #endif
+          keyIter, keyIter + totalElements, indexIter, ThrustGTOp<real>());
+    #else
+      bolt::amp::stable_sort_by_key(
+        keyIter, keyIter + totalElements, indexIter, ThrustGTOp<real>());
     #endif
-      keyIter, keyIter + totalElements, indexIter, ThrustGTOp<real>());
-#else
-    bolt::amp::stable_sort_by_key(keyIter,
-                                  keyIter + totalElements,
-                                  indexIter,
-                                  ThrustGTOp<real>());
-#endif
   } else {
-#if defined(THRUST_PATH)
+  #if defined(THRUST_PATH)
     thrust::stable_sort_by_key(
-    #if CUDA_VERSION >= 7000
-      thrust::cuda::par.on(THCState_getCurrentStream(state)),
-    #endif
+      #if CUDA_VERSION >= 7000
+        thrust::cuda::par.on(THCState_getCurrentStream(state)),
+      #endif
+        keyIter, keyIter + totalElements, indexIter, ThrustLTOp<real>());
+  #else
+    bolt::amp::stable_sort_by_key(
       keyIter, keyIter + totalElements, indexIter, ThrustLTOp<real>());
-#else
-  bolt::amp::stable_sort_by_key(keyIter,
-                                keyIter + totalElements,
-                                indexIter,
-                                ThrustLTOp<real>());
 #endif
   }
 
@@ -303,33 +291,32 @@ void sortViaThrust(THCState* state,
   // in. This completes the segment sort in Thrust, since we're
   // stably sorting here, preserving the relative order of values
   // per each slice
-#if defined(THRUST_PATH)
-  thrust::stable_sort_by_key(
-  #if CUDA_VERSION >= 7000
-    thrust::cuda::par.on(THCState_getCurrentStream(state)),
+  #if defined(THRUST_PATH)
+    thrust::stable_sort_by_key(
+      #if CUDA_VERSION >= 7000
+        thrust::cuda::par.on(THCState_getCurrentStream(state)),
+      #endif
+      indexIter, indexIter + totalElements, keyIter, SliceComp(sliceSize));
+  #else
+    bolt::amp::stable_sort_by_key(
+      indexIter, indexIter + totalElements, keyIter, SliceComp{sliceSize});
   #endif
-    indexIter, indexIter + totalElements, keyIter,
-    SliceComp(sliceSize));
-#else
-    bolt::amp::stable_sort_by_key(indexIter,
-                                  indexIter + totalElements,
-                                  keyIter,
-                                  SliceComp{sliceSize});
-#endif
 
   // Translate the global integer 0-based index to a per-slice real
   // Lua index
-#if defined(THRUST_PATH)
-  thrust::for_each(
-  #if CUDA_VERSION >= 7000
-    thrust::cuda::par.on(THCState_getCurrentStream(state)),
-  #endif
-    indexIter, indexIter + totalElements,
-    GlobalIndexToPerSliceIndex(sliceSize));
+  #if defined(THRUST_PATH)
+    thrust::for_each(
+      #if CUDA_VERSION >= 7000
+        thrust::cuda::par.on(THCState_getCurrentStream(state)),
+      #endif
+      indexIter,
+      indexIter + totalElements,
+      GlobalIndexToPerSliceIndex(sliceSize));
 #else
-  bolt::amp::for_each(indexIter,
-                      indexIter + totalElements,
-                      GlobalIndexToPerSliceIndex{sliceSize});
+  bolt::amp::for_each(
+    indexIter,
+    indexIter + totalElements,
+    GlobalIndexToPerSliceIndex{sliceSize});
 #endif
 
   // Reverse the transposition as needed

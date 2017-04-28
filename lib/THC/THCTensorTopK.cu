@@ -292,15 +292,15 @@ void radixSelect(
 template<typename IndexType, int Dim, bool Order>
 __global__
 void gatherTopK(
-    TensorInfo<float, IndexType> input,
+    reference_to_const(TensorInfo<float, IndexType>) input,
     IndexType inputSliceSize,
     IndexType outputSliceSize, // aka `k`
     IndexType numInputSlices,
     IndexType inputWithinSliceStride,
-    TensorInfo<float, IndexType> topK,
+    reference_to_const(TensorInfo<float, IndexType>) topK,
     IndexType numTopKSlices,
     IndexType topKWithinSliceStride,
-    TensorInfo<long, IndexType> indices,
+    reference_to_const(TensorInfo<long, IndexType>) indices,
     IndexType indicesWithinSliceStride)
 {
   // Indices are limited to integer fp precision, so counts can fit in
@@ -366,11 +366,7 @@ void gatherTopK(
 
     int index;
     int carry;
-    #if defined(__HIP_PLATFORM_HCC__)
-      exclusivePrefixSum<int, true>(smem, hasTopK, &index, &carry);
-    #else
-      exclusiveBinaryPrefixSum<int, true>(smem, hasTopK, &index, &carry);
-    #endif
+    exclusiveBinaryPrefixSum<int, true>(smem, hasTopK, &index, &carry);
 
     if (hasTopK) {
       int writeIndex = writeIndexStart + index;
@@ -405,11 +401,7 @@ void gatherTopK(
 
     int index;
     int carry;
-    #if defined(__HIP_PLATFORM_HCC__)
-      exclusivePrefixSum<int, true>(smem, hasTopK, &index, &carry);
-    #else
-      exclusiveBinaryPrefixSum<int, true>(smem, hasTopK, &index, &carry);
-    #endif
+    exclusiveBinaryPrefixSum<int, true>(smem, hasTopK, &index, &carry);
 
     if (hasTopK && index < topKRemaining) {
       int writeIndex = writeIndexStart + index;
@@ -565,36 +557,36 @@ void THCudaTensor_topk(
 
   // Sort the results if the user wants them sorted, since our
   // selection routine does not ensure sorting
-//  if (sorted) {
-//    // FIXME: the k/v inplace sort along slice only works for size <=
-//    // 2048 at the moment
-//    if (sliceSize <= 2048) {
-//      // This avoids any memory allocations and performs all sorting
-//      // work inplace along the slice
-//      THCudaTensor_sortKeyValueInplace(state, topK, indices, dim, dir);
-//    } else {
-//      // Depend upon the backup sort that returns indices, which we
-//      // can use in conjunction with gather to produce the original
-//      // indices.
-//      // This is not the most efficient implementation, especially since
-//      // there are memory allocations performed here. If the user desires
-//      // greater performance, they should torch.gather() the results
-//      // themselves using the reported indices, providing previously
-//      // allocated tensors to receive the results.
-//      THCudaTensor* sortedTopK = THCudaTensor_new(state);
-//      THCudaLongTensor* sortedIndices = THCudaLongTensor_new(state);
-//      THCudaTensor_sort(state, sortedTopK, sortedIndices, topK, dim, dir);
-//
-//      THCudaLongTensor* sortedTopKIndices = THCudaLongTensor_new(state);
-//
-//      THCudaLongTensor_resizeAs(state, sortedTopKIndices, indices);
-//      THCudaLongTensor_gather(state, sortedTopKIndices, indices, dim, sortedIndices);
-//
-//      THCudaTensor_freeCopyTo(state, sortedTopK, topK);
-//      THCudaLongTensor_freeCopyTo(state, sortedTopKIndices, indices);
-//      THCudaLongTensor_free(state, sortedIndices);
-//    }
-//  }
+  if (sorted) {
+    // FIXME: the k/v inplace sort along slice only works for size <=
+    // 2048 at the moment
+    if (sliceSize <= 2048) {
+      // This avoids any memory allocations and performs all sorting
+      // work inplace along the slice
+      THCudaTensor_sortKeyValueInplace(state, topK, indices, dim, dir);
+    } else {
+      // Depend upon the backup sort that returns indices, which we
+      // can use in conjunction with gather to produce the original
+      // indices.
+      // This is not the most efficient implementation, especially since
+      // there are memory allocations performed here. If the user desires
+      // greater performance, they should torch.gather() the results
+      // themselves using the reported indices, providing previously
+      // allocated tensors to receive the results.
+      THCudaTensor* sortedTopK = THCudaTensor_new(state);
+      THCudaLongTensor* sortedIndices = THCudaLongTensor_new(state);
+      THCudaTensor_sort(state, sortedTopK, sortedIndices, topK, dim, dir);
+
+      THCudaLongTensor* sortedTopKIndices = THCudaLongTensor_new(state);
+
+      THCudaLongTensor_resizeAs(state, sortedTopKIndices, indices);
+      THCudaLongTensor_gather(state, sortedTopKIndices, indices, dim, sortedIndices);
+
+      THCudaTensor_freeCopyTo(state, sortedTopK, topK);
+      THCudaLongTensor_freeCopyTo(state, sortedTopKIndices, indices);
+      THCudaLongTensor_free(state, sortedIndices);
+    }
+  }
 
   THCudaCheck(hipGetLastError());
 }

@@ -473,7 +473,15 @@ void THCudaTensor_potri(THCState *state, THCudaTensor *ra_, THCudaTensor *a)
   const int len = n*n;
   dim3 blocks(std::min(DIVUP(len, 128), 65535));
   dim3 threads(128);
-  hipLaunchKernelGGL((THCudaTensor_copyUpperSymmetric), dim3(blocks), dim3(threads), 0, stream, input_data, n, len);
+  hipLaunchKernelGGL(
+    (THCudaTensor_copyUpperSymmetric),
+    dim3(blocks),
+    dim3(threads),
+    0,
+    stream,
+    input_data,
+    n,
+    len);
 
   THCudaTensor_freeCopyTo(state, input, ra_);
 #else
