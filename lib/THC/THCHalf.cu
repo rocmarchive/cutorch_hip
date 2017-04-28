@@ -1,57 +1,89 @@
 #include "hip/hip_runtime_api.h"
 #include "THCHalf.h"
-#include <thrust/transform.h>
-#include <thrust/execution_policy.h>
+#if defined(__HIP_PLATFORM_HCC__)
+  #include <bolt/amp/iterator/ubiquitous_iterator.h>
+  #include <bolt/amp/transform.h>
+#else
+  #include <thrust/transform.h>
+  #include <thrust/execution_policy.h>
+#endif
 
 struct __half2floatOp {
-  __device__ float operator()(half v) { return __half2float(v); }
+  __device__
+  float operator()(half v) const { return __half2float(v); }
 };
 
 struct __float2halfOp {
-  __device__ half operator()(float v) { return __float2half(v); }
+  __device__
+  half operator()(float v) const { return __float2half(v); }
 };
 
-void THCFloat2Half(THCState *state, half *out, float *in, ptrdiff_t len) {
-  thrust::transform(
-#if CUDA_VERSION >= 7000
-    thrust::cuda::par.on(THCState_getCurrentStream(state)),
-#else
-    thrust::device,
-#endif
-    in, in + len, out, __float2halfOp());
+void THCFloat2Half(THCState *state, half *out, float *in, ptrdiff_t len)
+{
+  #if defined(__HIP_PLATFORM_HCC__)
+    bolt::amp::transform(
+        bolt::amp::make_ubiquitous_iterator(in),
+        bolt::amp::make_ubiquitous_iterator(in + len),
+        bolt::amp::make_ubiquitous_iterator(out),
+        __float2halfOp{});
+  #else
+    thrust::transform(
+      #if CUDA_VERSION >= 7000
+        thrust::cuda::par.on(THCState_getCurrentStream(state)),
+      #else
+        thrust::device,
+      #endif
+      in, in + len, out, __float2halfOp());
+  #endif
 }
 
-void THCHalf2Float(THCState *state, float *out, half *in, ptrdiff_t len) {
-  thrust::transform(
-#if CUDA_VERSION >= 7000
-    thrust::cuda::par.on(THCState_getCurrentStream(state)),
-#else
-    thrust::device,
-#endif
-    in, in + len, out, __half2floatOp());
+void THCHalf2Float(THCState *state, float *out, half *in, ptrdiff_t len)
+{
+  #if defined(__HIP_PLATFORM_HCC__)
+    bolt::amp::transform(
+      bolt::amp::make_ubiquitous_iterator(in),
+      bolt::amp::make_ubiquitous_iterator(in + len),
+      bolt::amp::make_ubiquitous_iterator(out),
+      __float2halfOp{});
+  #else
+    thrust::transform(
+      #if CUDA_VERSION >= 7000
+        thrust::cuda::par.on(THCState_getCurrentStream(state)),
+      #else
+        thrust::device,
+      #endif
+      in,
+      in + len,
+      out,
+      __half2floatOp());
+  #endif
 }
 
 float THC_half2float(half a)
 {
-  unsigned int bits = a.x & 0x7fff;
-  unsigned int sign = a.x & 0x8000;
-  unsigned int exp = a.x & 0x7c00;
+  #if defined(__HIP_PLATFORM_HCC__)
+    return a;
+  #else
+    unsigned int bits = a.x & 0x7fff;
+    unsigned int sign = a.x & 0x8000;
+    unsigned int exp = a.x & 0x7c00;
 
-  bits <<= 13;
-  sign <<= 16;
+    bits <<= 13;
+    sign <<= 16;
 
-  bits += 0x38000000U;
+    bits += 0x38000000U;
 
-  // flush denormals to 0
-  bits = (exp == 0 ? 0 : bits) | sign;
+    // flush denormals to 0
+    bits = (exp == 0 ? 0 : bits) | sign;
 
-  union {
-    float f;
-    unsigned int v;
-  } conv;
-  conv.v = bits;
+    union {
+      float f;
+      unsigned int v;
+    } conv;
+    conv.v = bits;
 
-  return conv.f;
+    return conv.f;
+  #endif
 }
 
 /*
@@ -84,41 +116,45 @@ float THC_half2float(half a)
 
 half THC_float2half(float a)
 {
-  uint32_t ia;
-  uint16_t ir;
-  memcpy(&ia, &a, sizeof(float));
+  #if defined(__HIP_PLATFORM_HCC__)
+    return a;
+  #else
+    uint32_t ia;
+    uint16_t ir;
+    memcpy(&ia, &a, sizeof(float));
 
-  ir = (ia >> 16) & 0x8000;
-  if ((ia & 0x7f800000) == 0x7f800000) {
-    if ((ia & 0x7fffffff) == 0x7f800000) {
-      ir |= 0x7c00; /* infinity */
-    } else {
-      ir = 0x7fff; /* canonical NaN */
-    }
-  } else if ((ia & 0x7f800000) >= 0x33000000) {
-    int shift = (int)((ia >> 23) & 0xff) - 127;
-    if (shift > 15) {
-      ir |= 0x7c00; /* infinity */
-    } else {
-      ia = (ia & 0x007fffff) | 0x00800000; /* extract mantissa */
-      if (shift < -14) { /* denormal */
-        ir |= ia >> (-1 - shift);
-        ia = ia << (32 - (-1 - shift));
-      } else { /* normal */
-        ir |= ia >> (24 - 11);
-        ia = ia << (32 - (24 - 11));
-        ir = ir + ((14 + shift) << 10);
+    ir = (ia >> 16) & 0x8000;
+    if ((ia & 0x7f800000) == 0x7f800000) {
+      if ((ia & 0x7fffffff) == 0x7f800000) {
+        ir |= 0x7c00; /* infinity */
+      } else {
+        ir = 0x7fff; /* canonical NaN */
       }
-      /* IEEE-754 round to nearest of even */
-      if ((ia > 0x80000000) || ((ia == 0x80000000) && (ir & 1))) {
-        ir++;
+    } else if ((ia & 0x7f800000) >= 0x33000000) {
+      int shift = (int)((ia >> 23) & 0xff) - 127;
+      if (shift > 15) {
+        ir |= 0x7c00; /* infinity */
+      } else {
+        ia = (ia & 0x007fffff) | 0x00800000; /* extract mantissa */
+        if (shift < -14) { /* denormal */
+          ir |= ia >> (-1 - shift);
+          ia = ia << (32 - (-1 - shift));
+        } else { /* normal */
+          ir |= ia >> (24 - 11);
+          ia = ia << (32 - (24 - 11));
+          ir = ir + ((14 + shift) << 10);
+        }
+        /* IEEE-754 round to nearest of even */
+        if ((ia > 0x80000000) || ((ia == 0x80000000) && (ir & 1))) {
+          ir++;
+        }
       }
     }
-  }
 
-  half ret;
-  memcpy(&ret, &ir, sizeof(half));
-  return ret;
+    half ret;
+    memcpy(&ret, &ir, sizeof(half));
+    return ret;
+  #endif
 }
 
 THC_EXTERNC int THC_nativeHalfInstructions(THCState *state) {

@@ -107,44 +107,71 @@ struct ScalarInv {
 };
 
 #ifdef CUDA_HALF_TENSOR
-template <>
-struct ScalarNegate<half> {
-  static __host__ __device__ half to(const half v) {
-#ifdef __CUDA_ARCH__
-#ifdef CUDA_HALF_INSTRUCTIONS
-    return __hneg(v);
-#else
-    return __float2half(-__half2float(v));
-#endif
-#else
-    half out = v;
-    out.x ^= 0x8000; // toggle sign bit
-    return out;
-#endif
-  }
-};
+    template <>
+    struct ScalarNegate<half> {
+      __host__
+      static
+      half to(half v)
+      {
+        #if defined(__HIP_PLATFORM_HCC__)
+          return -v;
+        #else
+          half out = v;
+          out.x ^= 0x8000; // toggle sign bit
+          return out;
+        #endif
+      }
 
-template <>
-struct ScalarInv<half> {
-  static __host__ __device__ half to(const half v) {
-#ifdef __CUDA_ARCH__
-    return __float2half(1.0f / __half2float(v));
-#else
-    float fv = THC_half2float(v);
-    fv = 1.0f / fv;
-    return THC_float2half(fv);
-#endif
-  }
-};
+      __device__
+      static
+      half to(half v)
+      {
+        #if defined(__HIP_PLATFORM_HCC__)
+          return -v;
+        #elif defined(CUDA_HALF_INSTRUCTIONS)
+          return __hneg(v);
+        #else
+          return __float2half(-__half2float(v));
+        #endif
+      }
+    };
 
-inline bool operator==(half a, half b) {
-  return a.x == b.x;
-}
+    template <>
+    struct ScalarInv<half> {
+      __host__
+      static
+      half to(half v)
+      {
+        float fv = THC_half2float(v);
+        fv = 1.0f / fv;
+        return THC_float2half(fv);
+      }
 
-inline bool operator!=(half a, half b) {
-  return a.x != b.x;
-}
+      __device__
+      static
+      half to(half v)
+      {
+        #if defined(__HIP_PLATFORM_HCC__)
+          return static_cast<half>(1) / v;
+        #else
+          return __float2half(1.0f / __half2float(v));
+        #endif
+      }
+    };
 
+    #if !defined(__HIP_PLATFORM_HCC__)
+      inline
+      bool operator==(half a, half b)
+      {
+        return a.x == b.x;
+      }
+
+      inline
+      bool operator!=(half a, half b)
+      {
+        return a.x != b.x;
+      }
+    #endif
 #endif // CUDA_HALF_TENSOR
 
 #endif // THC_TENSOR_TYPE_UTILS_INC

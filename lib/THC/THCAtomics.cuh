@@ -93,21 +93,43 @@ static inline __device__ void atomicAdd(long *address, long val) {
 }
 
 #ifdef CUDA_HALF_TENSOR
-static inline  __device__ void atomicAdd(half *address, half val) {
-  unsigned int * address_as_ui =
-      (unsigned int *) ((char *)address - ((size_t)address & 2));
-  unsigned int old = *address_as_ui;
-  unsigned int assumed;
+  #if defined(__HIP_PLATFORM_HCC__)
+    __device__
+    static
+    inline
+    void atomicAdd(half* address, half val)
+    {
+      // TODO: unimplemented.
+//        unsigned short* address_as_us =
+//            reinterpret_cast<unsigned short*>(address);
+//        half old_x = *address;
+//        half new_x;
+//        do {
+//            new_x = old_x + val;
+//        } while (!hc::atomic_compare_exchange(
+//            address_as_us, reinterpret_cast<unsigned short*>(&old_x), *reinterpret_cast<unsigned short*>(&new_x)));
+    }
+  #else
+    __device__
+    static
+    inline
+    void atomicAdd(half *address, half val)
+    {
+      unsigned int * address_as_ui =
+          (unsigned int *) ((char *)address - ((size_t)address & 2));
+      unsigned int old = *address_as_ui;
+      unsigned int assumed;
 
-  do {
-    assumed = old;
-    half hsum;
-    hsum.x = (size_t)address & 2 ? (old >> 16) : (old & 0xffff);
-    hsum = THCNumerics<half>::add(hsum, val);
-    old = (size_t)address & 2 ? (old & 0xffff) | (hsum.x << 16) : (old & 0xffff0000) | hsum.x;
-    old = atomicCAS(address_as_ui, assumed, old);
-   } while (assumed != old);
-}
+      do {
+        assumed = old;
+        half hsum;
+        hsum.x = (size_t)address & 2 ? (old >> 16) : (old & 0xffff);
+        hsum = THCNumerics<half>::add(hsum, val);
+        old = (size_t)address & 2 ? (old & 0xffff) | (hsum.x << 16) : (old & 0xffff0000) | hsum.x;
+        old = atomicCAS(address_as_ui, assumed, old);
+       } while (assumed != old);
+    }
+  #endif
 #endif
 
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ < 600 || defined(__HIP_PLATFORM_HCC__)
