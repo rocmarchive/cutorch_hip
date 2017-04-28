@@ -9,9 +9,9 @@
 #ifdef THRUST_PATH
   #include <thrust/device_ptr.h>
   #include <thrust/scan.h>
-#if CUDA_VERSION >= 7000
-  #include <thrust/system/cuda/execution_policy.h>
-#endif
+  #if CUDA_VERSION >= 7000
+    #include <thrust/system/cuda/execution_policy.h>
+  #endif
 #else
   #include <bolt/amp/iterator/ubiquitous_iterator.h>
   #include <bolt/amp/scan.h>

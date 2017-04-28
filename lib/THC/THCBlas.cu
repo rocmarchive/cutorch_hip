@@ -182,7 +182,7 @@ void THCudaBlas_Dger(THCState *state, long m, long n, double alpha, double *x, l
       int i_lda = (int)lda;
       int i_incx = (int)incx;
       int i_incy = (int)incy;
-#ifdef HIPBLAS_TODO 
+#ifdef HIPBLAS_TODO
       hipblasHandle_t handle = THCState_getCurrentBlasHandle(state);
       hipblasSetStream(handle, THCState_getCurrentStream(state));
       THCublasCheck(hipblasDger(handle, i_m, i_n, &alpha, x, i_incx, y, i_incy, a, i_lda));
@@ -316,7 +316,7 @@ void THCudaBlas_Hgemm(THCState *state, char transa, char transb, long m, long n,
 				  i_ldb, &fBeta, c, CUDA_R_16F, i_ldc));*/
     }
 #elif __HCC__
-      cublasHgemm(handle, opa, opb,
+      hipblasHgemm(handle, opa, opb,
 				i_m, i_n, i_k, &alpha, a, i_lda, b, i_ldb,
 				&beta, c, i_ldc);
 #endif
@@ -417,7 +417,7 @@ void THCudaBlas_Dgetrf(THCState *state, int n, double **a, int lda, int *pivot, 
     THError("Cublas_Dgetrf only supports n, lda, batchSize"
             "with the bound [val] <= %d", INT_MAX);
   }
-#ifdef HIPBLAS_TODO 
+#ifdef HIPBLAS_TODO
   hipblasHandle_t handle = THCState_getCurrentBlasHandle(state);
   hipblasSetStream(handle, THCState_getCurrentStream(state));
   THCublasCheck(hipblasDgetrfBatched(handle, n, a, lda, pivot, info, batchSize));
@@ -431,7 +431,7 @@ void THCudaBlas_Sgetri(THCState *state, int n, const float **a, int lda, int *pi
     THError("Cublas_Sgetri only supports n, lda, ldc, batchSize"
             "with the bound [val] <= %d", INT_MAX);
   }
-#ifdef HIPBLAS_TODO 
+#ifdef HIPBLAS_TODO
   hipblasHandle_t handle = THCState_getCurrentBlasHandle(state);
   hipblasSetStream(handle, THCState_getCurrentStream(state));
   THCublasCheck(hipblasSgetriBatched(handle, n, a, lda, pivot, c, ldc, info, batchSize));
@@ -445,7 +445,7 @@ void THCudaBlas_Dgetri(THCState *state, int n, const double **a, int lda, int *p
     THError("Cublas_Dgetri only supports n, lda, ldc, batchSize"
             "with the bound [val] <= %d", INT_MAX);
   }
-#ifdef HIPBLAS_TODO 
+#ifdef HIPBLAS_TODO
   hipblasHandle_t handle = THCState_getCurrentBlasHandle(state);
   hipblasSetStream(handle, THCState_getCurrentStream(state));
   THCublasCheck(hipblasDgetriBatched(handle, n, a, lda, pivot, c, ldc, info, batchSize));

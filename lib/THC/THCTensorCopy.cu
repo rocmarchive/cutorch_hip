@@ -11,7 +11,9 @@ inline int curGPU() {
 // Copy operator for the pointwise apply kernel
 template <typename TypeDst, typename TypeSrc>
 struct CopyOp {
-  __device__ __forceinline__ void operator()(TypeDst* dst, TypeSrc* src) {
+  __device__ __forceinline__
+  void operator()(TypeDst* dst, TypeSrc* src)
+  {
     *dst = ScalarConvert<TypeSrc, TypeDst>::to(*src);
   }
 };
