@@ -190,17 +190,6 @@ inline bool operator!=(half a, half b) {
       }
     };
 
-      inline
-      bool operator==(half a, half b)
-      {
-        return a.x == b.x;
-      }
-
-      inline
-      bool operator!=(half a, half b)
-      {
-        return a.x != b.x;
-      }
 #endif // CUDA_HALF_TENSOR
 #endif // HIP_PLATFORM_NVCC
 #endif // THC_TENSOR_TYPE_UTILS_INC
