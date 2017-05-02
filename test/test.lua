@@ -12,6 +12,7 @@ local maxvalue = 20
 local nloop = 100
 local test_tolerance = 1e-5
 local unpack = unpack or table.unpack
+local hasHalfChecked = false
 --e.g. unit test cmd: th -lcutorch -e "cutorch.test{'view','viewAs'}"
 
 local typenames = {
@@ -53,11 +54,22 @@ for k,v in pairs(t2gpu) do
 end
 
 local function checkHalf()
-   if cutorch.hasHalf then
+   if cutorch.hasHalf and hasHalfChecked == false then
        table.insert(typenames, 'torch.CudaHalfTensor')
        table.insert(float_typenames, 'torch.CudaHalfTensor')
        t2cpu['torch.CudaHalfTensor'] = 'torch.FloatTensor'
+       t2gpu['torch.HalfTensor'] = 'torch.CudaHalfTensor'
    end
+   hasHalfChecked = true
+end
+
+local function isFloat(t)
+    for k, v in pairs(float_typenames) do
+        if t == k then
+            return true
+        end
+    end
+    return false
 end
 
 -- Picks an integer between a and b, inclusive of endpoints
@@ -162,22 +174,47 @@ local function createTestTensor(maxSize)
    return createTestTensorMaxSize(holes, tr, maxSize)
 end
 
-local function isEqual(a, b, tolerance, ...)
-   if a == nil and b == nil then return true end
-   if a == nil and b ~= nil then return false end
-   if a ~= nil and b == nil then return false end
+local function isEqual(x, y, tolerance, ...)
+   if x == nil and y == nil then return true end
+   if x == nil and y ~= nil then return false end
+   if x ~= nil and y == nil then return false end
+
+   -- if x, y are tensors clone them so we can modify the contents if necessary for testing
+   local a = type(x) ~= 'number' and x:clone() or x
+   local b = type(y) ~= 'number' and y:clone() or y
+
    if torch.type(b) ~= torch.type(a) then
       b = b:typeAs(a) -- TODO: remove the need for this (a-b doesnt work for bytetensor, cudatensor pairs)
    end
    local diff = a-b
    tolerance = tolerance or 0.000001
    if type(a) == 'number' then
+      -- NaN Check:
+      if a ~= a and b ~= b then
+          return true
+      end
       return math.abs(diff) < tolerance
    else
       if torch.type(diff) ~= 'torch.FloatTensor' then
          diff = diff:float() -- TODO: remove the need for this (byteTensor and abs)
       end
-      return diff:abs():max() < tolerance
+      -- NaN Check:
+      local hasNaN = false
+      diff:apply(function(elt) if elt ~= elt then hasNaN = true end end)
+      if hasNaN then
+         -- check if NaN in equal positions
+         local nea = torch.ne(a, a)
+         local neb = torch.ne(b, b)
+         if not nea:equal(neb) then
+            return false
+         end
+         -- check diff of all other elements less than tolerance
+         local ea = a:apply(function(elt) if elt ~= elt then return 0 else return elt end end)
+         local eb = b:apply(function(elt) if elt ~= elt then return 0 else return elt end end)
+         return (ea-eb):abs():max() < tolerance
+      else
+         return diff:abs():max() < tolerance
+      end
    end
 end
 
@@ -233,7 +270,6 @@ local function compareFloatAndCuda(x, fn, ...)
 			       .. "are different for function '%s'", tostring(fn)))
    for k, _ in ipairs(rcpu) do
       if not isEqual(rcpu[k], rcuda[k], tolerance) then
-	      print(args)
 	      tester:assert(false, errstr)
       end
    end
@@ -327,10 +363,11 @@ end
 -- indexMode = true: keep indexing and masking Tensors as their CPU equivalents
 --             false: convert then to baseType when doing CUDA
 -- x = first argument tensor
+-- limit: number of returns to compare, if nil, compares all returns
 -- gpu2cpu_map = map of gpu types to cpu types
 -- fn = function name (as string), or the function)
 -- ... = the rest of arguments to fn
-local function compareCPUAndCUDATypeTensorArgsWithConv(cudaType, gpu2cpu_map, indexMode, x, fn, ...)
+local function compareCPUAndCUDATypeTensorArgsWithConvInternal(cudaType, gpu2cpu_map, indexMode, limit, x, fn, ...)
    local baseType = t2cpu[cudaType]
    assert(baseType, 'Cannot find baseType for ' .. cudaType)
    local x_cpu = x:type(baseType)
@@ -382,23 +419,29 @@ local function compareCPUAndCUDATypeTensorArgsWithConv(cudaType, gpu2cpu_map, in
    tester:assert(#rcpu == #rcuda,
 		 string.format("number of return arguments for CPU and CUDA "
 			       .. "are different for function '%s'", tostring(fn)))
-   for k, _ in ipairs(rcpu) do
-      tester:assert(isEqual(rcpu[k], rcuda[k], tolerance),
-                    string.format(errstrval, k, divval(rcpu[k], rcuda[k])))
+
+   if limit ~= nil then
+      for k = 1, limit do
+         tester:assert(isEqual(rcpu[k], rcuda[k], tolerance),
+                       string.format(errstrval, k, divval(rcpu[k], rcuda[k])))
+      end
+   else
+      for k, _ in ipairs(rcpu) do
+         tester:assert(isEqual(rcpu[k], rcuda[k], tolerance),
+                       string.format(errstrval, k, divval(rcpu[k], rcuda[k])))
+      end
    end
    -- also test x in case function changed object
    tester:assert(isEqual(x_cpu, x_cuda, tolerance),
                  string.format(errstrobj, divval(x_cpu, x_cuda)))
 end
 
--- baseType = the tensor type to test
--- indexMode = true: keep indexing and masking Tensors as their CPU equivalents
---             false: convert then to baseType when doing CUDA
--- x = first argument tensor
--- fn = function name (as string), or the function)
--- ... = the rest of arguments to fn
 local function compareCPUAndCUDATypeTensorArgs(cudaType, indexMode, x, fn, ...)
-   compareCPUAndCUDATypeTensorArgsWithConv(cudaType, nil, indexMode, x, fn, ...)
+   compareCPUAndCUDATypeTensorArgsWithConvInternal(cudaType, nil, indexMode, nil, x, fn, ...)
+end
+
+local function compareCPUAndCUDATypeTensorArgsWithLimit(cudaType, indexMode, limit, x, fn, ...)
+   compareCPUAndCUDATypeTensorArgsWithConvInternal(cudaType, nil, indexMode, limit, x, fn, ...)
 end
 
 function test.squeeze()
@@ -750,18 +793,34 @@ end
 
 function test.copyAsync()
    local sz = chooseInt(maxsize, 2 * maxsize)
-   local host_tensor = cutorch.createCudaHostTensor(sz):uniform()
-   local device_tensor = torch.CudaTensor(sz)
-   device_tensor:copyAsync(host_tensor)
-   cutorch.streamSynchronize(cutorch.getStream())
-   tester:assertTensorEq(host_tensor, device_tensor:float(), 0,
-                         "Async copy to device failed.")
+   local host_tensors = {
+     cutorch.createCudaHostTensor(sz),
+     cutorch.createCudaHostDoubleTensor(sz)
+   }
+   if cutorch.hasHalf then
+     table.insert(host_tensors, cutorch.createCudaHostHalfTensor(sz))
+   end
+   for k,host_tensor in ipairs(host_tensors) do
+      local device_type = t2gpu[torch.type(host_tensor)]:match(('torch.(%a+)'))
+      if torch.type(host_tensor) ~= 'torch.HalfTensor' then
+         host_tensor = host_tensor:uniform()
+      else
+         -- HalfTensor doesn't have math functions defined.
+         local copy_tensor = torch[device_type](sz):uniform()
+         host_tensor:copy(copy_tensor)
+      end
+      local device_tensor = torch[device_type](sz)
+      device_tensor:copyAsync(host_tensor)
+      cutorch.streamSynchronize(cutorch.getStream())
+      tester:assertTensorEq(host_tensor:double(), device_tensor:double(), 0,
+                            "Async copy to device failed.")
 
-   device_tensor:uniform()
-   host_tensor:copyAsync(device_tensor)
-   cutorch.streamSynchronize(cutorch.getStream())
-   tester:assertTensorEq(device_tensor:float(), host_tensor, 0,
-                         "Async copy to host failed.")
+      device_tensor:uniform()
+      host_tensor:copyAsync(device_tensor)
+      cutorch.streamSynchronize(cutorch.getStream())
+      tester:assertTensorEq(device_tensor:double(), host_tensor:double(), 0,
+                            "Async copy to host failed.")
+   end
 end
 
 function test.largeNoncontiguous()
@@ -827,6 +886,98 @@ function test.ones()
    torch.setdefaulttensortype(t)
 end
 
+function test.linspace()
+   local sz1 = chooseInt(minsize, maxsize)
+   local sz2 = chooseInt(minsize, maxsize)
+   local n = sz1 * sz2
+   local a = torch.uniform()
+   local b = torch.uniform()
+   local x = torch.FloatTensor():rand(sz1, sz2)
+   for k, typename in ipairs(float_typenames) do
+      local x = x:type(t2cpu[typename])
+      compareCPUAndCUDATypeTensorArgs(typename, nil, x, 'linspace', a, b, n)
+   end
+   checkMultiDevice(x, 'linspace', a, b, n)
+
+   -- Check range for non-contiguous tensors.
+   local x = createTestTensorWithSizes(true, true, {sz1, sz2})
+   for k, typename in ipairs(float_typenames) do
+      local x = x:type(t2cpu[typename])
+      compareCPUAndCUDATypeTensorArgs(typename, nil, x, 'linspace', a, b, n)
+   end
+   checkMultiDevice(x, 'linspace', a, b, n)
+
+   -- Ckeck new tensor creation
+   local x = torch.FloatTensor()
+   for k, typename in ipairs(float_typenames) do
+      local x = x:type(t2cpu[typename])
+      compareCPUAndCUDATypeTensorArgs(typename, nil, x, 'linspace', a, b, n)
+   end
+   checkMultiDevice(x, 'linspace', a, b, n)
+
+   -- Ckeck n = 1 case
+   local x = torch.rand(1)
+   for k, typename in ipairs(float_typenames) do
+      local x = x:type(t2cpu[typename])
+      compareCPUAndCUDATypeTensorArgs(typename, nil, x, 'linspace', a, a, 1)
+   end
+   checkMultiDevice(x, 'linspace', a, a, 1)
+
+   -- Ckeck default parameter case
+   local x = createTestTensorWithSizes(true, true, {100})
+   for k, typename in ipairs(float_typenames) do
+      local x = x:type(t2cpu[typename])
+      compareCPUAndCUDATypeTensorArgs(typename, nil, x, 'linspace', a, b)
+   end
+   checkMultiDevice(x, 'linspace', a, b)
+end
+
+function test.logspace()
+   local sz1 = chooseInt(minsize, maxsize)
+   local sz2 = chooseInt(minsize, maxsize)
+   local n = sz1 * sz2
+   local a = torch.uniform()
+   local b = torch.uniform()
+   local x = torch.FloatTensor():rand(sz1, sz2)
+   for k, typename in ipairs(float_typenames) do
+      local x = x:type(t2cpu[typename])
+      compareCPUAndCUDATypeTensorArgs(typename, nil, x, 'logspace', a, b, n)
+   end
+   checkMultiDevice(x, 'logspace', a, b, n)
+
+   -- Check range for non-contiguous tensors.
+   local x = createTestTensorWithSizes(true, true, {sz1, sz2})
+   for k, typename in ipairs(float_typenames) do
+      local x = x:type(t2cpu[typename])
+      compareCPUAndCUDATypeTensorArgs(typename, nil, x, 'logspace', a, b, n)
+   end
+   checkMultiDevice(x, 'logspace', a, b, n)
+
+   -- Ckeck new tensor creation
+   local x = torch.FloatTensor()
+   for k, typename in ipairs(float_typenames) do
+      local x = x:type(t2cpu[typename])
+      compareCPUAndCUDATypeTensorArgs(typename, nil, x, 'logspace', a, b, n)
+   end
+   checkMultiDevice(x, 'logspace', a, b, n)
+
+   -- Ckeck n = 1 case
+   local x = torch.rand(1)
+   for k, typename in ipairs(float_typenames) do
+      local x = x:type(t2cpu[typename])
+      compareCPUAndCUDATypeTensorArgs(typename, nil, x, 'logspace', a, a, 1)
+   end
+   checkMultiDevice(x, 'logspace', a, a, 1)
+
+   -- Ckeck default parameter case
+   local x = createTestTensorWithSizes(true, true, {100})
+   for k, typename in ipairs(float_typenames) do
+      local x = x:type(t2cpu[typename])
+      compareCPUAndCUDATypeTensorArgs(typename, nil, x, 'logspace', a, b)
+   end
+   checkMultiDevice(x, 'logspace3', a, b)
+end
+
 
 function test.add()
    local sz1 = chooseInt(minsize, maxsize)
@@ -847,6 +998,35 @@ function test.add()
    checkMultiDevice(x, 'add', z, v)
    checkMultiDevice(x, 'add', y, z)
    checkMultiDevice(x, 'add', y, v, z)
+end
+
+local test_bitops =  function(funcname, tmin, tmax, vmin, vmax)
+   local sz1 = chooseInt(minsize, maxsize)
+   local sz2 = chooseInt(minsize, maxsize)
+   local x = torch.IntTensor(sz1, sz2):random(tmin, tmax)
+   local v = torch.random(vmin, vmax)
+   compareCPUAndCUDATypeTensorArgs('torch.CudaIntTensor', nil, x, funcname, v)
+   checkMultiDevice(x, funcname, v)
+end
+
+function test.lshift()
+   test_bitops('lshift', 1, 1000, 1, 10)
+end
+
+function test.rshift()
+   test_bitops('rshift', 1000, 1000000, 1, 10)
+end
+
+function test.bitand()
+   test_bitops('bitand', 1, 1000, 1, 255)
+end
+
+function test.bitor()
+   test_bitops('bitor', 1, 1000, 1, 255)
+end
+
+function test.bitxor()
+   test_bitops('bitxor', 1, 1000, 1, 255)
 end
 
 function test.csub()
@@ -894,6 +1074,79 @@ function test.cpow()
        compareCPUAndCUDATypeTensorArgs(typename, nil, x, 'cpow', y)
    end
    checkMultiDevice(x, 'cpow', y)
+end
+
+function test.cremainder()
+   local sz1 = chooseInt(minsize, maxsize)
+   local sz2 = chooseInt(minsize, maxsize)
+   local x = torch.FloatTensor(sz1, sz2):uniform(-50, 50)
+   local y = torch.FloatTensor(sz1, sz2):uniform(-50, 50)
+   for k, typename in ipairs(typenames) do
+       local ctype = t2cpu[typename]
+       local a, b = x:type(ctype), y:type(ctype)
+       if not isFloat(typename) then
+           b[b:eq(0)] = 1
+       end
+       compareCPUAndCUDATypeTensorArgs(typename, nil, a, 'cremainder', b)
+   end
+   checkMultiDevice(x, 'cremainder', y)
+
+   -- ensure we test divide by zero
+   local x = torch.FloatTensor(1):fill(1)
+   local y = torch.FloatTensor(1):zero()
+   for k, typename in ipairs(float_typenames) do
+       local ctype = t2cpu[typename]
+       local a, b = x:type(ctype), y:type(ctype)
+       compareCPUAndCUDATypeTensorArgs(typename, nil, a, 'cremainder', b)
+   end
+   checkMultiDevice(x, 'cremainder', y)
+end
+
+function test.cfmod()
+   local sz1 = chooseInt(minsize, maxsize)
+   local sz2 = chooseInt(minsize, maxsize)
+   local x = torch.FloatTensor(sz1, sz2):uniform(-50, 50)
+   local y = torch.FloatTensor(sz1, sz2):uniform(-50, 50)
+   for k, typename in ipairs(typenames) do
+       local ctype = t2cpu[typename]
+       local a, b = x:type(ctype), y:type(ctype)
+       if not isFloat(typename) then
+           b[b:eq(0)] = 1
+       end
+       compareCPUAndCUDATypeTensorArgs(typename, nil, a, 'cfmod', b)
+   end
+   checkMultiDevice(x, 'cfmod', y)
+
+   -- ensure we test mod by zero
+   local x = torch.FloatTensor(1):fill(1)
+   local y = torch.FloatTensor(1):zero()
+   for k, typename in ipairs(float_typenames) do
+       local ctype = t2cpu[typename]
+       local a, b = x:type(ctype), y:type(ctype)
+       compareCPUAndCUDATypeTensorArgs(typename, nil, a, 'cfmod', b)
+   end
+   checkMultiDevice(x, 'cfmod', y)
+end
+
+function test.nonzero()
+    local minsize = 10
+    local maxsize = 20
+    local dims = {chooseInt(minsize, maxsize)}
+    local threshold = 1 / 3
+    local flip = math.random()
+    while flip > threshold do
+        dims[#dims + 1] = chooseInt(minsize, maxsize)
+        flip = math.random()
+    end
+    local x = createTestTensorWithSizes(true, true, dims)
+    local randMask = torch.ByteTensor(unpack(dims)):bernoulli()
+    x:maskedFill(randMask, 0)
+    for k, typename in ipairs(typenames) do
+        local ctype = t2cpu[typename]
+        local x = x:type(ctype)
+        compareCPUAndCUDATypeTensorArgs(typename, nil, x, 'nonzero')
+    end
+    checkMultiDevice(x, 'nonzero')
 end
 
 function test.cdiv()
@@ -978,6 +1231,79 @@ function test.addcdiv()
 
    checkMultiDevice(r, 'addcdiv', x, y, z)
    checkMultiDevice(r, 'addcdiv', x, torch.uniform(), y, z)
+end
+
+function test.fmod()
+   local sz1 = chooseInt(minsize, maxsize)
+   local sz2 = chooseInt(minsize, maxsize)
+   local x = torch.FloatTensor():randn(sz1, sz2)
+   x:apply(function(x)
+       x = x * torch.random(1, 100)
+       return x
+   end)
+   local r = torch.normal(0, 25)
+
+   for _, typename in ipairs(typenames) do
+      local x = x:type(t2cpu[typename])
+      compareCPUAndCUDATypeTensorArgs(typename, nil, x, 'fmod', r)
+   end
+end
+
+function test.remainder()
+   local sz1 = chooseInt(minsize, maxsize)
+   local sz2 = chooseInt(minsize, maxsize)
+   local x = torch.FloatTensor():randn(sz1, sz2)
+   x:apply(function(x)
+       x = x * torch.random(1, 100)
+       return x
+   end)
+   local r = torch.normal(0, 25)
+
+   for _, typename in ipairs(typenames) do
+      local x = x:type(t2cpu[typename])
+      compareCPUAndCUDATypeTensorArgs(typename, nil, x, 'remainder', r)
+   end
+end
+
+function test.equal()
+    -- empty tensors are equal
+    local x = torch.FloatTensor()
+    local y = torch.FloatTensor()
+
+    for _, typename in ipairs(typenames) do
+        local a = x:type(typename)
+        local b = y:type(typename)
+        tester:assert(a:equal(b), 'Empty Tensors should be considered equal')
+    end
+
+    -- mismatched size tensors are not equal
+    local x = torch.FloatTensor(5):fill(1)
+    local y = torch.FloatTensor(3):fill(1)
+
+    for _, typename in ipairs(typenames) do
+        local a = x:type(typename)
+        local b = y:type(typename)
+        tester:assert(not a:equal(b), 'Tensors of different sizes not equal')
+    end
+
+    -- tensors of same size but different value are not equal
+    local sz1 = chooseInt(minsize, maxsize)
+    local sz2 = chooseInt(minsize, maxsize)
+    local x = torch.FloatTensor(sz1, sz2):apply(function() return torch.random(0, 255) end)
+    local y = torch.add(x, 1)
+
+    for _, typename in ipairs(typenames) do
+        local a = x:type(typename)
+        local b = y:type(typename)
+        tester:assert(not a:equal(b), 'Tensors should not be equal')
+    end
+
+    -- actual equality
+    for _, typename in ipairs(typenames) do
+        local a = x:type(typename)
+        local b = x:type(typename)
+        tester:assert(a:equal(b), 'Tensors should be equal')
+    end
 end
 
 function test.logicalValue()
@@ -1163,9 +1489,12 @@ function test.cumsum()
    local sz1 = chooseInt(minsize, maxsize)
    local sz2 = chooseInt(minsize, maxsize)
    local x = torch.FloatTensor():rand(sz1, sz2)
-   compareFloatAndCuda(x, 'cumsum')
-   compareFloatAndCuda(x, 'cumsum', 1)
-   compareFloatAndCuda(x, 'cumsum', 2)
+   for _, typename in ipairs(typenames) do
+       local x = x:type(t2cpu[typename])
+       compareCPUAndCUDATypeTensorArgs(typename, nil, x, 'cumsum');
+       compareCPUAndCUDATypeTensorArgs(typename, nil, x, 'cumsum', 1);
+       compareCPUAndCUDATypeTensorArgs(typename, nil, x, 'cumsum', 2);
+   end
    checkMultiDevice(x, 'cumsum')
    checkMultiDevice(x, 'cumsum', 1)
 end
@@ -1189,9 +1518,12 @@ function test.cumprod()
    local sz1 = chooseInt(minsize, maxsize)
    local sz2 = chooseInt(minsize, maxsize)
    local x = torch.FloatTensor():rand(sz1, sz2)
-   compareFloatAndCuda(x, 'cumprod')
-   compareFloatAndCuda(x, 'cumprod', 1)
-   compareFloatAndCuda(x, 'cumprod', 2)
+   for _, typename in ipairs(typenames) do
+       local x = x:type(t2cpu[typename])
+       compareCPUAndCUDATypeTensorArgs(typename, nil, x, 'cumprod');
+       compareCPUAndCUDATypeTensorArgs(typename, nil, x, 'cumprod', 1);
+       compareCPUAndCUDATypeTensorArgs(typename, nil, x, 'cumprod', 2);
+   end
    checkMultiDevice(x, 'cumprod')
    checkMultiDevice(x, 'cumprod', 1)
 end
@@ -1237,37 +1569,128 @@ function test.diag()
    local sz2 = chooseInt(minsize, maxsize)
    local k = chooseInt(-minsize, minsize)
    local x = torch.FloatTensor():rand(sz1, sz2)
-   compareFloatAndCudaTensorArgs(x, 'diag')
-   compareFloatAndCudaTensorArgs(x, 'diag', k)
+   for _, typename in ipairs(float_typenames) do
+       local x = x:type(t2cpu[typename])
+       compareCPUAndCUDATypeTensorArgs(typename, nil, x, 'diag')
+       compareCPUAndCUDATypeTensorArgs(typename, nil, x, 'diag', k)
+   end
    checkMultiDevice(x, 'diag')
    checkMultiDevice(x, 'diag', k)
 
    local y = torch.FloatTensor():rand(sz1)
-   compareFloatAndCudaTensorArgs(y, 'diag')
-   compareFloatAndCudaTensorArgs(y, 'diag', k)
+   for _, typename in ipairs(float_typenames) do
+       local y = x:type(t2cpu[typename])
+       compareCPUAndCUDATypeTensorArgs(typename, nil, y, 'diag')
+       compareCPUAndCUDATypeTensorArgs(typename, nil, y, 'diag', k)
+   end
    checkMultiDevice(y, 'diag')
    checkMultiDevice(y, 'diag', k)
 
    -- test non-contiguous cases
    local x1 = createTestTensorWithSizes(true, true, {sz1, sz2});
-   compareFloatAndCudaTensorArgs(x1, 'diag')
-   compareFloatAndCudaTensorArgs(x1, 'diag', k)
+   for _, typename in ipairs(float_typenames) do
+       local x1 = x1:type(t2cpu[typename])
+       compareCPUAndCUDATypeTensorArgs(typename, nil, x1, 'diag')
+       compareCPUAndCUDATypeTensorArgs(typename, nil, x1, 'diag', k)
+   end
    checkMultiDevice(x1, 'diag')
    checkMultiDevice(x1, 'diag', k)
 
    local y1 = createTestTensorWithSizes(true, true, {sz1});
-   compareFloatAndCudaTensorArgs(y1, 'diag')
-   compareFloatAndCudaTensorArgs(y1, 'diag', k)
+   for _, typename in ipairs(float_typenames) do
+       local y1 = y1:type(t2cpu[typename])
+       compareCPUAndCUDATypeTensorArgs(typename, nil, y1, 'diag')
+       compareCPUAndCUDATypeTensorArgs(typename, nil, y1, 'diag', k)
+   end
    checkMultiDevice(y1, 'diag')
    checkMultiDevice(y1, 'diag', k)
+end
+
+function test.range()
+   local xmin = chooseInt(minsize, maxsize)
+   local xmax = chooseInt(xmin, maxsize)
+   local step = 3
+   local size = math.floor((xmax - xmin) / step + 1)
+   -- Base case
+   local x = torch.FloatTensor():rand(size)
+   for k, typename in ipairs(typenames) do
+      local x = x:type(t2cpu[typename])
+      compareCPUAndCUDATypeTensorArgs(typename, nil, x, 'range', xmin, xmax, step)
+   end
+   checkMultiDevice(x, 'range', xmin, xmax, step)
+
+   -- Check range for non-contiguous tensors.
+   local x = createTestTensorWithSizes(true, true, {size})
+   for k, typename in ipairs(typenames) do
+      local x = x:type(t2cpu[typename])
+      compareCPUAndCUDATypeTensorArgs(typename, nil, x, 'range', xmin, xmax, step)
+   end
+   checkMultiDevice(x, 'range', xmin, xmax, step)
+
+   -- Ckeck new tensor creation
+   local x = torch.Tensor()
+   for k, typename in ipairs(typenames) do
+      local x = x:type(t2cpu[typename])
+      compareCPUAndCUDATypeTensorArgs(typename, nil, x, 'range', xmin, xmax, step)
+   end
+   checkMultiDevice(x, 'range', xmin, xmax, step)
+
+   -- Ckeck negative step case
+   for k, typename in ipairs(typenames) do
+      local x = x:type(t2cpu[typename])
+      compareCPUAndCUDATypeTensorArgs(typename, nil, x, 'range', xmax, xmin, -step)
+   end
+   checkMultiDevice(x, 'range', xmax, xmin, -step)
+
+   -- Ckeck default parameter case
+   local x = createTestTensorWithSizes(true, true, {size})
+   for k, typename in ipairs(typenames) do
+      local x = x:type(t2cpu[typename])
+      compareCPUAndCUDATypeTensorArgs(typename, nil, x, 'range', xmin, xmax)
+   end
+   checkMultiDevice(x, 'range', xmin, xmax, step)
+
+   -- Ckeck floating step case
+   local step = 1.3
+   local x = torch.Tensor()
+   for k, typename in ipairs(float_typenames) do
+      local x = x:type(t2cpu[typename])
+      compareCPUAndCUDATypeTensorArgs(typename, nil, x, 'range', xmin, xmax)
+   end
+   checkMultiDevice(x, 'range', xmin, xmax, step)
 end
 
 function test.trace()
    local sz1 = chooseInt(minsize, maxsize)
    local sz2 = chooseInt(minsize, maxsize)
    local x = torch.FloatTensor():rand(sz1, sz2)
-   compareFloatAndCuda(x, 'trace')
+   for _, typename in ipairs(float_typenames) do
+       local x = x:type(t2cpu[typename])
+       compareCPUAndCUDATypeTensorArgs(typename, nil, x, 'trace')
+   end
    checkMultiDevice(x, 'trace')
+end
+
+function test.tril()
+   local sz1 = chooseInt(minsize, maxsize)
+   local sz2 = chooseInt(minsize, maxsize)
+   local x = torch.FloatTensor():rand(sz1, sz2)
+   for _, typename in ipairs(float_typenames) do
+       local x = x:type(t2cpu[typename])
+       compareCPUAndCUDATypeTensorArgs(typename, nil, x, 'tril')
+   end
+   checkMultiDevice(x, 'tril')
+end
+
+function test.triu()
+   local sz1 = chooseInt(minsize, maxsize)
+   local sz2 = chooseInt(minsize, maxsize)
+   local x = torch.FloatTensor():rand(sz1, sz2)
+   for _, typename in ipairs(float_typenames) do
+       local x = x:type(t2cpu[typename])
+       compareCPUAndCUDATypeTensorArgs(typename, nil, x, 'triu')
+   end
+   checkMultiDevice(x, 'triu')
 end
 
 -- Test element-wise unary operators with both one and two arguments.
@@ -1334,10 +1757,9 @@ for _,name in ipairs({
 
 end
 
---TODO: Fix the ERROR status caused for this particular test
 test["abs1"] = testUnary1({"abs", -100, 100}, {'torch.CudaIntTensor',
                                                'torch.CudaLongTensor'})
---TODO: Fix the ERROR status caused for this particular test
+
 test["abs2"] = testUnary2({"abs", -100, 100}, {'torch.CudaIntTensor',
                                                'torch.CudaLongTensor'})
 
@@ -1385,7 +1807,11 @@ function test.pow1()
    local sz2 = chooseInt(minsize, maxsize)
    local x = torch.FloatTensor():rand(sz1, sz2)
    local pow = torch.uniform(minvalue,maxvalue)
-   compareFloatAndCudaTensorArgs(x, 'pow', pow)
+   for k, typename in ipairs(float_typenames) do
+       local ctype = t2cpu[typename]
+       local x = x:type(ctype)
+       compareCPUAndCUDATypeTensorArgs(typename, nil, x, 'pow', pow)
+   end
    checkMultiDevice(x, 'pow', pow)
 end
 
@@ -1395,7 +1821,11 @@ function test.pow2()
    local x = torch.FloatTensor():rand(sz1, sz2)
    local y = torch.FloatTensor()
    local pow = torch.uniform(minvalue,maxvalue)
-   compareFloatAndCudaTensorArgs(y, 'pow', x, pow)
+   for k, typename in ipairs(float_typenames) do
+       local ctype = t2cpu[typename]
+       local x, y = x:type(ctype), y:type(ctype)
+       compareCPUAndCUDATypeTensorArgs(typename, nil, y, 'pow', x, pow)
+   end
    checkMultiDevice(y, 'pow', x, pow)
 end
 
@@ -1405,7 +1835,11 @@ function test.powExponentTensor()
    local pow = torch.uniform(minvalue,maxvalue)
    local x = torch.FloatTensor():rand(sz1, sz2)
    local y = torch.FloatTensor()
-   compareFloatAndCudaTensorArgs(y, 'pow', pow, x)
+   for k, typename in ipairs(float_typenames) do
+       local ctype = t2cpu[typename]
+       local x, y = x:type(ctype), y:type(ctype)
+       compareCPUAndCUDATypeTensorArgs(typename, nil, y, 'pow', pow, x)
+   end
    checkMultiDevice(y, 'pow', pow, x)
 end
 
@@ -1623,10 +2057,10 @@ local function testIndexAdd(types, gpu2cpu_map)
    for k, typename in ipairs(types) do
       local ctype = t2cpu[typename]
       local x, src = x:type(ctype), src:type(ctype)
-      compareCPUAndCUDATypeTensorArgsWithConv(typename, gpu2cpu_map, true, x, 'indexAdd',
+      compareCPUAndCUDATypeTensorArgsWithConvInternal(typename, gpu2cpu_map, true, nil, x, 'indexAdd',
                                               index, longIndex, src)
       if typename ~= 'torch.CudaByteTensor' and typename ~= 'torch.CudaCharTensor' then
-          compareCPUAndCUDATypeTensorArgsWithConv(typename, gpu2cpu_map, false, x, 'indexAdd',
+          compareCPUAndCUDATypeTensorArgsWithConvInternal(typename, gpu2cpu_map, false, nil, x, 'indexAdd',
                                                   index, longIndex, src)
       end
    end
@@ -1638,10 +2072,10 @@ local function testIndexAdd(types, gpu2cpu_map)
    for k, typename in ipairs(types) do
       local ctype = t2cpu[typename]
       local x, src = x:type(ctype), src:type(ctype)
-      compareCPUAndCUDATypeTensorArgsWithConv(typename, gpu2cpu_map, true, x, 'indexAdd',
+      compareCPUAndCUDATypeTensorArgsWithConvInternal(typename, gpu2cpu_map, true, nil, x, 'indexAdd',
                                               index, longIndex, src)
       if typename ~= 'torch.CudaByteTensor' and typename ~= 'torch.CudaCharTensor' then
-          compareCPUAndCUDATypeTensorArgsWithConv(typename, gpu2cpu_map, false, x, 'indexAdd',
+          compareCPUAndCUDATypeTensorArgsWithConvInternal(typename, gpu2cpu_map, false, nil, x, 'indexAdd',
                                                   index, longIndex, src)
       end
    end
@@ -1654,10 +2088,10 @@ local function testIndexAdd(types, gpu2cpu_map)
    for k, typename in ipairs(types) do
       local ctype = t2cpu[typename]
       local x, src = x:type(ctype), src:type(ctype)
-      compareCPUAndCUDATypeTensorArgsWithConv(typename, gpu2cpu_map, true, x, 'indexAdd',
+      compareCPUAndCUDATypeTensorArgsWithConvInternal(typename, gpu2cpu_map, true, nil, x, 'indexAdd',
                                               index, longIndex, src)
       if typename ~= 'torch.CudaByteTensor' and typename ~= 'torch.CudaCharTensor' then
-          compareCPUAndCUDATypeTensorArgsWithConv(typename, gpu2cpu_map, false, x, 'indexAdd',
+          compareCPUAndCUDATypeTensorArgsWithConvInternal(typename, gpu2cpu_map, false, nil, x, 'indexAdd',
                                                   index, longIndex, src)
       end
    end
@@ -1699,7 +2133,7 @@ function test.indexFill()
 
    local longIndex = torch.LongTensor{chooseInt(1, sz1), chooseInt(1, sz1)}
    local index = 1
-   local val = torch.randn(1)[1]
+   local val = torch.random(10)
    for k, typename in ipairs(typenames) do
        local x = x:type(t2cpu[typename])
        compareCPUAndCUDATypeTensorArgs(typename, true, x, 'indexFill',
@@ -1711,7 +2145,7 @@ function test.indexFill()
    end
    index = 2
    longIndex =  torch.LongTensor{chooseInt(1, sz2), chooseInt(1, sz2)}
-   val = torch.randn(1)[1]
+   val = torch.random(10)
    for k, typename in ipairs(typenames) do
       local x = x:type(t2cpu[typename])
       compareCPUAndCUDATypeTensorArgs(typename, true, x, 'indexFill',
@@ -1725,7 +2159,7 @@ function test.indexFill()
    x = torch.FloatTensor():rand(sz1)
    index = 1
    longIndex = torch.LongTensor{chooseInt(1, sz1), chooseInt(1, sz1)}
-   val = torch.randn(1)[1]
+   val = torch.random(10)
    for k, typename in ipairs(typenames) do
       local x = x:type(t2cpu[typename])
       compareCPUAndCUDATypeTensorArgs(typename, true, x, 'indexFill',
@@ -1803,11 +2237,16 @@ function test.dist()
    local sz2 = chooseInt(minsize, maxsize)
    local x = torch.FloatTensor():rand(sz1, sz2)
    local y = torch.FloatTensor():rand(sz1, sz2)
-   compareFloatAndCudaTensorArgs(x, 'dist', y)
+   for _, typename in ipairs(float_typenames) do
+       local x = x:type(t2cpu[typename])
+       local y = y:type(t2cpu[typename])
+       compareCPUAndCUDATypeTensorArgs(typename, nil, x, 'dist', y)
+       compareCPUAndCUDATypeTensorArgs(typename, nil, x, 'dist', y, 3)
+   end
    checkMultiDevice(x, 'dist', y)
 end
 
--- TODO: Need to fix occasional runtime error at hipFree / allocator_free at line 184 generic/THCStorage.c
+
 function test.indexCopy2()
    for tries = 1, 5 do
       local t = createTestTensor(1000000)
@@ -1819,7 +2258,7 @@ function test.indexCopy2()
    end
 end
 
--- TODO: Need to fix occasional runtime error at hipFree / allocator_free at line 184 generic/THCStorage.c
+
 function test.indexAdd2()
    for tries = 1, 5 do
       local t = createTestTensor(1000000)
@@ -1831,7 +2270,7 @@ function test.indexAdd2()
    end
 end
 
--- TODO: Need to fix occasional runtime error at hipFree / allocator_free at line 184 generic/THCStorage.c
+
 function test.indexFill2()
    for tries = 1, 5 do
       local t = createTestTensor(1000000)
@@ -1843,7 +2282,7 @@ function test.indexFill2()
    end
 end
 
--- TODO: Need to fix occasional runtime error at hipFree / allocator_free at line 184 generic/THCStorage.c
+
 function test.indexSelect2()
    for tries = 1, 5 do
       local t = createTestTensor(1000000)
@@ -2248,23 +2687,28 @@ function test.ger()
    end
 end
 
---TODO: Fix the ERROR status caused for this particular test
--- Lack of support for sgetrfBatched is cause for this
 function test.inverse()
    local a = torch.eye(5):add(torch.Tensor(5, 5):uniform(-0.1, 0.1))
-   local i1 = torch.inverse(a)
-   local i2 = torch.inverse(a:cuda())
-   tester:assertle((i2 - i1:cuda()):abs():max(), 1e-5, "wrong inverse answer")
+   for _, typename in ipairs({'torch.DoubleTensor', 'torch.FloatTensor'}) do
+       local at = a:type(typename)
+       local i1 = torch.inverse(at)
+       local i2 = torch.inverse(a:cuda())
+       tester:assertle((i2 - i1:cuda()):abs():max(), 1e-5, "wrong inverse answer")
+   end
 end
 
 if cutorch.magma then
    function test.gesv()
       local a = torch.Tensor(5, 5):uniform(-1, 1)
       local b = torch.Tensor(5, 3):uniform(-1, 1)
-      local rb1, ra1 = torch.gesv(b, a)
-      local rb2, ra2 = torch.gesv(b:cuda(), a:cuda())
-      tester:assertle((rb2 - rb1:cuda()):abs():max(), 1e-5, "wrong gesv answer")
-      tester:assertle((ra2 - ra1:cuda()):abs():max(), 1e-5, "wrong gesv answer")
+      for _, typename in ipairs({'torch.DoubleTensor', 'torch.FloatTensor'}) do
+          local at = a:type(typename)
+          local bt = b:type(typename)
+          local rb1, ra1 = torch.gesv(bt, at)
+          local rb2, ra2 = torch.gesv(bt:cuda(), at:cuda())
+          tester:assertle((rb2 - rb1:cuda()):abs():max(), 1e-5, "wrong gesv answer")
+          tester:assertle((ra2 - ra1:cuda()):abs():max(), 1e-5, "wrong gesv answer")
+      end
    end
 
    function test.gels()
@@ -2282,10 +2726,14 @@ if cutorch.magma then
          { 0.5360, 0.2048, 0.2745},
          { 0.8535,-0.3938,-0.2140},
       }
-      local rb1, ra1 = torch.gels(b, a)
-      local rb2, ra2 = torch.gels(b:cuda(), a:cuda())
-      tester:assertle((rb2 - rb1:cuda()):abs():max(), 5e-4, "wrong gels answer")
-      tester:assertle((ra2 - ra1:cuda()):abs():max(), 5e-4, "wrong gels answer")
+      for _, typename in ipairs({'torch.DoubleTensor', 'torch.FloatTensor'}) do
+          local at = a:type(typename)
+          local bt = b:type(typename)
+          local rb1, ra1 = torch.gels(bt, at)
+          local rb2, ra2 = torch.gels(bt:cuda(), at:cuda())
+          tester:assertle((rb2 - rb1:cuda()):abs():max(), 5e-4, "wrong gels answer")
+          tester:assertle((ra2 - ra1:cuda()):abs():max(), 5e-4, "wrong gels answer")
+      end
    end
 
    function test.symeig()
@@ -2294,10 +2742,13 @@ if cutorch.magma then
                               {-0.47, -6.39,  4.17,  0.00,  0.00},
                               {-7.20,  1.50, -1.51,  5.70,  0.00},
                               {-0.65, -6.34,  2.67,  1.80, -7.10}}):t()
-      local e1,v1 = torch.symeig(a, 'V')
-      local e2,v2 = torch.symeig(a:cuda(), 'V')
-      tester:assertle((e2 - e1:cuda()):abs():max(), 1e-5, "wrong symeig answer")
-      tester:assertle((v2 - v1:cuda()):abs():max(), 1e-5, "wrong symeig answer")
+      for _, typename in ipairs({'torch.DoubleTensor', 'torch.FloatTensor'}) do
+          local at = a:type(typename)
+          local e1,v1 = torch.symeig(at, 'V')
+          local e2,v2 = torch.symeig(at:cuda(), 'V')
+          tester:assertle((e2 - e1:cuda()):abs():max(), 1e-5, "wrong symeig answer")
+          tester:assertle((v2 - v1:cuda()):abs():max(), 1e-5, "wrong symeig answer")
+      end
    end
 
    function test.eig()
@@ -2308,10 +2759,13 @@ if cutorch.magma then
          { 0.5766, -0.6743,  0.6903, 0.3646, -0.4571},
          {-0.8956, -0.4074, -0.7583, 0.1838, -0.0091},
       }
-      local e1,v1 = torch.eig(a, 'V')
-      local e2,v2 = torch.eig(a:cuda(), 'V')
-      tester:assertle((e2 - e1:cuda()):abs():max(), 1e-6, "wrong eig answer")
-      tester:assertle((v2:abs() - v1:abs():cuda()):abs():max(), 1e-6, "wrong eig answer")
+      for _, typename in ipairs({'torch.DoubleTensor', 'torch.FloatTensor'}) do
+          local at = a:type(typename)
+          local e1,v1 = torch.eig(at, 'V')
+          local e2,v2 = torch.eig(at:cuda(), 'V')
+          tester:assertle((e2 - e1:cuda()):abs():max(), 1e-6, "wrong eig answer")
+          tester:assertle((v2:abs() - v1:abs():cuda()):abs():max(), 1e-6, "wrong eig answer")
+      end
    end
 
    function test.svd()
@@ -2322,7 +2776,9 @@ if cutorch.magma then
          {5.45, -0.27,  4.85,  0.74, 10.00, -6.02},
          {3.16,  7.98,  3.01,  5.80,  4.27, -5.31}}
 
-      local u,s,v = torch.svd(a, 'A')
+      for _, typename in ipairs({'torch.CudaDoubleTensor', 'torch.CudaTensor'}) do
+          local at = a:type(typename)
+          local u,s,v = torch.svd(a, 'A')
 
       local temp = torch.Tensor(a:size(2)):zero()
       temp:narrow(1, 1, a:size(1)):copy(s)
@@ -2333,6 +2789,7 @@ if cutorch.magma then
       tester:assertle((m - a):abs():max(), 1e-5, "svd: a != u * s * vT")
       tester:assertle((u*u:t() - torch.eye(a:size(1)):cuda()):abs():max(), 1e-6, "svd: u should be unitary")
       tester:assertle((v*v:t() - torch.eye(a:size(2)):cuda()):abs():max(), 1e-6, "svd: v should be unitary")
+      end
    end
 
 
@@ -2346,11 +2803,18 @@ if cutorch.magma then
       }
       A = A * A:t()
 
-      local i1 = torch.potri(A)
-      local i2 = torch.potri(A:cuda())
-      local M = A:cuda() * i2
-      tester:assertle((i2 - i1:cuda()):abs():max(), 1e-5, "wrong potri answer")
-      tester:assertle((M - torch.eye(A:size(1)):cuda()):abs():max(), 1e-5, "potri not an inverse")
+      for _, typename in ipairs({'torch.DoubleTensor', 'torch.FloatTensor'}) do
+          local at = A:type(typename)
+          for _, triarg in ipairs({'U', 'L'}) do
+              local chol  = torch.potrf(at, triarg)
+
+              local i1 = torch.potri(chol, triarg)
+              local i2 = torch.potri(chol:cuda(), triarg)
+              local M = at:cuda() * i2
+              tester:assertle((i2 - i1:cuda()):abs():max(), 1e-5, "wrong potri answer")
+              tester:assertle((M - torch.eye(at:size(1)):cuda()):abs():max(), 1e-5, "potri not an inverse")
+          end
+      end
    end
 
    function test.potrf()
@@ -2361,9 +2825,14 @@ if cutorch.magma then
          {-0.6738, 0.4734,-1.1123, 2.4071,-1.2756},
          {-3.3883, 0.2807, 0.8161,-1.2756, 4.3415},
       }
-      local i1 = torch.potrf(A)
-      local i2 = torch.potrf(A:cuda())
-      tester:assertle((i2 - i1:cuda()):abs():max(), 1e-5, "wrong potrf answer")
+      for _, typename in ipairs({'torch.DoubleTensor', 'torch.FloatTensor'}) do
+          local at = A:type(typename)
+          for _, triarg in ipairs({'U', 'L'}) do
+              local i1 = torch.potrf(at, triarg)
+              local i2 = torch.potrf(at:cuda(), triarg)
+              tester:assertle((i2 - i1:cuda()):abs():max(), 1e-5, "wrong potrf answer")
+          end
+      end
    end
 
    function test.potrs()
@@ -2379,10 +2848,16 @@ if cutorch.magma then
         {0.2334,  0.8594,  0.4103},
         {0.7556,  0.1966,  0.9637},
         {0.1420,  0.7185,  0.7476}})
-      local chol = torch.potrf(A)
-      local solve1 = torch.potrs(B, chol)
-      local solve2 = torch.potrs(B:cuda(), chol:cuda())
-      tester:assertle((solve2 - solve1:cuda()):abs():max(), 1e-4, "wrong potrs answer")
+      for _, typename in ipairs({'torch.DoubleTensor', 'torch.FloatTensor'}) do
+          local at = A:type(typename)
+          local bt = B:type(typename)
+          for _, triarg in ipairs({'U', 'L'}) do
+              local chol = torch.potrf(at, triarg)
+              local solve1 = torch.potrs(bt, chol, triarg)
+              local solve2 = torch.potrs(bt:cuda(), chol:cuda(), triarg)
+              tester:assertle((solve2 - solve1:cuda()):abs():max(), 1e-4, "wrong potrs answer")
+          end
+      end
    end
 
    function test.qr()
@@ -2393,10 +2868,13 @@ if cutorch.magma then
          {-0.2987,  1.9035, -1.4192, -0.9738,  1.4384},
          {-0.5315,  0.4958,  0.4449, -0.4676, -0.4878},
       }
-      local q1,r1 = torch.qr(A)
-      local q2,r2 = torch.qr(A:cuda())
-      tester:assertle((q2 - q1:cuda()):abs():max(), 1e-5, "wrong qr answer")
-      tester:assertle((r2 - r1:cuda()):abs():max(), 1e-5, "wrong qr answer")
+      for _, typename in ipairs({'torch.DoubleTensor', 'torch.FloatTensor'}) do
+          local at = A:type(typename)
+          local q1,r1 = torch.qr(at)
+          local q2,r2 = torch.qr(at:cuda())
+          tester:assertle((q2 - q1:cuda()):abs():max(), 1e-5, "wrong qr answer")
+          tester:assertle((r2 - r1:cuda()):abs():max(), 1e-5, "wrong qr answer")
+      end
    end
 end
 
@@ -2453,89 +2931,139 @@ function test.uniform()
    local max = min + torch.uniform()
    local t = torch.CudaTensor(sz1, sz2)
 
-   t:uniform(min, max)
-   checkIfUniformlyDistributed(t, min, max)
+   for _, typename in ipairs(float_typenames) do
+       local x = t:type(typename)
+       x:uniform(min, max)
+       checkIfUniformlyDistributed(x, min, max)
+   end
    checkMultiDevice(t, 'uniform', min, max)
 end
 
 function test.bernoulli()
+   local minsize = 1000
+   local maxsize = 2000
    local sz1 = chooseInt(minsize, maxsize)
    local sz2 = chooseInt(minsize, maxsize)
    local p = torch.uniform()
+   local p_fl = torch.rand(sz1, sz2):cuda()
+   local p_dbl = torch.rand(sz1, sz2):cudaDouble()
    local t = torch.CudaTensor(sz1, sz2)
 
-   t:bernoulli(p)
-   tester:assertalmosteq(t:mean(), p, 0.1, "mean is not equal to p")
-   local f = t:float()
-   tester:assertTensorEq(f:eq(1):add(f:eq(0)):float(),
-                         torch.FloatTensor(sz1, sz2):fill(1),
-                         1e-6,
-                         "each value must be either 0 or 1")
+   for _, typename in ipairs(typenames) do
+       local x = t:type(typename)
+       local expected_mean
+       for i, p in ipairs({p, p_fl, p_dbl}) do
+          x:bernoulli(p)
+          local mean = x:sum() / (sz1 * sz2)
+          if torch.type(p) == 'number' then
+             expected_mean = p
+          else
+             expected_mean = p:mean()
+          end
+          tester:assertalmosteq(mean, expected_mean, 0.1, "mean is not equal to the expected value")
+          local f = x:float()
+          tester:assertTensorEq(f:eq(1):add(f:eq(0)):float(),
+                                torch.FloatTensor(sz1, sz2):fill(1),
+                                1e-6,
+                                "each value must be either 0 or 1")
+       end
+   end
    checkMultiDevice(t, 'bernoulli', p)
 end
 
 function test.normal()
+   local minsize = 1000
+   local maxsize = 2000
    local sz1 = chooseInt(minsize, maxsize)
    local sz2 = chooseInt(minsize, maxsize)
    local mean, std = torch.uniform(), 0.1 * torch.uniform()
    local tolerance = 0.01
    local t = torch.CudaTensor(sz1, sz2)
 
-   t:normal(mean, std)
-   tester:assertalmosteq(t:mean(), mean, tolerance, "mean is wrong")
-   tester:assertalmosteq(t:std(), std, tolerance, "standard deviation is wrong")
+   for _, typename in ipairs(float_typenames) do
+       local x = t:type(t2cpu[typename])
+       x:normal(mean, std)
+       tester:assertalmosteq(x:mean(), mean, tolerance, "mean is wrong")
+       tester:assertalmosteq(x:std(), std, tolerance, "standard deviation is wrong")
+   end
+
    checkMultiDevice(t, 'normal', mean, std)
 end
 
 function test.logNormal()
+   local minsize = 1000
+   local maxsize = 2000
    local sz1 = chooseInt(minsize, maxsize)
    local sz2 = chooseInt(minsize, maxsize)
    local mean, std = torch.uniform(), 0.1 * torch.uniform()
    local tolerance = 0.01
    local t = torch.CudaTensor(sz1, sz2)
 
-   t:logNormal(mean, std)
-   local logt = t:log()
-   tester:assertalmosteq(logt:mean(), mean, tolerance, "mean is wrong")
-   tester:assertalmosteq(logt:std(), std, tolerance, "standard deviation is wrong")
+   for _, typename in ipairs(float_typenames) do
+       local x = t:type(typename)
+       x:logNormal(mean, std)
+       local logt = x:log()
+       tester:assertalmosteq(logt:mean(), mean, tolerance, "mean is wrong")
+       tester:assertalmosteq(logt:std(), std, tolerance, "standard deviation is wrong")
+   end
    checkMultiDevice(t, 'logNormal', mean, std)
 end
 
 function test.geometric()
+   local minsize = 1000
+   local maxsize = 2000
    local sz1 = chooseInt(minsize, maxsize)
    local sz2 = chooseInt(minsize, maxsize)
-   local p = torch.uniform()
-   local t = torch.CudaTensor(sz1, sz2)
 
-   t:geometric(p)
-   local u = torch.FloatTensor(sz1, sz2):fill(1) -
-                 ((t:float() - 1) * math.log(p)):exp()
-   checkIfUniformlyDistributed(u, 0, 1)
+   -- unlike other tests, we pick a large p-value to lower the variance, so
+   -- that its highly unlikely the mean falls outside the bounds of the
+   -- specified tolerance
+   local p = 0.8
+   local tolerance = 0.2
+
+   local t = torch.CudaTensor(sz1, sz2)
+   local mean = (1 / p)
+
+   for _, typename in ipairs(float_typenames) do
+       local x = t:type(typename)
+       x:geometric(p)
+       tester:assertalmosteq(x:mean(), mean, tolerance, "mean is wrong")
+   end
    checkMultiDevice(t, 'geometric', p)
 end
 
 function test.exponential()
+   local minsize = 1000
+   local maxsize = 2000
    local sz1 = chooseInt(minsize, maxsize)
    local sz2 = chooseInt(minsize, maxsize)
    local lambda = torch.uniform()
    local t = torch.CudaTensor(sz1, sz2)
 
-   t:exponential(lambda)
-   local u = torch.FloatTensor(sz1, sz2):fill(1) -
-                 (t:float() * -lambda):exp()
-   checkIfUniformlyDistributed(u, 0, 1)
+   for _, typename in ipairs(float_typenames) do
+       local x = t:type(t2cpu[typename])
+       x:exponential(lambda)
+       local u = torch.FloatTensor(sz1, sz2):fill(1) -
+                     (x:float() * -lambda):exp()
+       checkIfUniformlyDistributed(u, 0, 1)
+   end
    checkMultiDevice(t, 'exponential', lambda)
 end
 
 function test.cauchy()
+   local minsize = 1000
+   local maxsize = 2000
    local sz1 = chooseInt(minsize, maxsize)
    local sz2 = chooseInt(minsize, maxsize)
    local median, sigma = torch.uniform(), torch.uniform()
    local t = torch.CudaTensor(sz1, sz2)
 
-   t:cauchy(median, sigma)
-   local u = ((t:float() - median) / sigma):atan() / math.pi + 0.5
-   checkIfUniformlyDistributed(u, 0, 1)
+   for _, typename in ipairs(float_typenames) do
+       local x = t:type(typename)
+       x:cauchy(median, sigma)
+       local u = ((x:float() - median) / sigma):atan() / math.pi + 0.5
+       checkIfUniformlyDistributed(u, 0, 1)
+   end
    checkMultiDevice(t, 'cauchy', median, sigma)
 end
 
@@ -2602,15 +3130,20 @@ function test.multinomial_with_replacement()
       local prob_dist = torch.CudaTensor(n_row, n_col):uniform()
       prob_dist:select(2, n_col):fill(0) --index n_col shouldn't be sampled
       local n_sample = torch.random(n_col - 1)
-      local sample_indices = torch.multinomial(prob_dist, n_sample, true)
-      tester:assert(sample_indices:dim() == 2, "wrong sample_indices dim")
-      tester:assert(sample_indices:size(2) == n_sample, "wrong number of samples")
+      for _, typename in ipairs(float_typenames) do
+          if typename ~= 'torch.CudaHalfTensor' then
+             local pd = prob_dist:type(typename)
+             local sample_indices = torch.multinomial(pd, n_sample, true)
+             tester:assert(sample_indices:dim() == 2, "wrong sample_indices dim")
+             tester:assert(sample_indices:size(2) == n_sample, "wrong number of samples")
 
       for i = 1, n_row do
          for j = 1, n_sample do
             local val = sample_indices[{i,j}]
             tester:assert(val == math.floor(val) and val >= 1 and val < n_col,
                           "sampled an invalid index: " .. val)
+                end
+             end
          end
       end
    end
@@ -2625,29 +3158,33 @@ function test.multinomial_without_replacement()
       local prob_dist = torch.CudaTensor(n_row, n_col):uniform()
       prob_dist:select(2, n_col):fill(0) --index n_col shouldn't be sampled
       local n_sample = torch.random(n_col - 1)
-      local sample_indices = torch.multinomial(prob_dist, n_sample, false)
-      tester:assert(sample_indices:dim() == 2, "wrong sample_indices dim")
-      tester:assert(sample_indices:size(2) == n_sample, "wrong number of samples")
+      for _, typename in ipairs(float_typenames) do
+          if typename ~= 'torch.CudaHalfTensor' then
+             local pd = prob_dist:type(typename)
+             local sample_indices = torch.multinomial(pd, n_sample, false)
+             tester:assert(sample_indices:dim() == 2, "wrong sample_indices dim")
+             tester:assert(sample_indices:size(2) == n_sample, "wrong number of samples")
 
-      sample_indices = sample_indices:float()
+             sample_indices = sample_indices:float()
 
-      for i = 1, n_row do
-         local row_samples = {}
-         for j = 1, n_sample do
-            local sample_idx = sample_indices[{i,j}]
-            tester:assert(
-               sample_idx ~= n_col, "sampled an index with zero probability"
-            )
-            tester:assert(
-                  not row_samples[sample_idx], "sampled an index twice"
-            )
-            row_samples[sample_idx] = true
+             for i = 1, n_row do
+                local row_samples = {}
+                for j = 1, n_sample do
+                   local sample_idx = sample_indices[{i,j}]
+                   tester:assert(
+                      sample_idx ~= n_col, "sampled an index with zero probability"
+                   )
+                   tester:assert(
+                         not row_samples[sample_idx], "sampled an index twice"
+                   )
+                   row_samples[sample_idx] = true
+                end
+             end
          end
       end
    end
 end
 
---TODO: Fix the ERROR status caused for this particular test
 function test.multinomial_without_replacement_gets_all()
    for tries = 1, 10 do
       local distributions = torch.random(10)
@@ -2659,29 +3196,42 @@ function test.multinomial_without_replacement_gets_all()
          t[dist] = linear
       end
 
-      local orig = t:clone()
+      local orig = t:cudaLong()
 
-      -- Sample without replacement
-      local result = torch.multinomial(t, distSize)
-      tester:assert(result:size(1) == distributions)
-      tester:assert(result:size(2) == distSize)
+      for _, typename in ipairs(float_typenames) do
+          -- Half tensors have precision errors for the binary search causing this test
+          -- to fail frequently
+          if typename ~= 'torch.CudaHalfTensor' then
+              local x = t:type(typename)
 
-      -- Sort, and we should have the original results, since without replacement
-      -- sampling everything, we should have chosen every value uniquely
-      result = result:sort(2)
-      tester:assertTensorEq(orig, result, 0, "error in multinomial_without_replacement_gets_all")
+              -- Sample without replacement
+              local result = torch.multinomial(x, distSize)
+              tester:assert(result:size(1) == distributions)
+              tester:assert(result:size(2) == distSize)
+
+              -- Sort, and we should have the original results, since without replacement
+              -- sampling everything, we should have chosen every value uniquely
+              result = result:sort(2)
+              tester:assertTensorEq(orig, result, 0, "error in multinomial_without_replacement_gets_all")
+          end
+      end
    end
 end
 function test.multinomial_vector()
    local n_col = torch.random(100)
    local prob_dist = torch.CudaTensor(n_col):uniform()
    local n_sample = n_col
-   local sample_indices = torch.multinomial(prob_dist, n_sample, true)
-   tester:assert(sample_indices:dim() == 1, "wrong sample_indices dim")
-   -- Multinomial resizes prob_dist to be 2d (1xn), check that the resize
-   -- was undone
-   tester:assert(prob_dist:dim() == 1, "wrong number of prob_dist dimensions")
-   tester:assert(sample_indices:size(1) == n_sample, "wrong number of samples")
+   for _, typename in ipairs(float_typenames) do
+       if typename ~= 'torch.CudaHalfTensor' then
+           local pd = prob_dist:type(typename)
+           local sample_indices = torch.multinomial(pd, n_sample, true)
+           tester:assert(sample_indices:dim() == 1, "wrong sample_indices dim")
+           -- Multinomial resizes prob_dist to be 2d (1xn), check that the resize
+           -- was undone
+           tester:assert(prob_dist:dim() == 1, "wrong number of prob_dist dimensions")
+           tester:assert(sample_indices:size(1) == n_sample, "wrong number of samples")
+       end
+   end
 end
 
 function test.get_device()
@@ -2759,7 +3309,7 @@ function test.cudaTypeCopy()
       {'int',   'IntTensor'},
       {'long',  'LongTensor'},
       {'double','DoubleTensor'},
-
+      {'half', 'HalfTensor'},
       {'cuda',      'CudaTensor'},
       {'cudaByte',  'CudaByteTensor'},
       {'cudaChar',  'CudaCharTensor'},
@@ -2823,7 +3373,7 @@ function test.cudaStorageTypeCopy()
       {'int',   'IntStorage'},
       {'long',  'LongStorage'},
       {'double','DoubleStorage'},
-
+      {'half',   'HalfStorage'},
       {'cuda',      'CudaStorage'},
       {'cudaByte',  'CudaByteStorage'},
       {'cudaChar',  'CudaCharStorage'},
@@ -2833,7 +3383,7 @@ function test.cudaStorageTypeCopy()
       {'cudaDouble','CudaDoubleStorage'},
    }
    if cutorch.hasHalf then
-      table.insert(types, {'cudaHalf', 'CudaStorage'})
+      table.insert(types, {'cudaHalf', 'CudaHalfStorage'})
    end
 
    local N = 100
@@ -2869,13 +3419,23 @@ function test.tensorToTable()
       {'CudaLongTensor',   'LongTensor'},
       {'CudaDoubleTensor', 'DoubleTensor'},
    }
-
+   if cutorch.hasHalf then
+      table.insert(types, {'CudaHalfTensor', 'HalfTensor'})
+   end
    for _, types in ipairs(types) do
       local cudaType, hostType = unpack(types)
       local dim = torch.random(5)
       local size = torch.LongTensor(dim):random(5):totable()
-      hostTensor = torch[hostType](size):random()
-      cudaTensor = torch[cudaType](size):copy(hostTensor)
+      local hostTensor = nil
+      if hostType ~= 'HalfTensor' then
+          hostTensor = torch[hostType](size):random()
+      else
+          -- work around HalfTensor not having random functions and reduced range
+          local copyTensor = torch['FloatTensor'](size):random(128)
+          hostTensor = torch[hostType](size)
+          hostTensor:copy(copyTensor)
+      end
+      local cudaTensor = torch[cudaType](size):copy(hostTensor)
       tester:assertTableEq(hostTensor:totable(), cudaTensor:totable(),
                            'wrong result for ' .. cudaType .. ':totable()')
    end
@@ -2891,6 +3451,9 @@ function test.storageToTable()
       {'CudaLongStorage',   'LongTensor'},
       {'CudaDoubleStorage', 'DoubleTensor'},
    }
+   if cutorch.hasHalf then
+     types['CudaHalfStorage'] = 'HalfTensor'
+   end
 
    for _, types in ipairs(types) do
       local cudaStorageType, hostTensorType = unpack(types)
@@ -3157,8 +3720,7 @@ function test.scatterFill()
    end
 end
 
---TODO: fix the TensorSort and TopK implementation to run the below test
--- Currently results in ERROR status
+
 function test.sort()
    for tries = 1, 5 do
       local t = createTestTensor(2 ^ 20)
@@ -3215,25 +3777,35 @@ function test.sort()
    tester:assert(isEqual(gather_cpu, gather_gpu), 'indices mismatch')
 end
 
-function test.topk()
-   local function runTopK(t, dim, k, dir)
-      -- FIXME: if the tensors ever contain equivalent values, then their indices
-      -- could in fact be different.
-
-      if torch.Tensor.type(t) == 'torch.CudaTensor' then
-         return t:topk(k, dim, dir, true)
-      else
-         local sorted, indices = t:sort(dim, dir)
-         return sorted:narrow(dim, 1, k), indices:narrow(dim, 1, k)
+local function explore(typename, func, t, topk, indices)
+   if t:nDimension() == 1 then
+      func(typename, t, topk, indices)
+   else
+      for i = 1, t:size(1) do
+         explore(typename, func, t[i], topk[i], indices[i])
       end
    end
+end
 
-   for tries = 1, 5 do
-      -- max size 2^20 for indexing
-      local t = createTestTensor(2 ^ 20)
-      local dim = chooseInt(1, t:nDimension())
-      local dimSize = t:size(dim)
-      local dir = chooseInt(1, 2) == 1
+function test.topk()
+   -- need to ensure unique values for index checking, so for the first pass we create Tensors
+   -- with sizes less than the maximum range of values for that type
+   local counts = {}
+   counts['torch.CudaByteTensor'] = 255
+   counts['torch.CudaCharTensor'] = 255
+   counts['torch.CudaShortTensor'] = 65536
+   counts['torch.CudaIntTensor'] = 2 ^ 20
+   counts['torch.CudaTensor'] = 2 ^ 20
+   counts['torch.CudaLongTensor'] = 2 ^ 20
+   counts['torch.CudaDoubleTensor'] =  2 ^ 20
+   counts['torch.CudaHalfTensor'] = 32768
+
+   for _, typename in ipairs(typenames) do
+      for tries = 1, 5 do
+         local t = createTestTensor(counts[typename]):type(typename)
+         local dim = chooseInt(1, t:nDimension())
+         local dimSize = t:size(dim)
+         local dir = chooseInt(1, 2) == 1
 
       -- Test boundary conditions
       local kTests = {1, dimSize}
@@ -3246,10 +3818,439 @@ function test.topk()
          table.insert(kTests, chooseInt(1, math.min(2048, dimSize)))
       end
 
-      for k = 1, #kTests do
-         compareFloatAndCuda(t, runTopK, dim, kTests[k], dir)
+         for k = 1, #kTests do
+            compareCPUAndCUDATypeTensorArgsWithLimit(typename, nil, 1, t, 'topk', kTests[k], dim, dir, true)
+
+            -- verify that indices picked yield topk value in original tensor
+            local topk, indices = t:topk(kTests[k], dim, dir, true)
+            local verify = function(typename, t, topk, indices)
+               t = t:type(t2cpu[typename])
+               indices = indices:long()
+               topk = topk:type(t2cpu[typename])
+               for i = 1, indices:size(1) do
+                  tester:assert(t[indices[i]] == topk[i])
+               end
+            end
+
+            local tt  = t:transpose(dim, t:nDimension())
+            local ttk = topk:transpose(dim, topk:nDimension())
+            local tti = indices:transpose(dim, indices:nDimension())
+
+            explore(typename, verify, tt, ttk, tti)
+         end
       end
    end
+end
+
+local function verifyMode1D(tensor)
+   -- We cannot rely upon comparing against CPU-Torch as the way it resolves
+   -- ties between equal modes and how it picks the corresponding index is not
+   -- reliable. Instead we will use apply macros to compute the mode in place in
+   -- our code and compare against these results
+
+   -- counts is a table of tensor element -> # of occurrences
+   local counts = {}
+
+   -- populate counts by iterating over the elements in the tensor
+   tensor:apply(function(x) if counts[x] == nil then counts[x] = 1 else counts[x] = counts[x] + 1 end return x end)
+
+   -- next, calculate the max occurrence in the tensor
+   local max = -1;
+   for _, count in pairs(counts) do
+      if count > max then max = count end
+   end
+
+   -- now verify for all the GPU types that 1. the mode picked has max occurrences,
+   -- and 2. that the index returned contains that mode
+
+   for _, cudaType in ipairs(typenames) do
+      local baseType = t2cpu[cudaType]
+      assert(baseType, 'Cannot find baseType for ' .. cudaType)
+      local x_cpu = tensor:clone():type(baseType)
+      local x_cuda = cloneExactlyToGPUType(x_cpu, nil, t2gpu)
+
+      local modes, indices = x_cuda:mode()
+
+      -- 1D, so should only be a single return
+      tester:assert(modes:nElement() == 1, 'mode returned an invalid number of values')
+      tester:assert(indices:nElement() == 1, 'mode returned an invalid number of values')
+      local mode = modes[1]
+      local index = indices[1]
+
+      tester:assert(counts[mode] == max, string.format(
+         'Type: %s --> Selected mode of %s which has count of %s, but mode must have %s occurrences',
+         cudaType, tostring(mode), tostring(counts[mode]), tostring(max)
+      ))
+      tester:assert(tensor[index] == mode, string.format(
+        'Type: %s --> Selected index of %s which has value %s, but mode is %s',
+        cudaType, tostring(index), tostring(tensor[index]), tostring(mode)
+      ))
+   end
+end
+
+local function assertSize(tensor, sizes)
+   local valid = true
+   if tensor:nDimension() ~= #sizes then
+      tester:assert(false, 'tensor dimension mismatch')
+   end
+   for i, size in ipairs(sizes) do
+      if tensor:size(i) ~= size then
+         valid = false
+      end
+   end
+   tester:assert(valid, 'tensor size mismatch')
+end
+
+local function verifyMode2D(tensor, onlyDim)
+   local dims = {}
+   if onlyDim ~= nil then
+      dims = {onlyDim}
+   else
+      dims = {1, 2}
+   end
+
+   for _, dim in ipairs(dims) do
+      -- In the case of a 2D Tensor, we need to calculate the count for each slice
+      -- sCounts is a table containing the counts of elements for each slice,
+      -- sMax is a table containing the max occurrence for each slice
+      local sCounts = {}
+      local sMax = {}
+
+      -- First, we use the :split() function to split the Tensor
+      -- Suppose we are mode'ing a 5x10 Tensor. If we mode along dim=1,
+      -- we have a result Tensor that is 1x10, so we need the counts for
+      -- all 10 slices of size=5. So we actually split along dim=2, with
+      -- size = 1, to yield 10 5x1 tensors
+      local splits = tensor:split(1, dim == 1 and 2 or 1)
+
+      -- next, we iterate over these split Tensors to calculate the mode, as we
+      -- did in the 1D case
+      for i, slice in pairs(splits) do
+         local counts = {}
+         slice:apply(function(x) if counts[x] == nil then counts[x] = 1 else counts[x] = counts[x] + 1 end return x end)
+
+         local max = -1;
+         for _, count in pairs(counts) do
+            if count > max then max = count end
+         end
+
+         sCounts[i] = counts;
+         sMax[i] = max;
+      end
+
+      -- verification pass
+      for _, cudaType in ipairs(typenames) do
+         local baseType = t2cpu[cudaType]
+         assert(baseType, 'Cannot find baseType for ' .. cudaType)
+         local x_cpu = tensor:clone():type(baseType)
+         local x_cuda = cloneExactlyToGPUType(x_cpu, nil, t2gpu)
+         local modes, indices = x_cuda:mode(dim)
+
+         -- 2D, so expect:
+         -- (dim = 1) a 1xsize(tensor, dim = 2) tensor
+         -- (dim = 2) a size(tensor, dim = 1)x1 tensor
+
+         if dim == 1 then
+            assertSize(modes, {1, tensor:size(2)})
+            assertSize(indices, {1, tensor:size(2)})
+         else
+            assertSize(modes, {tensor:size(1), 1})
+            assertSize(indices, {tensor:size(1), 1})
+         end
+
+         -- we need to run through and verify that all of the modes/indices are valid, for
+         -- the results of each slice. First, we squeeze the Tensor, so we can iterate over
+         -- both the 1D/2D values in the same manner
+         modes = modes:squeeze(dim)
+         indices = indices:squeeze(dim)
+
+         -- iterate over each slice, and verify that for each slice the mode selected has
+         -- max occurrences, and the index points to the mode
+         for i, counts in pairs(sCounts) do
+            local max = sMax[i]
+            local mode = modes[i]
+            local index = indices[i]
+
+            tester:assert(counts[mode] == max, string.format(
+               'Type: %s --> Selected mode of %s which has count of %s, but mode must have %s occurrences',
+               cudaType, tostring(mode), tostring(counts[mode]), tostring(max)
+            ))
+
+            if dim == 1 then
+               tester:assert(tensor[index][i] == mode, string.format(
+                  'Type: %s --> Selected index of %s which has value %s, but mode is %s',
+                  cudaType, tostring(index), tostring(tensor[index][i]), tostring(mode)
+               ))
+            else
+               tester:assert(tensor[i][index] == mode, string.format(
+                  'Type: %s --> Selected index of %s which has value %s, but mode is %s',
+                  cudaType, tostring(index), tostring(tensor[i][index]), tostring(mode)
+               ))
+            end
+         end
+      end
+   end
+end
+
+local function verifyMode3D(tensor, onlyDim)
+    local dims = {}
+    if onlyDim ~= nil then
+       dims = {onlyDim}
+    else
+       dims = {1, 2, 3}
+    end
+    -- In the case of 3D Tensor, we need to calculate the count for each slice,
+    -- but this time, we have two layers of depth, for each of the non-mode dims
+    -- so sCounts is a multi-level table where sCounts[i][j] is the counts for
+    -- (_, i, j), (i, _, j) or (i, j, _) depending on the dim
+    local sCounts = {}
+    local sMax = {}
+
+    -- Suppose we have a 2x3x4 Tensor T:
+    -- (1, .., ..),    (2, .., ..)
+    -- [1, 2, 3, 4]    [3, 2, 2, 4]
+    -- [5, 6, 7, 8]    [5, 6, 8, 7]
+    -- [9, 10, 11, 12] [1, 10, 11, 1]
+    --
+    -- Then for dim = 1, we need counts to be a multi-level table (3x4xcounts)
+    --                2                                           (2x4xcounts)
+    --                3                                           (2x3xcounts)
+    --
+    -- Results: dim = 1
+    -- {1:
+    --    {1:
+    --       1 --> 1,
+    --       3 --> 1,
+    --     2:
+    --       2 --> 2,
+    --     3:
+    --       2 --> 1,
+    --       3 --> 1,
+    --     4:
+    --       4 --> 2,
+    --    },
+    -- {2:
+    --    {1:
+    --       5 --> 2,
+    --       ...
+
+    -- used to set loop bounds and indexing to construct the above table using the loop below
+    local dbounds = {
+      {tensor:size(2), tensor:size(3), tensor:size(1)},
+      {tensor:size(1), tensor:size(3), tensor:size(2)},
+      {tensor:size(1), tensor:size(2), tensor:size(3)}}
+    local dfuncs = {
+      function(tensor, i, j, k) return tensor[k][i][j] end,
+      function(tensor, i, j, k) return tensor[i][k][j] end,
+      function(tensor, i, j, k) return tensor[i][j][k] end,
+    }
+
+    -- loop...
+    for d, bounds in ipairs(dbounds) do
+      sCounts[d] = {}
+      sMax[d] = {}
+      for i = 1, bounds[1] do
+        sCounts[d][i] = {}
+        sMax[d][i] = {}
+        for j = 1, bounds[2] do
+           sCounts[d][i][j] = {}
+           sMax[d][i][j] = {}
+           for k = 1, bounds[3] do
+             local v = dfuncs[d](tensor, i, j, k)
+             if sCounts[d][i][j][v] == nil then
+                sCounts[d][i][j][v] = 1
+             else
+                sCounts[d][i][j][v] = sCounts[d][i][j][v] + 1
+             end
+
+             local max = -1
+             for _, count in pairs(sCounts[d][i][j]) do
+                if count > max then max = count end
+             end
+             sMax[d][i][j] = max
+           end -- k
+        end -- k
+      end -- j
+    end -- d
+
+
+   -- verification pass
+   for _, dim in ipairs(dims) do
+      for _, cudaType in ipairs(typenames) do
+         local baseType = t2cpu[cudaType]
+         assert(baseType, 'Cannot find baseType for ' .. cudaType)
+         local x_cpu = tensor:clone():type(baseType)
+         local x_cuda = cloneExactlyToGPUType(x_cpu, nil, t2gpu)
+         local modes, indices = x_cuda:mode(dim)
+
+         if dim == 1 then
+            assertSize(modes, {1, tensor:size(2), tensor:size(3)})
+            assertSize(indices, {1, tensor:size(2), tensor:size(3)})
+         elseif dim == 2 then
+            assertSize(modes, {tensor:size(1), 1, tensor:size(3)})
+            assertSize(indices, {tensor:size(1), 1, tensor:size(3)})
+         else
+            assertSize(modes, {tensor:size(1), tensor:size(2), 1})
+            assertSize(indices, {tensor:size(1), tensor:size(2), 1})
+         end
+
+         -- squeeze on mode dim
+         modes = modes:squeeze(dim)
+         indices = indices:squeeze(dim)
+
+         -- iterate over slices
+         for i, js in pairs(sCounts[dim]) do
+            for j, counts in pairs(js) do
+               local max = sMax[dim][i][j]
+               local mode = modes[i][j]
+               local index = indices[i][j]
+
+               tester:assert(counts[mode] == max, string.format(
+                  'Type: %s --> Selected mode of %s which has count of %s, but mode must have %s occurrences',
+                  cudaType, tostring(mode), tostring(counts[mode]), tostring(max)
+               ))
+
+               if dim == 1 then
+                  tester:assert(tensor[index][i][j] == mode, string.format(
+                     'Type: %s --> Selected index of %s which has value %s, but mode is %s',
+                     cudaType, tostring(index), tostring(tensor[index][i][j]), tostring(mode)
+                  ))
+               elseif dim == 2 then
+                  tester:assert(tensor[i][index][j] == mode, string.format(
+                     'Type: %s --> Selected index of %s which has value %s, but mode is %s',
+                     cudaType, tostring(index), tostring(tensor[i][index][j]), tostring(mode)
+                  ))
+               else
+                  tester:assert(tensor[i][j][index] == mode, string.format(
+                     'Type: %s --> Selected index of %s which has value %s, but mode is %s',
+                     cudaType, tostring(index), tostring(tensor[i][j][index]), tostring(mode)
+                  ))
+               end
+
+            end -- j
+         end --i
+      end -- tensor type
+   end -- dim
+end
+
+function test.mode()
+    -- Tests for 1D Tensors
+
+    -- Single-element Tensor
+    local input = torch.FloatTensor({1})
+    verifyMode1D(input)
+
+    -- Tensor of all the same values
+    local input = torch.FloatTensor(10):fill(1)
+    verifyMode1D(input)
+
+    -- Tensor with a unique range of values
+    local input = torch.FloatTensor({4, 3, 6, 8, 2, 1})
+    verifyMode1D(input)
+
+    -- Handles ties when there are two things with equal counts
+    local input = torch.FloatTensor({2, 2, 1, 1})
+    verifyMode1D(input)
+
+    -- Big Range of Values: (4 is the mode)
+    local input = torch.FloatTensor({
+        1, 4, 4, 4, 4, 1, 1, 2, 2, 2, 3, 4, 5, 5, 4, 4, 4, 4, 4, 4,
+        2, 2, 1, 1, 2, 3, 4, 4, 4, 4, 2, 3, 4, 4, 3, 2, 1, 2, 3, 4})
+    verifyMode1D(input)
+
+    -- Larger Example
+    local input = torch.FloatTensor(1000):apply(function(x) return torch.random(1, 10) end)
+    verifyMode1D(input)
+
+    -- verify input is unchanged
+    local input = torch.FloatTensor({4, 3, 6, 8, 2, 1})
+    local same = torch.FloatTensor({4, 3, 6, 8, 2, 1})
+    torch.mode(input)
+    tester:assertTensorEq(input, same, 0, 'cutorch mode modified input')
+
+    -- Tests for 2D Tensors
+
+    -- Tensor of all the same values
+    local input = torch.FloatTensor(3, 4):fill(1)
+    verifyMode2D(input)
+
+    -- Tensor with a unique range of values
+    local input = torch.FloatTensor({{2,  3,  5, 7},
+                                     {1, 10, 17, 6},
+                                     {0, 22, 14, 9}})
+    verifyMode2D(input)
+
+    -- Consistency between ties when there are two things with equal counts
+    local input = torch.FloatTensor({{2,  2,  3, 3},
+                                     {1,  1,  3, 3},
+                                     {2,  2,  1, 1},
+                                     {1,  1,  1, 1}})
+    verifyMode2D(input)
+
+    -- Larger example
+    local input = torch.FloatTensor(50, 100):apply(function(x) return torch.random(1, 10) end)
+    verifyMode2D(input)
+
+    -- Tests for 3D Tensors
+
+    -- Tensor of all the same values
+    local input = torch.FloatTensor(2, 4, 5):fill(1)
+    verifyMode3D(input)
+
+    -- Tensor with a unique range of values
+    local input = torch.FloatTensor(
+        {
+            {{2,  3,  5, 7},
+             {1, 10, 17, 6},
+             {0, 22, 14, 9}},
+
+            {{32, 88, 25,   4},
+             {21, 78, 57, 111},
+             {15, 68, 64, 117}}
+        }
+    )
+    verifyMode3D(input)
+
+    -- Handles ties when there are two things with equal counts
+    local input = torch.FloatTensor(
+        {
+            {{2,  2,  3, 3},
+             {1,  1,  3, 3},
+             {2,  2,  1, 1},
+             {1,  1,  1, 1}},
+
+            {{3,  3,  4, 4},
+             {2,  2,  4, 4},
+             {3,  3,  2, 2},
+             {2,  2,  2, 2}},
+        }
+    )
+    verifyMode3D(input)
+
+    -- Larger example
+    local input = torch.FloatTensor(14, 22, 32):apply(function(x) return torch.random(1, 10) end)
+    verifyMode3D(input)
+end
+
+function test.bigmode()
+    -- Examples that overflow fused-kernel
+    local input = torch.IntTensor(16384):apply(function(x) return torch.random(1, 100) end)
+    verifyMode1D(input)
+
+    local input = torch.FloatTensor(4096, 4):fill(1)
+    verifyMode2D(input, 1)
+
+    local input = torch.FloatTensor(4, 4096):fill(1)
+    verifyMode2D(input, 2)
+
+    local input = torch.FloatTensor(2, 2, 4096):fill(1)
+    verifyMode3D(input, 3)
+
+    local input = torch.FloatTensor(2, 4096, 2):fill(1)
+    verifyMode3D(input, 2)
+
+    local input = torch.FloatTensor(4096, 2, 2):fill(1)
+    verifyMode3D(input, 1)
 end
 
 function test.cat()
@@ -3263,10 +4264,49 @@ function test.cat()
 	 tester:assertTensorEq(mx:narrow(dim, 1, 13), x, 0, 'torch.cat value')
 	 tester:assertTensorEq(mx:narrow(dim, 14, 17), y, 0, 'torch.cat value')
 
-	 local mxx = torch.Tensor():type(typename)
-	 torch.cat(mxx, x, y, dim)
-	 tester:assertTensorEq(mx, mxx, 0, 'torch.cat value')
+         local mxx = torch.Tensor():type(typename)
+         torch.cat(mxx, x, y, dim)
+         tester:assertTensorEq(mx, mxx, 0, 'torch.cat value')
+
+         local x = torch.CudaTensor(1, 2, 3):uniform()
+         local y = torch.CudaTensor()
+         local mx = torch.cat(x,y,dim)
+         tester:asserteq(mx:size(1),1,'torch.cat size')
+         tester:asserteq(mx:size(2),2,'torch.cat size')
+         tester:asserteq(mx:size(3),3,'torch.cat size')
+         tester:assertTensorEq(mx, x, 0, 'torch.cat value')
+
+         local x = torch.CudaTensor()
+         local y = torch.CudaTensor()
+         local mx = torch.cat(x,y,dim)
+         tester:asserteq(mx:dim(),0,'torch.cat dim')
       end
+   end
+end
+
+function test.catNoDim()
+   for k, typename in ipairs(typenames) do
+      local a
+      local b
+      local c
+
+      a = torch.Tensor(minsize):uniform():type(typename)
+      b = torch.Tensor(minsize):uniform():type(typename)
+      c = torch.cat(a, b)
+      tester:assertTensorEq(c:narrow(1, 1, minsize), a, 0, 'torch.cat value')
+      tester:assertTensorEq(c:narrow(1, minsize + 1, minsize), b, 0, 'torch.cat value')
+
+      a = torch.Tensor(1, minsize):uniform():type(typename)
+      b = torch.Tensor(1, minsize):uniform():type(typename)
+      c = torch.cat(a, b)
+      tester:assertTensorEq(c:narrow(2, 1, minsize), a, 0, 'torch.cat value')
+      tester:assertTensorEq(c:narrow(2, minsize + 1, minsize), b, 0, 'torch.cat value')
+
+      a = torch.Tensor(10, minsize):uniform():type(typename)
+      b = torch.Tensor(10, minsize):uniform():type(typename)
+      c = torch.cat(a, b)
+      tester:assertTensorEq(c:narrow(2, 1, minsize), a, 0, 'torch.cat value')
+      tester:assertTensorEq(c:narrow(2, minsize + 1, minsize), b, 0, 'torch.cat value')
    end
 end
 
@@ -3285,11 +4325,84 @@ function test.catArray()
 	 tester:assertTensorEq(mx:narrow(dim, 14, 17), y, 0, 'torch.cat value')
 	 tester:assertTensorEq(mx:narrow(dim, 31, 19), z, 0, 'torch.cat value')
 
-	 local mxx = torch.Tensor():type(typename)
-	 torch.cat(mxx, {x, y, z}, dim)
-	 tester:assertTensorEq(mx, mxx, 0, 'torch.cat value')
+         local mxx = torch.Tensor():type(typename)
+         torch.cat(mxx, {x, y, z}, dim)
+         tester:assertTensorEq(mx, mxx, 0, 'torch.cat value')
+
+         local x = torch.CudaTensor(1, 2, 3):uniform()
+         local y = torch.CudaTensor()
+         local mx = torch.cat({x,y},dim)
+         tester:asserteq(mx:size(1),1,'torch.cat size')
+         tester:asserteq(mx:size(2),2,'torch.cat size')
+         tester:asserteq(mx:size(3),3,'torch.cat size')
+         tester:assertTensorEq(mx, x, 0, 'torch.cat value')
+
+         local x = torch.CudaTensor()
+         local y = torch.CudaTensor()
+         local mx = torch.cat({x,y},dim)
+         tester:asserteq(mx:dim(),0,'torch.cat dim')
       end
    end
+end
+
+-- designed to specifically hit the batched kernel for catArray
+function test.catArrayBatched()
+    local batchSizes = {2, 16, 128, 1024, 4096}
+    for _, batchSize in ipairs(batchSizes) do
+        -- first, batches for 1D Tensors
+        local tensors = {}
+        for i = 1, batchSize do
+            table.insert(tensors, torch.CudaTensor(1024):uniform())
+        end
+        local mx = torch.cat(tensors, 1)
+        local offset = 1
+        for i = 1, batchSize do
+            tester:assertTensorEq(mx:narrow(1, offset, tensors[i]:size(1)), tensors[i], 0, 'torch.carArrayBatched value')
+            offset = offset + tensors[i]:size(1)
+        end
+
+        -- next, 2D Tensors
+        tensors = {}
+        for i = 1, batchSize do
+            table.insert(tensors, torch.CudaTensor(1, 1024):uniform())
+        end
+        -- across dim = 1 (row-wise concatentation)
+        mx = torch.cat(tensors, 1)
+        offset = 1
+        for i = 1, batchSize do
+            tester:assertTensorEq(mx:narrow(1, offset, tensors[i]:size(1)), tensors[i], 0, 'torch.carArrayBatched value')
+            offset = offset + tensors[i]:size(1)
+        end
+        tensors = {}
+        for i = 1, batchSize do
+            table.insert(tensors, torch.CudaTensor(128, 128):uniform())
+        end
+        -- across dim = 2 (column-wise concatentation)
+        mx = torch.cat(tensors, 2)
+        offset = 1
+        for i = 1, batchSize do
+            tester:assertTensorEq(mx:narrow(2, offset, tensors[i]:size(2)), tensors[i], 0, 'torch.carArrayBatched value')
+            offset = offset + tensors[i]:size(2)
+        end
+    end
+
+    -- one giant copy
+    local a = torch.CudaTensor(4096, 4096):uniform()
+    local b = torch.CudaTensor(4096, 4096):uniform()
+    local mx = torch.cat({a, b}, 1)
+    tester:assertTensorEq(mx:narrow(1, 1, 4096), a, 0, 'torch.carArrayBatched value')
+    tester:assertTensorEq(mx:narrow(1, 4097, 4096), b, 0, 'torch.carArrayBatched value')
+
+    -- output Tensor is non-contiguous
+    local notcontig = torch.CudaTensor(5, 4):t():uniform()
+    local a = torch.CudaTensor(2, 5):uniform()
+    local b = torch.CudaTensor(1, 5):uniform()
+    local c = torch.CudaTensor(1, 5):uniform()
+
+    torch.cat(notcontig, {a, b, c}, 1)
+    tester:assertTensorEq(notcontig:narrow(1, 1, 2), a, 0, 'torch.carArrayBatched value')
+    tester:assertTensorEq(notcontig:narrow(1, 3, 1), b, 0, 'torch.carArrayBatched value')
+    tester:assertTensorEq(notcontig:narrow(1, 4, 1), c, 0, 'torch.carArrayBatched value')
 end
 
 function test.streamWaitFor()
@@ -3693,10 +4806,65 @@ function test.kernelP2PAccess()
    end
 end
 
+if os.getenv('THC_CACHING_ALLOCATOR') ~= '0' then
+   local function getCyclesPerMs()
+      cutorch.synchronize()
+      local t = torch.Timer()
+      cutorch._sleep(1e6)
+      cutorch.synchronize()
+      return 1e6 / (t:time().real * 1000)
+   end
+
+   function test.cachedPinnedMemory()
+      local cyclesPerMs = getCyclesPerMs()
+
+      -- check that allocations are re-used after deletion
+      local t = cutorch.createCudaHostTensor({1})
+      local ptr = t:data()
+      t = nil; collectgarbage()
+      t = cutorch.createCudaHostTensor({1})
+      tester:asserteq(t:data(), ptr, 'allocation not reused')
+
+      -- check that the allocation is not re-used if it's in-use by a copy
+      gpuTensor = torch.CudaTensor({0})
+      cutorch._sleep(50 * cyclesPerMs)  -- delay the copy
+      gpuTensor:copyAsync(t)
+      t = nil; collectgarbage()
+      t = cutorch.createCudaHostTensor({1})
+      tester:assertne(t:data(), ptr, 'allocation re-used too soon')
+   end
+
+   function test.cachedPinnedMemoryMultiGPU()
+      local device_count = cutorch.getDeviceCount()
+      if device_count < 2 then
+         return
+      end
+
+      local cyclesPerMs = getCyclesPerMs()
+      local t = cutorch.createCudaHostTensor(1)
+      local ptr = t:data()
+      t[1] = 1
+
+      local gpu_tensor1 = torch.CudaTensor({0})
+
+      cutorch.setDevice(2)
+      local gpu_tensor2 = torch.CudaTensor({0})
+      cutorch._sleep(50 * cyclesPerMs)  -- delay the copy
+      gpu_tensor2:copyAsync(t)
+
+      cutorch.setDevice(1)
+      t = nil; collectgarbage();
+      t = cutorch.createCudaHostTensor(1)
+      tester:assertne(t:data(), ptr, 'allocation re-used too soon')
+   end
+
+end
+
 -- unfortunately, torch.Tester() forgot setUp and tearDown functions.
 -- It would be nice to fix torch.Tester() eventually.
 local function setUp()
   cutorch.setDevice(1)
+  checkHalf()
 end
 
 local test_ = torch.TestSuite()
@@ -3719,7 +4887,6 @@ end
 
 function cutorch.test(tests, seed)
    initSeed(seed)
-   checkHalf()
    tester = torch.Tester()
    tester:add(test)
    tester:run(tests)
