@@ -52,8 +52,8 @@ void THCTensor_(indexCopy)(THCState *state, THCTensor *dst, int dim, THCudaLongT
 #define SMALL_INDEX(TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM)\
   hipLaunchKernelGGL(\
     (indexCopySmallIndex<TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM>),\
-    dim3{smallIndexGrid},\
-    dim3{smallIndexBlock},\
+    smallIndexGrid,\
+    smallIndexBlock,\
     0,\
     stream,\
     make_magic_wrapper(dstInfo),\
@@ -67,8 +67,8 @@ void THCTensor_(indexCopy)(THCState *state, THCTensor *dst, int dim, THCudaLongT
 #define LARGE_INDEX(TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM)\
   hipLaunchKernelGGL(\
     (indexCopyLargeIndex<TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM>),\
-    dim3{largeIndexGrid},\
-    dim3{largeIndexBlock},\
+    largeIndexGrid,\
+    largeIndexBlock,\
     0,\
     stream,\
     make_magic_wrapper(dstInfo),\
@@ -199,8 +199,8 @@ void THCTensor_(indexAdd)(THCState *state, THCTensor *dst, int dim, THCudaLongTe
 #define SMALL_INDEX(TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM) \
   hipLaunchKernelGGL(\
     (indexAddSmallIndex<TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM>),\
-    dim3{smallIndexGrid},\
-    dim3{smallIndexBlock},\
+    smallIndexGrid,\
+    smallIndexBlock,\
     0,\
     stream,\
     make_magic_wrapper(dstInfo),\
@@ -214,8 +214,8 @@ void THCTensor_(indexAdd)(THCState *state, THCTensor *dst, int dim, THCudaLongTe
 #define LARGE_INDEX(TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM)\
   hipLaunchKernelGGL(\
     (indexAddLargeIndex<TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM>),\
-    dim3{largeIndexGrid},\
-    dim3{largeIndexBlock},\
+    largeIndexGrid,\
+    largeIndexBlock,\
     0,\
     stream,\
     make_magic_wrapper(dstInfo),\
@@ -340,8 +340,8 @@ void THCTensor_(indexFill)(THCState *state, THCTensor *dst, int dim, THCudaLongT
 #define SMALL_INDEX(TENSOR_TYPE, TYPE, DST_DIM, IDX_DIM)\
   hipLaunchKernelGGL(\
     (indexFillSmallIndex<TENSOR_TYPE, TYPE, DST_DIM, IDX_DIM>),\
-    dim3{smallIndexGrid},\
-    dim3{smallIndexBlock},\
+    smallIndexGrid,\
+    smallIndexBlock,\
     0,\
     stream,\
     make_magic_wrapper(dstInfo),\
@@ -354,8 +354,8 @@ void THCTensor_(indexFill)(THCState *state, THCTensor *dst, int dim, THCudaLongT
 #define LARGE_INDEX(TENSOR_TYPE, TYPE, DST_DIM, IDX_DIM)\
   hipLaunchKernelGGL(\
     (indexFillLargeIndex<TENSOR_TYPE, TYPE, DST_DIM, IDX_DIM>),\
-    dim3{largeIndexGrid},\
-    dim3{largeIndexBlock},\
+    largeIndexGrid,\
+    largeIndexBlock,\
     0,\
     stream,\
     make_magic_wrapper(dstInfo),\
@@ -477,8 +477,8 @@ void THCTensor_(indexSelect)(THCState *state, THCTensor *dst, THCTensor *src, in
 #define SMALL_INDEX(TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM)\
   hipLaunchKernelGGL(\
     (indexSelectSmallIndex<TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM>),\
-    dim3{smallIndexGrid},\
-    dim3{smallIndexBlock},\
+    smallIndexGrid,\
+    smallIndexBlock,\
     0,\
     stream,\
     make_magic_wrapper(dstInfo),\
@@ -492,8 +492,8 @@ void THCTensor_(indexSelect)(THCState *state, THCTensor *dst, THCTensor *src, in
 #define LARGE_INDEX(TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM)\
   hipLaunchKernelGGL(\
     (indexSelectLargeIndex<TENSOR_TYPE, TYPE, DST_DIM, SRC_DIM, IDX_DIM>),\
-    dim3{largeIndexGrid},\
-    dim3{largeIndexBlock},\
+    largeIndexGrid,\
+    largeIndexBlock,\
     0,\
     stream,\
     make_magic_wrapper(dstInfo),\

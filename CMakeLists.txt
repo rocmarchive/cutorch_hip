@@ -84,10 +84,3 @@ IF(LUALIB)
   TARGET_LINK_LIBRARIES(cutorch ${LUALIB})
 ENDIF()
 
-SET(EXE cutorch.test)
-ADD_EXECUTABLE(${EXE} test/test.cpp)
-TARGET_LINK_LIBRARIES(${EXE} qlua qtlua lua m)
-target_compile_options(${EXE} PUBLIC -Wall)
-SET_PROPERTY(
-  TARGET ${EXE}
-  APPEND_STRING PROPERTY LINK_FLAGS " -I/usr/local/include -I./test")

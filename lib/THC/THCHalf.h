@@ -10,12 +10,12 @@
 
 #ifdef CUDA_HALF_TENSOR
     #if defined(__HIP_PLATFORM_HCC__)
+	#include <cstdint>
         #include <hip/hip_fp16.h>
     #else
         #include <cuda_fp16.h>
     #endif
 
-    #include <cstdint>
 
     THC_EXTERNC
     void THCFloat2Half(THCState *state, half *out, float *in, ptrdiff_t len);

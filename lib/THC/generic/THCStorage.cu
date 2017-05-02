@@ -3,8 +3,10 @@
 #define THC_GENERIC_FILE "generic/THCStorage.cu"
 #else
 
+#ifdef __HCC__
 #include <bolt/amp/fill.h>
 #include <bolt/amp/iterator/ubiquitous_iterator.h>
+#endif
 
 void THCStorage_(fill)(THCState *state, THCStorage *self, real value)
 {

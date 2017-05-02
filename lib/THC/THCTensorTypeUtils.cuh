@@ -106,6 +106,53 @@ struct ScalarInv {
   static __host__ __device__ T to(const T v) { return ((T) 1) / v; }
 };
 
+#if defined(__HIP_PLATFORM_NVCC__)
+
+#ifdef CUDA_HALF_TENSOR
+template <>
+struct ScalarNegate<half> {
+  static __host__ __device__ half to(const half v) {
+#ifdef __CUDA_ARCH__
+#ifdef CUDA_HALF_INSTRUCTIONS
+    return __hneg(v);
+#else
+    return __float2half(-__half2float(v));
+#endif
+#else
+    half out = v;
+    out.x ^= 0x8000; // toggle sign bit
+    return out;
+#endif
+  }
+};
+
+template <>
+struct ScalarInv<half> {
+  static __host__ __device__ half to(const half v) {
+#ifdef __CUDA_ARCH__
+    return __float2half(1.0f / __half2float(v));
+#else
+    float fv = THC_half2float(v);
+    fv = 1.0f / fv;
+    return THC_float2half(fv);
+#endif
+  }
+};
+
+inline bool operator==(half a, half b) {
+  return a.x == b.x;
+}
+
+inline bool operator!=(half a, half b) {
+  return a.x != b.x;
+}
+
+#endif // CUDA_HALF_TENSOR
+
+
+#elif defined(__HIP_PLATFORM_HCC__)
+
+
 #ifdef CUDA_HALF_TENSOR
     template <>
     struct ScalarNegate<half> {
@@ -113,26 +160,14 @@ struct ScalarInv {
       static
       half to(half v)
       {
-        #if defined(__HIP_PLATFORM_HCC__)
           return -v;
-        #else
-          half out = v;
-          out.x ^= 0x8000; // toggle sign bit
-          return out;
-        #endif
       }
 
       __device__
       static
       half to(half v)
       {
-        #if defined(__HIP_PLATFORM_HCC__)
           return -v;
-        #elif defined(CUDA_HALF_INSTRUCTIONS)
-          return __hneg(v);
-        #else
-          return __float2half(-__half2float(v));
-        #endif
       }
     };
 
@@ -151,15 +186,10 @@ struct ScalarInv {
       static
       half to(half v)
       {
-        #if defined(__HIP_PLATFORM_HCC__)
           return static_cast<half>(1) / v;
-        #else
-          return __float2half(1.0f / __half2float(v));
-        #endif
       }
     };
 
-    #if !defined(__HIP_PLATFORM_HCC__)
       inline
       bool operator==(half a, half b)
       {
@@ -171,7 +201,6 @@ struct ScalarInv {
       {
         return a.x != b.x;
       }
-    #endif
 #endif // CUDA_HALF_TENSOR
-
+#endif // HIP_PLATFORM_NVCC
 #endif // THC_TENSOR_TYPE_UTILS_INC
