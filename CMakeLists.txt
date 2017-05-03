@@ -75,7 +75,6 @@ ADD_TORCH_PACKAGE(cutorch "${src}" "${luasrc}")
 
 IF(${PLATFORM} MATCHES "hcc")
   TARGET_LINK_LIBRARIES(cutorch luaT THC hip_hcc)
-  target_compile_options(cutorch PUBLIC -Wall) # TODO: temporary.
 ELSEIF(${PLATFORM} MATCHES "nvcc")
   TARGET_LINK_LIBRARIES(cutorch luaT THC)
 ENDIF()
