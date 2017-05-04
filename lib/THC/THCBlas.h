@@ -8,7 +8,7 @@
 THC_API float THCudaBlas_Sdot(THCState *state, long n, float *x, long incx, float *y, long incy);
 THC_API double THCudaBlas_Ddot(THCState *state, long n, double *x, long incx, double *y, long incy);
 #ifdef CUDA_HALF_TENSOR
-THC_API half THCudaBlas_Hdot(THCState *state, long n, half *x, long incx, half *y, long incy);
+THC_API float THCudaBlas_Hdot(THCState *state, long n, half *x, long incx, half *y, long incy);
 #endif
 
 /* Level 2 */
@@ -35,6 +35,10 @@ THC_API void THCudaBlas_DgemmBatched(THCState *state, char transa, char transb, 
 /* Inverse */
 THC_API void THCudaBlas_Sgetrf(THCState *state, int n, float **a, int lda, int *pivot, int *info, int batchSize);
 THC_API void THCudaBlas_Dgetrf(THCState *state, int n, double **a, int lda, int *pivot, int *info, int batchSize);
+
+THC_API void THCudaBlas_Sgetrs(THCState *state, char transa, int n, int nrhs, const float **a, int lda, int *pivot, float **b, int ldb, int *info, int batchSize);
+THC_API void THCudaBlas_Dgetrs(THCState *state, char transa, int n, int nrhs, const double **a, int lda, int *pivot, double **b, int ldb, int *info, int batchSize);
+
 THC_API void THCudaBlas_Sgetri(THCState *state, int n, const float **a, int lda, int *pivot, float **c, int ldc, int *info, int batchSize);
 THC_API void THCudaBlas_Dgetri(THCState *state, int n, const double **a, int lda, int *pivot, double **c, int ldc, int *info, int batchSize);
 

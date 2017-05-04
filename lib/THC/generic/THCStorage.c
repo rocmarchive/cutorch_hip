@@ -42,8 +42,8 @@ THCStorage* THCStorage_(newWithSize)(THCState *state, ptrdiff_t size)
 {
   return THCStorage_(newWithAllocator)(
     state, size,
-    state->cudaDeviceAllocator,
-    state->cudaDeviceAllocator->state);
+    state->hipDeviceAllocator,
+    state->hipDeviceAllocator->state);
 }
 
 THCStorage* THCStorage_(newWithAllocator)(THCState *state, ptrdiff_t size,
@@ -128,8 +128,8 @@ THCStorage* THCStorage_(newWithMapping)(THCState *state, const char *fileName, p
 THCStorage* THCStorage_(newWithData)(THCState *state, real *data, ptrdiff_t size)
 {
   return THCStorage_(newWithDataAndAllocator)(state, data, size,
-                                              state->cudaDeviceAllocator,
-                                              state->cudaDeviceAllocator->state);
+                                              state->hipDeviceAllocator,
+                                              state->hipDeviceAllocator->state);
 }
 
 THCStorage* THCStorage_(newWithDataAndAllocator)(

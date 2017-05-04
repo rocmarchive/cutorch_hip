@@ -3,6 +3,8 @@
 
 #include "THCGeneral.h"
 
-THC_API void THCAllocator_init(THCState *state);
+extern THAllocator THCudaHostAllocator;
+extern THAllocator THCUVAAllocator;
+extern THCDeviceAllocator THCIpcAllocator;
 
 #endif

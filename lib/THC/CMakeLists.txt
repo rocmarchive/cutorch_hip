@@ -262,6 +262,7 @@ INSTALL(FILES
           THCSortUtils.cuh
           THCAllocator.h
           THCCachingAllocator.h
+          THCCachingHostAllocator.h
           THCDeviceUtils.cuh
           THCDeviceTensor.cuh
           THCDeviceTensor-inl.cuh
@@ -281,6 +282,7 @@ INSTALL(FILES
           THCNumerics.cuh
           THCTensorSort.cuh
           THCTensorInfo.cuh
+          THCTensorMathPointwise.cuh
           THCTensorTypeUtils.cuh
           DESTINATION "${THC_INSTALL_INCLUDE_SUBDIR}/THC")
 
@@ -319,6 +321,8 @@ INSTALL(FILES
           generic/THCTensorMathPointwise.cu
           generic/THCTensorMathReduce.h
           generic/THCTensorMathReduce.cu
+          generic/THCTensorMathScan.h
+          generic/THCTensorMathScan.cu
           generic/THCTensorScatterGather.h
           generic/THCTensorScatterGather.cu
           generic/THCTensorIndex.h

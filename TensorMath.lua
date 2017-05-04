@@ -661,7 +661,57 @@ for k, Tensor_ in pairs(handledTypenames) do
             {name=Tensor, method={default=1}},
             {name=real}})
 
-    for _, name in ipairs({"cmul", "cpow", "cdiv"}) do
+    wrap("lshift",
+         cname("lshift"),
+         {{name=Tensor, default=true, returned=true, method={default='nil'}},
+            {name=Tensor, method={default=1}},
+            {name=real}})
+
+    wrap("rshift",
+         cname("rshift"),
+         {{name=Tensor, default=true, returned=true, method={default='nil'}},
+            {name=Tensor, method={default=1}},
+            {name=real}})
+
+    wrap("fmod",
+         cname("fmod"),
+         {{name=Tensor, default=true, returned=true, method={default='nil'}},
+            {name=Tensor, method={default=1}},
+            {name=real}})
+
+    wrap("remainder",
+         cname("remainder"),
+         {{name=Tensor, default=true, returned=true, method={default='nil'}},
+            {name=Tensor, method={default=1}},
+            {name=real}})
+
+    wrap("bitand",
+         cname("bitand"),
+         {{name=Tensor, default=true, returned=true, method={default='nil'}},
+            {name=Tensor, method={default=1}},
+            {name=real}})
+
+    wrap("bitor",
+         cname("bitor"),
+         {{name=Tensor, default=true, returned=true, method={default='nil'}},
+            {name=Tensor, method={default=1}},
+            {name=real}})
+
+    wrap("bitxor",
+         cname("bitxor"),
+         {{name=Tensor, default=true, returned=true, method={default='nil'}},
+            {name=Tensor, method={default=1}},
+            {name=real}})
+
+    wrap("equal",
+         cname("equal"),
+         {{name=Tensor},
+          {name=Tensor},
+          {name="boolean", creturned=true}})
+
+    local cfuncs = {"cmul", "cpow", "cdiv", "cremainder", "cfmod",
+                    "clshift", "crshift", "cbitand", "cbitor", "cbitxor"}
+    for _, name in ipairs(cfuncs) do
        wrap(name,
             cname(name),
             {{name=Tensor, default=true, returned=true, method={default='nil'}},
@@ -747,6 +797,14 @@ for k, Tensor_ in pairs(handledTypenames) do
             {name=Tensor},
             {name="index"}})
 
+    for _, name in ipairs({"cumsum", "cumprod"}) do
+        wrap(name,
+             cname(name),
+             {{name=Tensor, default=true, returned=true},
+                 {name=Tensor},
+                 {name="index", default=1}})
+    end
+
     wrap("prod",
          cname("prodall"),
          {{name=Tensor},
@@ -827,6 +885,23 @@ for k, Tensor_ in pairs(handledTypenames) do
              {name="boolean", default=0}}
     )
 
+   wrap("topk",
+        cname("topk"),
+        {{name=Tensor, default=true, returned=true},
+          {name="CudaLongTensor", default=true, returned=true, noreadadd=true},
+          {name=Tensor},
+          {name="long", default=1},
+          {name="index", default=lastdim(3)},
+          {name="boolean", default=0},
+          {name="boolean", default=0}})
+
+    wrap("mode",
+         cname("mode"),
+         {{name=Tensor, default=true, returned=true, noreadadd=true},
+             {name="CudaLongTensor", default=true, returned=true, noreadadd=true},
+             {name=Tensor},
+             {name="index", default=lastdim(3)}})
+
     wrap("squeeze",
          cname("squeeze"),
          {{name=Tensor, default=true, returned=true, postcall=function(arg)
@@ -880,11 +955,39 @@ for k, Tensor_ in pairs(handledTypenames) do
 	 {{name=Tensor, default=true, returned=true},
 	    {name=Tensor},
 	    {name=Tensor},
-	    {name="index", default=lastdim(2)}},
+	    {name="index", default=-1}},
 	 cname("catArray"),
 	 {{name=Tensor, default=true, returned=true},
 	    {name=Tensor .. "Array"},
-	    {name="index", default=lastdimarray(2)}})
+	    {name="index", default=-1}})
+
+    wrap("geometric",
+        cname("geometric"),
+        {{name=Tensor, returned=true},
+            {name='double'}})
+
+    wrap("bernoulli",
+        cname("bernoulli"),
+        {{name=Tensor, returned=true},
+            {name='double', default=0.5}},
+        cname("bernoulli_FloatTensor"),
+        {{name=Tensor, returned=true},
+            {name="CudaTensor"}},
+        cname("bernoulli_DoubleTensor"),
+        {{name=Tensor, returned=true},
+            {name="CudaDoubleTensor"}})
+
+    wrap("nonzero",
+         cname("nonzero"),
+         {{name="CudaLongTensor", default=true, returned=true},
+             {name=Tensor}})
+
+    wrap("range",
+         cname("range"),
+         {{name=Tensor, default=true, returned=true, method={default='nil'}},
+             {name=accreal},
+             {name=accreal},
+             {name=accreal, default=1}})
 
     if real == 'float' or real == 'double' or real == 'half' then
        for _,name in ipairs({"log", "log1p", "exp",
@@ -901,6 +1004,64 @@ for k, Tensor_ in pairs(handledTypenames) do
                   {name=Tensor, method={default=1}}})
 
        end
+
+       wrap("linspace",
+            cname("linspace"),
+            {{name=Tensor, default=true, returned=true, method={default='nil'}},
+                {name=real},
+                {name=real},
+                {name="long", default=100}})
+
+       wrap("logspace",
+            cname("logspace"),
+            {{name=Tensor, default=true, returned=true, method={default='nil'}},
+                {name=real},
+                {name=real},
+                {name="long", default=100}})
+
+       wrap("pow",
+            cname("pow"),
+            {{name=Tensor, default=true, returned=true, method={default='nil'}},
+                {name=Tensor, method={default=1}},
+                {name=real}},
+            cname("tpow"),
+            {{name=Tensor, default=true, returned=true, method={default='nil'}},
+                {name = real},
+                {name=Tensor, method={default=1}}})
+
+     wrap("rand",
+          cname("rand"),
+          {{name=Tensor, default=true, returned=true, method={default='nil'}},
+           {name="LongArg"}})
+
+     wrap("randn",
+          cname("randn"),
+          {{name=Tensor, default=true, returned=true, method={default='nil'}},
+           {name="LongArg"}})
+
+     wrap("multinomial",
+          cname("multinomial"),
+          {{name='CudaLongTensor', default=true, returned=true, method={default='nil'}},
+           {name=Tensor},
+           {name="int"},
+           {name="boolean", default=false}})
+
+     for _,f in ipairs({{name='uniform', a=0, b=1},
+                        {name='cauchy', a=0, b=1},
+                        {name='normal', a=0, b=1},
+                        {name='logNormal', a=1, b=2}}) do
+
+        wrap(f.name,
+             cname(f.name),
+             {{name=Tensor, returned=true},
+              {name='double', default=f.a},
+              {name='double', default=f.b}})
+     end
+
+     wrap('exponential',
+          cname('exponential'),
+          {{name=Tensor, returned=true},
+           {name='double', default=nil}})
 
       wrap("norm",
            cname("normall"),
@@ -921,6 +1082,14 @@ for k, Tensor_ in pairs(handledTypenames) do
             {name="index"},
             {name=real}})
 
+      wrap("dist",
+           cname("dist"),
+           {{name=Tensor},
+               {name=Tensor},
+               {name=real, default=2},
+               {name=accreal, creturned=true}})
+
+
       for _,name in ipairs({"var", "std"}) do
          wrap(name,
               cname(name .. "all"),
@@ -932,6 +1101,29 @@ for k, Tensor_ in pairs(handledTypenames) do
                {name="index"},
                {name="boolean", default=false}})
       end
+
+      wrap("tril",
+           cname("tril"),
+           {{name=Tensor, default=true, returned=true},
+               {name=Tensor},
+               {name="int", default=0}})
+
+      wrap("triu",
+           cname("triu"),
+           {{name=Tensor, default=true, returned=true},
+               {name=Tensor},
+               {name="int", default=0}})
+
+      wrap("diag",
+           cname("diag"),
+           {{name=Tensor, default=true, returned=true},
+               {name=Tensor},
+               {name="int", default=0}})
+
+      wrap("trace",
+           cname("trace"),
+           {{name=Tensor},
+               {name=accreal, creturned=true}})
 
       wrap("lerp",
         cname("lerp"),
@@ -1074,11 +1266,119 @@ for k, Tensor_ in pairs(handledTypenames) do
        end
     end
 
+    if real == 'float' or real == 'double' then
+
+        for _,name in ipairs({"gesv", "gels"}) do
+           wrap(name,
+                cname(name),
+                {{name=Tensor, returned=true},
+                 {name=Tensor, returned=true},
+                 {name=Tensor},
+                 {name=Tensor}},
+                cname(name),
+                {{name=Tensor, default=true, returned=true, invisible=true},
+                 {name=Tensor, default=true, returned=true, invisible=true},
+                 {name=Tensor},
+                 {name=Tensor}})
+        end
+
+        wrap("symeig",
+             cname("syev"),
+             {{name=Tensor, returned=true},
+              {name=Tensor, returned=true},
+              {name=Tensor},
+              {name='charoption', values={'N', 'V'}, default='N'},
+              {name='charoption', values={'U', 'L'}, default='U'}},
+             cname("syev"),
+             {{name=Tensor, default=true, returned=true, invisible=true},
+              {name=Tensor, default=true, returned=true, invisible=true},
+              {name=Tensor},
+              {name='charoption', values={'N', 'V'}, default='N'},
+              {name='charoption', values={'U', 'L'}, default='U'}})
+
+        wrap("eig",
+             cname("geev"),
+             {{name=Tensor, returned=true},
+              {name=Tensor, returned=true},
+              {name=Tensor},
+              {name='charoption', values={'N', 'V'}, default='N'}},
+             cname("geev"),
+             {{name=Tensor, default=true, returned=true, invisible=true},
+              {name=Tensor, default=true, returned=true, invisible=true},
+              {name=Tensor},
+              {name='charoption', values={'N', 'V'}, default='N'}})
+
+        wrap("svd",
+             cname("gesvd"),
+             {{name=Tensor, returned=true},
+              {name=Tensor, returned=true},
+              {name=Tensor, returned=true},
+              {name=Tensor},
+              {name='charoption', values={'A', 'S'}, default='S'}},
+             cname("gesvd"),
+             {{name=Tensor, default=true, returned=true, invisible=true},
+              {name=Tensor, default=true, returned=true, invisible=true},
+              {name=Tensor, default=true, returned=true, invisible=true},
+              {name=Tensor},
+              {name='charoption', values={'A', 'S'}, default='S'}})
+
+        wrap("inverse",
+             cname("getri"),
+             {{name=Tensor, returned=true},
+              {name=Tensor}},
+             cname("getri"),
+             {{name=Tensor, default=true, returned=true, invisible=true},
+              {name=Tensor}})
+
+        wrap("potri",
+             cname("potri"),
+             {{name=Tensor, returned=true},
+              {name=Tensor},
+              {name='charoption', values={'U', 'L'}, default='U'}},
+             cname("potri"),
+             {{name=Tensor, default=true, returned=true, invisible=true},
+              {name=Tensor},
+              {name='charoption', values={'U', 'L'}, default='U'}})
+
+        wrap("potrf",
+             cname("potrf"),
+             {{name=Tensor, returned=true},
+              {name=Tensor},
+              {name='charoption', values={'U', 'L'}, default='U'}},
+             cname("potrf"),
+             {{name=Tensor, default=true, returned=true, invisible=true},
+              {name=Tensor},
+              {name='charoption', values={'U', 'L'}, default='U'}})
+
+        wrap("potrs",
+             cname("potrs"),
+             {{name=Tensor, returned=true},
+              {name=Tensor},
+              {name=Tensor},
+              {name='charoption', values={'U', 'L'}, default='U'}},
+             cname("potrs"),
+             {{name=Tensor, default=true, returned=true, invisible=true},
+              {name=Tensor},
+              {name=Tensor},
+              {name='charoption', values={'U', 'L'}, default='U'}})
+
+        wrap("qr",
+             cname("qr"),
+             {{name=Tensor, returned=true},
+              {name=Tensor, returned=true},
+              {name=Tensor}},
+             cname("qr"),
+             {{name=Tensor, default=true, returned=true, invisible=true},
+              {name=Tensor, default=true, returned=true, invisible=true},
+              {name=Tensor}})
+
+    end
+
     wrap("dot",
          cname("dot"),
          {{name=Tensor},
             {name=Tensor},
-            {name=real, creturned=true}})
+            {name=accreal, creturned=true}})
 
     method:register("m_cutorch_" .. Tensor .. "Math__")
     interface:print(method:tostring())
@@ -1161,6 +1461,20 @@ wrap("zeros",
         {{name=Tensor, default=true, returned=true, method={default='nil'}},
            {name="LongArg"}})
 
+wrap("linspace",
+     cname("linspace"),
+     {{name=Tensor, default=true, returned=true, method={default='nil'}},
+         {name=real},
+         {name=real},
+         {name="long", default=100}})
+
+wrap("logspace",
+     cname("logspace"),
+     {{name=Tensor, default=true, returned=true, method={default='nil'}},
+         {name=real},
+         {name=real},
+         {name="long", default=100}})
+
    wrap("reshape",
         cname("reshape"),
         {{name=Tensor, default=true, returned=true},
@@ -1207,7 +1521,27 @@ wrap("div",
         {name=Tensor, method={default=1}},
         {name=real}})
 
-for _, name in ipairs({"cmul", "cpow", "cdiv"}) do
+wrap("fmod",
+     cname("fmod"),
+     {{name=Tensor, default=true, returned=true, method={default='nil'}},
+        {name=Tensor, method={default=1}},
+        {name=real}})
+
+wrap("remainder",
+     cname("remainder"),
+     {{name=Tensor, default=true, returned=true, method={default='nil'}},
+        {name=Tensor, method={default=1}},
+        {name=real}})
+
+wrap("equal",
+     cname("equal"),
+     {{name=Tensor},
+      {name=Tensor},
+      {name="boolean", creturned=true}})
+
+local cfuncs = {"cmul", "cpow", "cdiv", "cremainder", "cfmod",
+                "clshift", "crshift", "cbitand", "cbitor", "cbitxor"}
+for _, name in ipairs(cfuncs) do
   wrap(name,
        cname(name),
        {{name=Tensor, default=true, returned=true, method={default='nil'}},
@@ -1301,6 +1635,13 @@ wrap("topk",
        {name="index", default=lastdim(3)},
        {name="boolean", default=0},
        {name="boolean", default=0}})
+
+wrap("mode",
+     cname("mode"),
+     {{name=Tensor, default=true, returned=true, noreadadd=true},
+       {name="CudaLongTensor", default=true, returned=true, noreadadd=true},
+       {name=Tensor},
+       {name="index", default=lastdim(3)}})
 
 do
    local Tensor = Tensor
@@ -1577,7 +1918,7 @@ wrap("randn",
 
 wrap("multinomial",
      cname("multinomial"),
-     {{name=Tensor, default=true, returned=true, method={default='nil'}},
+     {{name='CudaLongTensor', default=true, returned=true, method={default='nil'}},
         {name=Tensor},
         {name="int"},
         {name="boolean", default=false}})
@@ -1614,20 +1955,39 @@ wrap("cat",
      {{name=Tensor, default=true, returned=true},
       {name=Tensor},
       {name=Tensor},
-      {name="index", default=lastdim(2)}},
+      {name="index", default=-1}},
      cname("catArray"),
      {{name=Tensor, default=true, returned=true},
       {name=Tensor .. "Array"},
-      {name="index", default=lastdimarray(2)}})
+      {name="index", default=-1}})
 
-for _,f in ipairs({{name='geometric'},
-                   {name='bernoulli', a=0.5}}) do
+wrap("nonzero",
+     cname("nonzero"),
+     {{name="CudaLongTensor", default=true, returned=true},
+         {name=Tensor}})
 
-   wrap(f.name,
-        cname(f.name),
-        {{name=Tensor, returned=true},
-         {name=real, default=f.a}})
-end
+wrap("range",
+     cname("range"),
+     {{name=Tensor, default=true, returned=true, method={default='nil'}},
+         {name=real},
+         {name=real},
+         {name=real, default=1}})
+
+wrap("geometric",
+    cname("geometric"),
+    {{name=Tensor, returned=true},
+        {name='double'}})
+
+wrap("bernoulli",
+    cname("bernoulli"),
+    {{name=Tensor, returned=true},
+        {name='double', default=0.5}},
+    cname("bernoulli_FloatTensor"),
+    {{name=Tensor, returned=true},
+        {name="CudaTensor"}},
+    cname("bernoulli_DoubleTensor"),
+    {{name=Tensor, returned=true},
+        {name="CudaDoubleTensor"}})
 
 for _,f in ipairs({{name='uniform', a=0, b=1},
                    {name='normal', a=0, b=1},
@@ -1714,28 +2074,34 @@ wrap("inverse",
 wrap("potri",
      cname("potri"),
      {{name=Tensor, returned=true},
-      {name=Tensor}},
+      {name=Tensor},
+      {name='charoption', values={'U', 'L'}, default='U'}},
      cname("potri"),
      {{name=Tensor, default=true, returned=true, invisible=true},
-      {name=Tensor}})
+      {name=Tensor},
+      {name='charoption', values={'U', 'L'}, default='U'}})
 
 wrap("potrf",
      cname("potrf"),
      {{name=Tensor, returned=true},
-      {name=Tensor}},
+      {name=Tensor},
+      {name='charoption', values={'U', 'L'}, default='U'}},
      cname("potrf"),
      {{name=Tensor, default=true, returned=true, invisible=true},
-      {name=Tensor}})
+      {name=Tensor},
+      {name='charoption', values={'U', 'L'}, default='U'}})
 
 wrap("potrs",
      cname("potrs"),
      {{name=Tensor, returned=true},
       {name=Tensor},
-      {name=Tensor}},
+      {name=Tensor},
+      {name='charoption', values={'U', 'L'}, default='U'}},
      cname("potrs"),
      {{name=Tensor, default=true, returned=true, invisible=true},
       {name=Tensor},
-      {name=Tensor}})
+      {name=Tensor},
+      {name='charoption', values={'U', 'L'}, default='U'}})
 
 wrap("qr",
      cname("qr"),

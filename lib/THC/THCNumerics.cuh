@@ -4,7 +4,7 @@
 #ifdef CUDA_PATH
   #include <cuda.h>
 #endif
-
+#include <limits.h>
 #include "hip/hip_runtime.h"
 
 #include "THCHalf.h"
@@ -1133,6 +1133,7 @@ struct THCNumerics<float> {
   static inline __host__ __device__ bool ne(float a, float b) { return a != b; }
 
   static inline __host__ __device__  float exp  (float a) { return   expf(a); }
+  static inline __host__ __device__  float exp10(float a) { return exp10f(a); }
   static inline __host__ __device__  float log  (float a) { return   logf(a); }
   static inline __host__ __device__  float log1p(float a) { return log1pf(a); }
   static inline __host__ __device__  float cos  (float a) { return   cosf(a); }
@@ -1176,6 +1177,7 @@ struct THCNumerics<double> {
   static inline __host__ __device__ bool ne(double a, double b) { return a != b; }
 
   static inline __host__ __device__  double exp  (double a) { return   ::exp(a); }
+  static inline __host__ __device__  double exp10(double a) { return ::exp10(a); }
   static inline __host__ __device__  double log  (double a) { return   ::log(a); }
   static inline __host__ __device__  double log1p(double a) { return ::log1p(a); }
   static inline __host__ __device__  double cos  (double a) { return   ::cos(a); }
@@ -1195,7 +1197,7 @@ struct THCNumerics<double> {
   static inline __host__ __device__  double tan  (double a) { return   ::tan(a); }
   static inline __host__ __device__  double atan (double a) { return  ::atan(a); }
   static inline __host__ __device__  double tanh (double a) { return  ::tanh(a); }
-  static inline __host__ __device__  double abs  (double a) { return  ::fabs(a); }
+  static inline __host__ __device__  double abs  (double a) { return   ::abs(a); }
   static inline __host__ __device__  double round(double a) { return ::round(a); }
   static inline __host__ __device__  double frac (double a) { return a - ::trunc(a); }
   static inline __host__ __device__  double cinv (double a) { return 1.0 / a; }

@@ -50,7 +50,7 @@ double THCudaBlas_Ddot(THCState *state, long n, double *x, long incx, double *y,
 }
 
 #ifdef CUDA_HALF_TENSOR
-half THCudaBlas_Hdot(THCState *state, long n, half *x, long incx, half *y, long incy)
+float THCudaBlas_Hdot(THCState *state, long n, half *x, long incx, half *y, long incy)
 {
 #if CUDA_VERSION >= 8000
   if (n == 1) {
@@ -62,27 +62,27 @@ half THCudaBlas_Hdot(THCState *state, long n, half *x, long incx, half *y, long 
     int i_n = (int)n;
     int i_incx = (int)incx;
     int i_incy = (int)incy;
-    half result;
+    float result;
 #ifdef HIPBLAS_TODO
     hipblasHandle_t handle = THCState_getCurrentBlasHandle(state);
     hipblasSetStream(handle, THCState_getCurrentStream(state));
     THCublasCheck(hipblasDotEx(handle, i_n, x, CUDA_R_16F, i_incx, y, CUDA_R_16F, i_incy, &result, CUDA_R_16F, CUDA_R_32F));
 #else
 #ifdef __NVCC__
-    hipblasHandle_t handle = THCState_getCurrentBlasHandle(state);
+    cublasHandle_t handle = THCState_getCurrentBlasHandle(state);
     cublasSetStream((cublasHandle_t)handle, THCState_getCurrentStream(state));
     cublasDotEx(handle, i_n, x, CUDA_R_16F, i_incx, y, CUDA_R_16F, i_incy, &result, CUDA_R_16F, CUDA_R_32F);
 #endif
 #endif
     return result;
-}
+   }
 
   THError("Cublas_Hdot only supports n, incx and incy "
           "up to signed integer limits: %d", INT_MAX);
-  return THC_float2half(0);
+  return 0;
 #else
   THError("Cublas_Hdot requires CUDA 8.0+");
-  return THC_float2half(0);
+  return 0;
 #endif
 }
 #endif
@@ -189,8 +189,8 @@ void THCudaBlas_Dger(THCState *state, long m, long n, double alpha, double *x, l
 #else
 #ifdef __NVCC__
     hipblasHandle_t handle = THCState_getCurrentBlasHandle(state);
-    cublasSetStream((cublasHandle_t)handle, THCState_getCurrentStream(state));
-    cublasDger(handle, i_m, i_n, &alpha, x, i_incx, y, i_incy, a, i_lda);
+    hipblasSetStream((hipblasHandle_t)handle, THCState_getCurrentStream(state));
+    hipblasDger(handle, i_m, i_n, &alpha, x, i_incx, y, i_incy, a, i_lda);
 #endif
 #endif
       return;
@@ -310,7 +310,7 @@ void THCudaBlas_Hgemm(THCState *state, char transa, char transb, long m, long n,
       float fAlpha = THC_half2float(alpha);
       float fBeta = THC_half2float(beta);
 
-      /*THCublasCheck(cublasSgemmEx(handle, opa, opb,
+      /*THCublasCheck(hipblasSgemmEx(handle, opa, opb,
 				  i_m, i_n, i_k, &fAlpha,
                                   a, CUDA_R_16F, i_lda, b, CUDA_R_16F,
 				  i_ldb, &fBeta, c, CUDA_R_16F, i_ldc));*/
@@ -424,6 +424,40 @@ void THCudaBlas_Dgetrf(THCState *state, int n, double **a, int lda, int *pivot, 
 #endif
 }
 
+THC_API void THCudaBlas_Sgetrs(THCState *state, char transa, int n, int nrhs, const float **a, int lda, int *pivot, float **b, int ldb, int *info, int batchSize)
+{
+  if( (n >= INT_MAX) || (nrhs >= INT_MAX) || (lda >= INT_MAX) || (ldb >= INT_MAX) || (batchSize >= INT_MAX) )
+  {
+    THError("Cublas_Dgetrs only supports n, nrhs, lda, ldb, batchSize"
+            "with the bound [val] <= %d", INT_MAX);
+  }
+
+
+#ifdef HIPBLAS_TODO
+  hipblasOperation_t opa = convertTransToHipblasOperation(transa);
+  hipblasHandle_t handle = THCState_getCurrentBlasHandle(state);
+  hipblasSetStream(handle, THCState_getCurrentStream(state));
+  THCublasCheck(hipblasSgetrsBatched(handle, opa, n, nrhs, a, lda, pivot, b, ldb, info, batchSize));
+#endif
+}
+
+
+THC_API void THCudaBlas_Dgetrs(THCState *state, char transa, int n, int nrhs, const double **a, int lda, int *pivot, double **b, int ldb, int *info, int batchSize)
+{
+  if( (n >= INT_MAX) || (nrhs >= INT_MAX) || (lda >= INT_MAX) || (ldb >= INT_MAX) || (batchSize >= INT_MAX) )
+  {
+    THError("Cublas_Dgetrs only supports n, nrhs, lda, ldb, batchSize"
+            "with the bound [val] <= %d", INT_MAX);
+  }
+
+
+#ifdef HIPBLAS_TODO
+  hipblasOperation_t opa = convertTransToHipblasOperation(transa);
+  hipblasHandle_t handle = THCState_getCurrentBlasHandle(state);
+  hipblasSetStream(handle, THCState_getCurrentStream(state));
+  THCublasCheck(hipblasDgetrsBatched(handle, opa, n, nrhs, a, lda, pivot, b, ldb, info, batchSize));
+#endif
+}
 void THCudaBlas_Sgetri(THCState *state, int n, const float **a, int lda, int *pivot, float **c, int ldc, int *info, int batchSize) {
 
   if( (n >= INT_MAX) || (lda >= INT_MAX)|| (ldc >= INT_MAX) || (batchSize >= INT_MAX) )

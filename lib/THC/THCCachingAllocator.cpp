@@ -1,6 +1,7 @@
 #include "THCCachingAllocator.h"
 
 #include <hip/hip_runtime_api.h>
+#include <deque>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -30,22 +31,26 @@
 
 namespace {
 
+typedef std::shared_ptr<THCStream> THCStreamPtr;
+typedef std::set<THCStreamPtr> stream_set;
 const size_t kRoundSmall = 512;     // round up small allocs to 512 bytes
 const size_t kRoundLarge = 131072;  // round up large allocs to 128 KiB
 const size_t kSmallAlloc = 1048576; // largest "small" allocation is 1 MiB
 
 struct Block {
-  int           device;     // gpu
-  hipStream_t  stream;     // allocation stream
-  size_t        size;       // block size in bytes
-  char*         ptr;        // memory address
-  bool          allocated;  // in-use flag
-  Block*        prev;       // prev block if split from a larger allocation
-  Block*        next;       // next block if split from a larger allocation
+  int           device;      // gpu
+  hipStream_t  stream;      // allocation stream
+  stream_set    stream_uses; // streams on which the block was used
+  size_t        size;        // block size in bytes
+  char*         ptr;         // memory address
+  bool          allocated;   // in-use flag
+  Block*        prev;        // prev block if split from a larger allocation
+  Block*        next;        // next block if split from a larger allocation
+  int           event_count; // number of outstanding CUDA events
 
   Block(int device, hipStream_t stream, size_t size, char* ptr=NULL) :
-      device(device), stream(stream), size(size), ptr(ptr), allocated(0),
-      prev(NULL), next(NULL) { }
+      device(device), stream(stream), stream_uses(), size(size), ptr(ptr),
+      allocated(0), prev(NULL), next(NULL), event_count(0) { }
 };
 
 static bool BlockComparator(const Block* a, const Block* b)
@@ -72,6 +77,8 @@ struct THCCachingAllocator
   // lock around malloc and free
   std::mutex mutex;
 
+  // lock around calls to hipFree (to prevent deadlocks with NCCL)
+  std::mutex hip_free_mutex;
   // cached blocks larger than 1 MB
   FreeBlocks large_blocks;
 
@@ -80,6 +87,9 @@ struct THCCachingAllocator
 
   // allocated blocks by device pointer
   std::unordered_map<void*, Block*> allocated_blocks;
+
+  // outstanding hip events
+  std::deque<std::pair<hipEvent_t, Block*>> hip_events;
 
   THCCachingAllocator() :
       large_blocks(BlockComparator),
@@ -92,6 +102,11 @@ struct THCCachingAllocator
 
     int device;
     hipError_t err = hipGetDevice(&device);
+    if (err != hipSuccess) {
+      return err;
+    }
+
+    err = process_events();
     if (err != hipSuccess) {
       return err;
     }
@@ -112,7 +127,7 @@ struct THCCachingAllocator
     } else {
       void* ptr;
       size_t alloc_size = small ? kSmallAlloc : size;
-      hipError_t err = hip_malloc_retry(device, &ptr, alloc_size);
+      err = hip_malloc_retry(device, &ptr, alloc_size);
       if (err != hipSuccess) {
         return err;
       }
@@ -157,14 +172,14 @@ struct THCCachingAllocator
     Block* block = it->second;
     allocated_blocks.erase(it);
 
-    bool small = block->size <= kSmallAlloc;
-    auto& free_blocks = small ? large_blocks : small_blocks;
-    try_merge_blocks(block, block->prev, free_blocks);
-    try_merge_blocks(block, block->next, free_blocks);
+
 
     block->allocated = false;
-    free_blocks.insert(block);
+    if (!block->stream_uses.empty()) {
+      return insert_events(block);
+    }
 
+    free_block(block);
     return hipSuccess;
   }
 
@@ -183,10 +198,79 @@ struct THCCachingAllocator
     return hipSuccess;
   }
 
+  void* getBaseAllocation(void* ptr, size_t* outSize)
+  {
+    std::lock_guard<std::mutex> lock(mutex);
+    Block* block = find_allocated_block(ptr);
+    if (!block) {
+      THError("invalid device pointer: %p", ptr);
+    }
+    while (block->prev) {
+      block = block->prev;
+    }
+    void *basePtr = block->ptr;
+    if (outSize) {
+      size_t size = 0;
+      while (block) {
+        size += block->size;
+        block = block->next;
+      }
+      *outSize = size;
+    }
+    return basePtr;
+  }
+
+  // Accumulates sizes of all memory blocks for given device in given free list
+  void cacheInfoAux(FreeBlocks& blocks, int dev_id, size_t* total, size_t* largest)
+  {
+    Block search_key(dev_id, 0, 0);
+    auto it = blocks.lower_bound(&search_key);
+    for (;it != blocks.end() && *it && (*it)->device == dev_id; ++it) {
+      size_t blocksize = (*it)->size;
+      *total += blocksize;
+      if (blocksize > *largest) {
+        *largest = blocksize;
+      }
+    }
+  }
+
+  void cacheInfo(int dev_id, size_t* total, size_t* largest)
+  {
+    std::lock_guard<std::mutex> lock(mutex);
+    cacheInfoAux(large_blocks, dev_id, total, largest);
+    cacheInfoAux(small_blocks, dev_id, total, largest);
+  }
+
+  void recordStream(void* ptr, THCStream* stream)
+  {
+    std::lock_guard<std::mutex> lock(mutex);
+    Block* block = find_allocated_block(ptr);
+    if (!block) {
+      THError("invalid device pointer: %p", ptr);
+    }
+    if (stream->stream == block->stream) {
+      // ignore uses on the allocation stream, since those don't require any
+      // special synchronization
+      return;
+    }
+    THCStream_retain(stream);
+    block->stream_uses.insert(THCStreamPtr(stream, &THCStream_free));
+  }
+
+  /** moves a block into the free block list */
+  void free_block(Block* block)
+  {
+    THAssert(!block->allocated && block->event_count == 0);
+    bool small = block->size <= kSmallAlloc;
+    auto& free_blocks = small ? large_blocks : small_blocks;
+    try_merge_blocks(block, block->prev, free_blocks);
+    try_merge_blocks(block, block->next, free_blocks);
+    free_blocks.insert(block);
+  }
   /** combine previously split blocks */
   void try_merge_blocks(Block* dst, Block* src, FreeBlocks& free_blocks)
   {
-    if (!src || src->allocated) {
+    if (!src || src->allocated || src->event_count > 0) {
       return;
     }
     if (dst->prev == src) {
@@ -260,6 +344,7 @@ struct THCCachingAllocator
   hipError_t free_blocks(FreeBlocks& blocks, FreeBlocks::iterator it, FreeBlocks::iterator end)
   {
     // Frees all non-split blocks between `it` and `end`
+    std::lock_guard<std::mutex> lock(hip_free_mutex);
     while (it != end) {
       Block* block = *it;
       if (!block->prev && !block->next) {
@@ -274,6 +359,77 @@ struct THCCachingAllocator
       } else {
         ++it;
       }
+    }
+    return hipSuccess;
+  }
+
+  Block* find_allocated_block(void *ptr) {
+    auto it = allocated_blocks.find(ptr);
+    if (it == allocated_blocks.end()) {
+      return NULL;
+    }
+    return it->second;
+  }
+
+  hipError_t insert_events(Block* block)
+  {
+    hipError_t err;
+
+    int prev_device;
+    err = hipGetDevice(&prev_device);
+    if (err != hipSuccess) return err;
+
+    std::set<THCStreamPtr> streams(std::move(block->stream_uses));
+    THAssert(block->stream_uses.empty());
+    for (auto it = streams.begin(); it != streams.end(); ++it) {
+      auto& stream = *it;
+
+      err = hipSetDevice(stream->device);
+      if (err != hipSuccess) break;
+
+      hipEvent_t event;
+      err = hipEventCreateWithFlags(&event, hipEventDisableTiming);
+      if (err != hipSuccess) break;
+
+      err = hipEventRecord(event, stream->stream);
+      if (err != hipSuccess) break;
+
+      block->event_count++;
+      hip_events.emplace_back(event, block);
+    }
+
+    hipSetDevice(prev_device);
+    return err;
+  }
+
+  hipError_t process_events()
+  {
+    // Process outstanding hipEvents. Events that are completed are removed
+    // from the queue, and the 'event_count' for the corresponding allocation
+    // is decremented. Stops at the first event which has not been completed.
+    // Since events on different devices or streams may occur out of order,
+    // the processing of some events may be delayed.
+    while (!hip_events.empty()) {
+      auto& e = hip_events.front();
+      hipEvent_t event = e.first;
+      Block* block = e.second;
+
+      hipError_t err = hipEventQuery(event);
+      if (err == hipErrorNotReady) {
+        break;
+      } else if (err != hipSuccess) {
+        return err;
+      }
+      err = hipEventDestroy(event);
+      if (err != hipSuccess) {
+        return err;
+      }
+
+      block->event_count--;
+      if (block->event_count == 0) {
+        free_block(block);
+      }
+      hip_events.pop_front();
     }
     return hipSuccess;
   }
@@ -297,16 +453,38 @@ static hipError_t THCCachingAllocator_emptyCache(void* ctx)
   return a->emptyCache();
 }
 
+static hipError_t THCCachingAllocator_cacheInfo(void* ctx, int dev_id, size_t* cachedAndFree, size_t* largestBlock)
+{
+  THCCachingAllocator* a = (THCCachingAllocator*) ctx;
+  a->cacheInfo(dev_id, cachedAndFree, largestBlock);
+  return hipSuccess;
+}
 static THCCachingAllocator caching_allocator;
 static THCDeviceAllocator device_allocator = {
   &THCCachingAllocator_malloc,
   NULL,
   &THCCachingAllocator_free,
   &THCCachingAllocator_emptyCache,
+  &THCCachingAllocator_cacheInfo,
   &caching_allocator
 };
 
 THC_API THCDeviceAllocator* THCCachingAllocator_get(void)
 {
   return &device_allocator;
+}
+
+THC_API void* THCCachingAllocator_getBaseAllocation(void *ptr, size_t *size)
+{
+  return caching_allocator.getBaseAllocation(ptr, size);
+}
+
+THC_API void THCCachingAllocator_recordStream(void *ptr, THCStream* stream)
+{
+  caching_allocator.recordStream(ptr, stream);
+}
+
+THC_API std::mutex* THCCachingAllocator_getCudaFreeMutex()
+{
+  return &caching_allocator.hip_free_mutex;
 }
