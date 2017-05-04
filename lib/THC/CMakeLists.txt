@@ -130,11 +130,13 @@ ENDIF()
 
 SET(src
     THCCachingAllocator.cpp
+    THCCachingHostAllocator.cpp
     THCGeneral.cc
     THCStorageCopy.cc
     THCStream.cc
     THCTensor.cc
     THCTensorCopy.cc
+    THCTensorRandom.cpp
     THCThreadLocal.cc
     )
 
