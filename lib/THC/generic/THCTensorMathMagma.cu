@@ -469,7 +469,7 @@ THC_API void THCTensor_(getri)(THCState *state, THCTensor *ra_, THCTensor *a)
 
 __global__ void THCTensor_(copyUpperSymmetric)(real *input, int n, int len)
 {
-  for (int idx = threadIdx.x + blockIdx.x * blockDim.x; idx < len; idx += 65535) {
+  for (int idx = hipThreadIdx_x + hipBlockIdx_x * hipBlockDim_x; idx < len; idx += 65535) {
     const int r = idx % n;
     const int c = idx / n;
     if (r > c) {
@@ -480,7 +480,7 @@ __global__ void THCTensor_(copyUpperSymmetric)(real *input, int n, int len)
 
 __global__ void THCTensor_(copyLowerSymmetric)(real *input, int n, int len)
 {
-  for (int idx = threadIdx.x + blockIdx.x * blockDim.x; idx < len; idx += 65535) {
+  for (int idx = hipThreadIdx_x + hipBlockIdx_x * hipBlockDim_x; idx < len; idx += 65535) {
     const int r = idx % n;
     const int c = idx / n;
     if (r < c) {

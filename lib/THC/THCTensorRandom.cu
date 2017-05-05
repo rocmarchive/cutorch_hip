@@ -57,7 +57,7 @@ __host__ void THCRandom_getRNGState(THCState* state, THByteTensor *rng_state)
 
 __global__ void set_rngstate_kernel(curandStateMtgp32 *state, mtgp32_kernel_params *kernel)
 {
-  state[threadIdx.x].k = kernel;
+  state[hipThreadIdx_x].k = kernel;
 }
 
 __host__ void THCRandom_setRNGState(THCState* state, THByteTensor *rng_state)
@@ -80,10 +80,10 @@ __host__ void THCRandom_setRNGState(THCState* state, THByteTensor *rng_state)
 #define GENERATE_KERNEL1(NAME, T, ARG1, CURAND_T, CURAND_FUNC, TRANSFORM)      \
 __global__ void NAME(curandStateMtgp32 *state, int size, T *result, ARG1)      \
 {                                                                              \
-  int idx = blockIdx.x * BLOCK_SIZE + threadIdx.x;                             \
+  int idx = hipBlockIdx_x * BLOCK_SIZE + hipThreadIdx_x;                             \
   int rounded_size = THCCeilDiv(size, BLOCK_SIZE) * BLOCK_SIZE;                \
   for (int i = idx; i < rounded_size; i += BLOCK_SIZE * MAX_NUM_BLOCKS) {      \
-    CURAND_T x = CURAND_FUNC(&state[blockIdx.x]);                              \
+    CURAND_T x = CURAND_FUNC(&state[hipBlockIdx_x]);                              \
     if (i < size) {                                                            \
       T y = TRANSFORM;                                                         \
       result[i] = y;                                                           \
@@ -94,10 +94,10 @@ __global__ void NAME(curandStateMtgp32 *state, int size, T *result, ARG1)      \
 #define GENERATE_KERNEL2(NAME, T, ARG1, ARG2, CURAND_T, CURAND_FUNC, TRANSFORM)      \
 __global__ void NAME(curandStateMtgp32 *state, int size, T *result, ARG1, ARG2)      \
 {                                                                                    \
-  int idx = blockIdx.x * BLOCK_SIZE + threadIdx.x;                                   \
+  int idx = hipBlockIdx_x * BLOCK_SIZE + hipThreadIdx_x;                                   \
   int rounded_size = THCCeilDiv(size, BLOCK_SIZE) * BLOCK_SIZE;                      \
   for (int i = idx; i < rounded_size; i += BLOCK_SIZE * MAX_NUM_BLOCKS) {            \
-    CURAND_T x = CURAND_FUNC(&state[blockIdx.x]);                                    \
+    CURAND_T x = CURAND_FUNC(&state[hipBlockIdx_x]);                                    \
     if (i < size) {                                                                  \
       T y = TRANSFORM;                                                               \
       result[i] = y;                                                                 \
@@ -115,15 +115,15 @@ template<typename real, typename prob_type>
 __global__ void generate_bernoulli_tensor(curandStateMtgp32 *state, int size,
         real *result, prob_type *probs)
 {
-  int idx = blockIdx.x * BLOCK_SIZE + threadIdx.x;
+  int idx = hipBlockIdx_x * BLOCK_SIZE + hipThreadIdx_x;
   int rounded_size = THCCeilDiv(size, BLOCK_SIZE) * BLOCK_SIZE;
   for (int i = idx; i < rounded_size; i += BLOCK_SIZE * MAX_NUM_BLOCKS) {
     if (is_same<prob_type, double>::value) {
-      double x = curand_uniform_double(&state[blockIdx.x]);
+      double x = curand_uniform_double(&state[hipBlockIdx_x]);
       if (i < size)
         result[i] = ScalarConvert<bool, real>::to(x <= probs[i]);
     } else {
-      float x = curand_uniform(&state[blockIdx.x]);
+      float x = curand_uniform(&state[hipBlockIdx_x]);
       if (i < size)
         result[i] = ScalarConvert<bool, real>::to(x <= probs[i]);
     }
