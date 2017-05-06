@@ -513,14 +513,14 @@ THC_API void THCTensor_(potri)(THCState *state, THCTensor *ra_, THCTensor *a, co
   else if (info < 0)
     THError("MAGMA potri : Argument %d : illegal value", -info);
 
-  cudaStream_t stream = THCState_getCurrentStream(state);
+  hipStream_t stream = THCState_getCurrentStream(state);
   const int len = n*n;
   dim3 blocks(std::min(DIVUP(len, 128), 65535));
   dim3 threads(128);
   if (uplo[0] == 'U') {
-    THCTensor_(copyUpperSymmetric)<<<blocks, threads, 0, stream>>>(input_data, n, len);
+    hipLaunchKernelGGL((THCTensor_(copyUpperSymmetric)), blocks, threads, 0, stream, input_data, n, len);
   } else {
-    THCTensor_(copyLowerSymmetric)<<<blocks, threads, 0, stream>>>(input_data, n, len);
+    hipLaunchKernelGGL((THCTensor_(copyLowerSymmetric)), blocks, threads, 0, stream, input_data, n, len);
   }
 
   THCTensor_(freeCopyTo)(state, input, ra_);

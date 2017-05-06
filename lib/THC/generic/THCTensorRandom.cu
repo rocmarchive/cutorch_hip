@@ -14,7 +14,7 @@ THC_API void THCTensor_(uniform)(THCState* state, THCTensor *self_, double a, do
   ptrdiff_t size = THCTensor_(nElement)(state, self);
   real *data = THCTensor_(data)(state, self);
 
-  generate_uniform<<<NUM_BLOCKS, BLOCK_SIZE, 0, THCState_getCurrentStream(state)>>>(
+  hipLaunchKernelGGL((generate_uniform), NUM_BLOCKS, BLOCK_SIZE, 0, THCState_getCurrentStream(state),
       gen->gen_states, size, data, a, b);
 
   THCTensor_(freeCopyTo)(state, self, self_);
@@ -28,7 +28,7 @@ THC_API void THCTensor_(normal)(THCState* state, THCTensor *self_, double mean, 
   ptrdiff_t size = THCTensor_(nElement)(state, self);
   real *data = THCTensor_(data)(state, self);
 
-  generate_normal<<<NUM_BLOCKS, BLOCK_SIZE, 0, THCState_getCurrentStream(state)>>>(
+  hipLaunchKernelGGL((generate_normal), NUM_BLOCKS, BLOCK_SIZE, 0, THCState_getCurrentStream(state), 
       gen->gen_states, size, data, mean, stdv);
 
   THCTensor_(freeCopyTo)(state, self, self_);
@@ -44,7 +44,7 @@ THC_API void THCTensor_(logNormal)(THCState* state, THCTensor *self_, double mea
   ptrdiff_t size = THCTensor_(nElement)(state, self);
   real *data = THCTensor_(data)(state, self);
 
-  generateLogNormal<real><<<NUM_BLOCKS, BLOCK_SIZE, 0, THCState_getCurrentStream(state)>>>(
+  hipLaunchKernelGGL((generateLogNormal<real>), NUM_BLOCKS, BLOCK_SIZE, 0, THCState_getCurrentStream(state),
       gen->gen_states, size, data, mean, stdv);
 
   THCTensor_(freeCopyTo)(state, self, self_);
@@ -59,7 +59,7 @@ THC_API void THCTensor_(exponential)(THCState* state, THCTensor *self_, double l
   ptrdiff_t size = THCTensor_(nElement)(state, self);
   real *data = THCTensor_(data)(state, self);
 
-  generate_exponential<<<NUM_BLOCKS, BLOCK_SIZE, 0, THCState_getCurrentStream(state)>>>(
+  hipLaunchKernelGGL((generate_exponential), NUM_BLOCKS, BLOCK_SIZE, 0, THCState_getCurrentStream(state),
       gen->gen_states, size, data, lambda);
 
   THCTensor_(freeCopyTo)(state, self, self_);
@@ -74,7 +74,7 @@ THC_API void THCTensor_(cauchy)(THCState* state, THCTensor *self_, double median
   ptrdiff_t size = THCTensor_(nElement)(state, self);
   real *data = THCTensor_(data)(state, self);
 
-  generate_cauchy<<<NUM_BLOCKS, BLOCK_SIZE, 0, THCState_getCurrentStream(state)>>>(
+  hipLaunchKernelGGL((generate_cauchy), NUM_BLOCKS, BLOCK_SIZE, 0, THCState_getCurrentStream(state),
       gen->gen_states, size, data, median, sigma);
 
   THCTensor_(freeCopyTo)(state, self, self_);
@@ -95,9 +95,9 @@ void THCTensor_(renormRows)(struct THCState* state,
   dim3 grid(rows < numSM * 4 ? rows : numSM * 4);
   dim3 block(cols < maxThreads ? cols : maxThreads);
 
-  renormRowsL1<real>
-    <<<grid, block, block.x * sizeof(real),
-    THCState_getCurrentStream(state)>>>(THCTensor_(data)(state, t),
+  hipLaunchKernelGGL((renormRowsL1<real>),
+    grid, block, block.x * sizeof(real),
+    THCState_getCurrentStream(state), THCTensor_(data)(state, t),
                                         rows, cols);
 }
 
@@ -159,10 +159,10 @@ THC_API void THCTensor_(multinomial)(struct THCState *state,
     int maxThreads = props->maxThreadsPerBlock;
     dim3 block(numCategories < maxThreads ? numCategories : maxThreads);
     dim3 grid(numDist < numSM * 4 ? numDist : numSM * 4);
-    sampleMultinomialOnce<real, accreal>
-      <<<grid, block,
+    hipLaunchKernelGGL((sampleMultinomialOnce<real, accreal>), 
+         grid, block,
          block.x * (sizeof(real) * sizeof(accreal)),
-         THCState_getCurrentStream(state)>>>(
+         THCState_getCurrentStream(state),
       THCudaLongTensor_data(state, self),
       numDist,
       numCategories,
@@ -202,8 +202,8 @@ THC_API void THCTensor_(multinomial)(struct THCState *state,
       // distribution concurrently.
       dim3 grid(numDist < MAX_NUM_BLOCKS ? numDist : MAX_NUM_BLOCKS);
 
-      sampleMultinomialWithReplacement
-        <<<grid, block, 0, THCState_getCurrentStream(state)>>>(
+      hipLaunchKernelGGL((sampleMultinomialWithReplacement), 
+          grid, block, 0, THCState_getCurrentStream(state),
           gen->gen_states,
           n_sample,
           THCudaLongTensor_data(state, self),
@@ -235,8 +235,8 @@ THC_API void THCTensor_(multinomial)(struct THCState *state,
 
         // The kernel can only draw one sample before we have to
         // recalculate our distribution
-        sampleMultinomialWithoutReplacement
-          <<<grid, block, 0, THCState_getCurrentStream(state)>>>(
+        hipLaunchKernelGGL((sampleMultinomialWithoutReplacement), 
+            grid, block, 0, THCState_getCurrentStream(state),
             gen->gen_states,
             n_sample,
             sample,
@@ -295,7 +295,7 @@ THC_API void THCTensor_(bernoulli)(THCState* state, THCTensor *self_, double p)
   ptrdiff_t size = THCTensor_(nElement)(state, self);
   real *data = THCTensor_(data)(state, self);
 
-  generate_bernoulli<<<NUM_BLOCKS, BLOCK_SIZE, 0, THCState_getCurrentStream(state)>>>(
+  hipLaunchKernelGGL((generate_bernoulli), NUM_BLOCKS, BLOCK_SIZE, 0, THCState_getCurrentStream(state), 
       gen->gen_states, size, data, p);
 
   THCTensor_(freeCopyTo)(state, self, self_);
@@ -316,7 +316,7 @@ THC_API void THCTensor_(NAME)(THCState* state,                                 \
                                                                                \
   THArgCheck(size == prob_size, 3, "inconsistent tensor size");                \
                                                                                \
-  generate_bernoulli_tensor<<<NUM_BLOCKS, BLOCK_SIZE, 0, THCState_getCurrentStream(state)>>>( \
+  hipLaunchKernelGGL((generate_bernoulli_tensor), NUM_BLOCKS, BLOCK_SIZE, 0, THCState_getCurrentStream(state),  \
       gen->gen_states, size, result_data, probs_data);                         \
                                                                                \
   PROB_TYPE##_free(state, probs);                                              \
@@ -342,7 +342,7 @@ THC_API void THCTensor_(geometric)(THCState* state, THCTensor *self_, double p)
   ptrdiff_t size = THCTensor_(nElement)(state, self);
   real *data = THCTensor_(data)(state, self);
 
-  generate_geometric<<<NUM_BLOCKS, BLOCK_SIZE, 0, THCState_getCurrentStream(state)>>>(
+  hipLaunchKernelGGL((generate_geometric), NUM_BLOCKS, BLOCK_SIZE, 0, THCState_getCurrentStream(state), 
       gen->gen_states, size, data, p);
 
   THCTensor_(freeCopyTo)(state, self, self_);

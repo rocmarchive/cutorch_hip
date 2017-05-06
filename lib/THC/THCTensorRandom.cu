@@ -72,7 +72,7 @@ __host__ void THCRandom_setRNGState(THCState* state, THByteTensor *rng_state)
 
   THCudaCheck(hipMemcpy(gen->gen_states, THByteTensor_data(rng_state),
                          states_size, hipMemcpyHostToDevice));
-  set_rngstate_kernel<<<1, MAX_NUM_BLOCKS, 0, THCState_getCurrentStream(state)>>>(
+  hipLaunchKernelGGL((set_rngstate_kernel), 1, MAX_NUM_BLOCKS, 0, THCState_getCurrentStream(state),
       gen->gen_states, gen->kernel_params);
   memcpy(&gen->initial_seed, THByteTensor_data(rng_state) + states_size, seed_size);
 }
