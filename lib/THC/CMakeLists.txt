@@ -143,6 +143,7 @@ SET(src
 SET(src-cuda
   THCReduceApplyUtils.cu
   THCBlas.cu
+  THCSleep.cu
   THCStorage.cu
   THCStorageCopy.cu
   THCTensor.cu
@@ -161,6 +162,8 @@ SET(src-cuda
   THCTensorTopK.cu
   THCTensorSort.cu
   THCTensorTypeUtils.cu
+  THCSortUtils.cu
+  THCTensorMode.cu
   )
 
 # loop over all types

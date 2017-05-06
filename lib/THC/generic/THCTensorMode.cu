@@ -262,7 +262,7 @@ THC_API void THCTensor_(mode)(THCState *state,
       default:
         assert(false);
     }
-    THCudaCheck(cudaGetLastError());
+    THCudaCheck(hipGetLastError());
 
     THCTensor_(free)(state, transposed);
     THCTensor_(free)(state, contiguous);

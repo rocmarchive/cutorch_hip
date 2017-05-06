@@ -1,21 +1,5 @@
 #include "THCTensorSort.cuh"
 
-// Returns 2^(ceil(lg(n)) from Stanford bit twiddling hacks
-unsigned long nextHighestPowerOf2(unsigned long n) {
-  n--;
-  n |= n >> 1;
-  n |= n >> 2;
-  n |= n >> 4;
-  n |= n >> 8;
-  n |= n >> 16;
-#ifndef _MSC_VER
-  n |= n >> 32;
-#endif
-  n++;
-
-  return n;
-}
-
 void THCudaLongTensor_fillSliceWithIndex(THCState* state,
                                          THCudaLongTensor* t,
                                          int dim) {
@@ -40,17 +24,10 @@ void THCudaLongTensor_fillSliceWithIndex(THCState* state,
 
   dim3 block(numThreads);
 
-#define FILL_INDEX(T, DIM)\
-  hipLaunchKernelGGL(\
-    (fillSliceWithIndex<T, DIM>),\
-    grid,\
-    block,\
-    0,\
-    THCState_getCurrentStream(state),\
-    make_magic_wrapper(info),\
-    numSlices,\
-    sliceSize,\
-    info.strides[collapseDim])
+#define FILL_INDEX(T, DIM)                                       \
+  fillSliceWithIndex<T, DIM>                                     \
+    <<<grid, block, 0, THCState_getCurrentStream(state)>>>(      \
+      info, numSlices, sliceSize, info.strides[collapseDim])
 
   if (TensorUtils<THCudaLongTensor>::canUse32BitIndexMath(state, t)) {
     TensorInfo<long, unsigned int> info =

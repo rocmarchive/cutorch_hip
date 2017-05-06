@@ -17,5 +17,5 @@ THC_API void THC_sleep(THCState* state, long long cycles)
   dim3 grid(1);
   dim3 block(1);
   spin_kernel<<<grid, block, 0, THCState_getCurrentStream(state)>>>(cycles);
-  THCudaCheck(cudaGetLastError());
+  THCudaCheck(hipGetLastError());
 }
