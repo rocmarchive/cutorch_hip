@@ -10,6 +10,7 @@ __host__ void THCTensor_(scanThrust)(
     THCTensor *src,
     BinaryFunction binary_op)
 {
+#ifdef THRUST_PATH 
   THCThrustAllocator thrustAlloc(state);
   thrust::device_ptr<real> src_data(THCTensor_(data)(state, src));
   thrust::device_ptr<real> dst_data(THCTensor_(data)(state, dst));
@@ -20,8 +21,11 @@ __host__ void THCTensor_(scanThrust)(
 #endif
       src_data, src_data + size, dst_data,
       binary_op);
+#else  // THRUST_PATH
+#endif // THRUST_PATH
 }
 #endif
+
 
 template<class BinaryOp>
 __host__ void THCTensor_(scanOuterDim)(THCState *state, THCTensor *tgt,

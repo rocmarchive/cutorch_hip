@@ -315,7 +315,7 @@ struct TensorDivConstantOp<double> {
 
 template <typename T>
 struct TensorRemainderOp {
-  TensorRemainderOp(T v) : val(v) {}
+  __host__ __device__ TensorRemainderOp(T v) : val(v) {}
   __device__ __forceinline__ void operator()(T* out, T* in) {
     *out = *in % val;
     if ((*out * val) < 0){
@@ -335,7 +335,7 @@ struct TensorRemainderOp {
 
 template <>
 struct TensorRemainderOp<float> {
-  TensorRemainderOp(float v) : val(v) {}
+  __host__ __device__ TensorRemainderOp(float v) : val(v) {}
   __device__ __forceinline__ void operator()(float* out, float* in) {
     *out = *in - val * floorf(*in / val);
   }
@@ -349,7 +349,7 @@ struct TensorRemainderOp<float> {
 
 template <>
 struct TensorRemainderOp<double> {
-  TensorRemainderOp(double v) : val(v) {}
+  __host__ __device__ TensorRemainderOp(double v) : val(v) {}
   __device__ __forceinline__ void operator()(double* out, double* in) {
     *out = *in - val * floor(*in / val);
   }
@@ -365,9 +365,9 @@ struct TensorRemainderOp<double> {
 template <>
 struct TensorRemainderOp<half> {
 #ifdef CUDA_HALF_INSTRUCTIONS
-  TensorRemainderOp(half v) : val(v) {}
+  __host__ __device__ TensorRemainderOp(half v) : val(v) {}
 #else
-  TensorRemainderOp(half v): fval(THC_half2float(v)) {}
+  __host__ __device__ TensorRemainderOp(half v): fval(THC_half2float(v)) {}
 #endif
 
   __device__ __forceinline__ void operator()(half* out, half* in) {
@@ -400,7 +400,7 @@ struct TensorRemainderOp<half> {
 
 template <typename T>
 struct TensorFmodOp {
-  TensorFmodOp(T v) : val((float)v) {}
+  __host__ __device__ TensorFmodOp(T v) : val((float)v) {}
   __device__ __forceinline__ void operator()(T* out, T* in) {
     *out = (T) fmodf((float) *in, val);
   }
@@ -480,7 +480,7 @@ struct TensorTriOp {
 
 template <typename T>
 struct TensorLShiftConstantOp {
-  TensorLShiftConstantOp(T v) : val(v) {}
+  __host__ __device__ TensorLShiftConstantOp(T v) : val(v) {}
   __device__ __forceinline__ void operator()(T* out, T* in) {
     *out = *in << val;
   }
@@ -494,7 +494,7 @@ struct TensorLShiftConstantOp {
 
 template <typename T>
 struct TensorRShiftConstantOp {
-  TensorRShiftConstantOp(T v) : val(v) {}
+  __host__ __device__ TensorRShiftConstantOp(T v) : val(v) {}
   __device__ __forceinline__ void operator()(T* out, T* in) {
     *out = *in >> val;
   }
@@ -508,7 +508,7 @@ struct TensorRShiftConstantOp {
 
 template <typename T>
 struct TensorBitAndConstantOp {
-  TensorBitAndConstantOp(T v) : val(v) {}
+  __host__ __device__ TensorBitAndConstantOp(T v) : val(v) {}
   __device__ __forceinline__ void operator()(T* out, T* in) {
     *out = *in & val;
   }
@@ -522,7 +522,7 @@ struct TensorBitAndConstantOp {
 
 template <typename T>
 struct TensorBitOrConstantOp {
-  TensorBitOrConstantOp(T v) : val(v) {}
+  __host__ __device__  TensorBitOrConstantOp(T v) : val(v) {}
   __device__ __forceinline__ void operator()(T* out, T* in) {
     *out = *in | val;
   }
@@ -536,7 +536,7 @@ struct TensorBitOrConstantOp {
 
 template <typename T>
 struct TensorBitXorConstantOp {
-  TensorBitXorConstantOp(T v) : val(v) {}
+  __host__ __device__ TensorBitXorConstantOp(T v) : val(v) {}
   __device__ __forceinline__ void operator()(T* out, T* in) {
     *out = *in ^ val;
   }
