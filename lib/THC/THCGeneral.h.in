@@ -5,6 +5,7 @@
 # define CURAND_PATH 1
 # define THRUST_PATH 1
 # define CUDA_PATH 1
+# define CUSPARSE_PATH 1
 #endif 
 
 
@@ -15,7 +16,10 @@
 #include "hip/hip_runtime_api.h"
 #include "hip/hip_runtime.h"
 #include "hipblas.h"
-#include "cusparse.h"
+
+#ifdef CUSPARSE_PATH
+  #include "cusparse.h"
+#endif 
 
 #cmakedefine USE_MAGMA
 
@@ -68,8 +72,10 @@ typedef struct _THCCudaResourcesPerDevice {
   int numSparseHandles;
   /* cuBLAS handes are lazily initialized */
   hipblasHandle_t* blasHandles;
+#ifdef CUSPARSE_PATH
   /* cuSparse handes are lazily initialized */
   cusparseHandle_t* sparseHandles;
+#endif
   /* Size of scratch space per each stream on this device available */
   size_t scratchSpacePerStream;
   /* Device-resident scratch space per stream, used for global memory
@@ -186,8 +192,10 @@ THC_API hipblasHandle_t THCState_getCurrentBlasHandle(THCState *state);
 THC_API int THCState_getCurrentBlasHandleIndex(THCState *state);
 THC_API void THCState_setCurrentBlasHandleIndex(THCState *state, int handle);
 
+#ifdef CUSPARSE_PATH
 THC_API cusparseHandle_t THCState_getDeviceSparseHandle(THCState *state, int device, int handle);
 THC_API cusparseHandle_t THCState_getCurrentSparseHandle(THCState *state);
+#endif
 THC_API int THCState_getCurrentSparseHandleIndex(THCState *state);
 THC_API void THCState_setCurrentSparseHandleIndex(THCState *state, int handle);
 
@@ -206,8 +214,9 @@ THC_API size_t THCState_getDeviceScratchSpaceSize(THCState* state, int device);
 THC_API void __THCudaCheck(hipError_t err, const char *file, const int line);
 THC_API void __THCudaCheckWarn(hipError_t err, const char *file, const int line);
 THC_API void __THCublasCheck(hipblasStatus_t status, const char *file, const int line);
+#ifdef CUSPARSE_PATH
 THC_API void __THCusparseCheck(cusparseStatus_t status, const char *file, const int line);
-
+#endif
 THC_API hipError_t THCudaMalloc(THCState *state, void **ptr, size_t size);
 THC_API hipError_t THCudaFree(THCState *state, void *ptr);
 THC_API hipError_t THCudaMemGetInfo(THCState *state, size_t* freeBytes, size_t* totalBytes);

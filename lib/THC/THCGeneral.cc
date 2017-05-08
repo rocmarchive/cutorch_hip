@@ -169,7 +169,9 @@ void THCudaShutdown(THCState* state)
     }
     /* Free user defined sparse handles */
     for (int i = 0; i < res->numSparseHandles; ++i) {
+#ifdef CUSPARSE_PATH
       THCusparseCheck(cusparseDestroy(res->sparseHandles[i]));
+#endif
     }
     /* Free per-stream scratch space; starts at 0 because there is space for
        the default stream as well*/
@@ -413,6 +415,7 @@ void THCState_reserveDeviceSparseHandles(THCState* state, int device, int numSpa
   THCudaCheck(hipGetDevice(&prevDev));
   THCudaCheck(hipSetDevice(device));
 
+#ifdef CUSPARSE_PATH
   size_t size = numSparseHandles * sizeof(cusparseHandle_t);
   cusparseHandle_t* handles = (cusparseHandle_t*) realloc(res->sparseHandles, size);
   for (int i = res->numSparseHandles; i < numSparseHandles; ++i) {
@@ -421,7 +424,7 @@ void THCState_reserveDeviceSparseHandles(THCState* state, int device, int numSpa
   }
   res->sparseHandles = handles;
   res->numSparseHandles = numSparseHandles;
-
+#endif
   THCudaCheck(hipSetDevice(prevDev));
 }
 
@@ -494,6 +497,7 @@ hipblasHandle_t THCState_getDeviceBlasHandle(THCState *state, int device, int ha
   return res->blasHandles[handle - 1];
 }
 
+#ifdef CUSPARSE_PATH
 cusparseHandle_t THCState_getDeviceSparseHandle(THCState *state, int device, int handle)
 {
   if (handle <= 0 || handle > state->numUserSparseHandles) {
@@ -504,6 +508,7 @@ cusparseHandle_t THCState_getDeviceSparseHandle(THCState *state, int device, int
   THCState_reserveDeviceSparseHandles(state, device, handle);
   return res->sparseHandles[handle - 1];
 }
+#endif
 
 static THCStream* THCState_getStreamOnDevice(THCState* state, int device)
 {
@@ -568,6 +573,7 @@ hipblasHandle_t THCState_getCurrentBlasHandle(THCState *state)
   return NULL;
 }
 
+#ifdef CUSPARSE_PATH
 cusparseHandle_t THCState_getCurrentSparseHandle(THCState *state)
 {
   /* This is called at the point of kernel execution.
@@ -583,6 +589,7 @@ cusparseHandle_t THCState_getCurrentSparseHandle(THCState *state)
   THError("THCState and sparseHandles must be set as there is no default sparseHandle");
   return NULL;
 }
+#endif
 
 int THCState_getCurrentStreamIndex(THCState *state)
 {
@@ -768,6 +775,7 @@ void __THCublasCheck(hipblasStatus_t status, const char *file, const int line)
     _THError(file, line, "hipblas runtime error : %s", errmsg);
   }
 }
+#ifdef CUSPARSE_PATH
 void __THCusparseCheck(cusparseStatus_t status, const char *file, const int line)
 {
   if(status != CUSPARSE_STATUS_SUCCESS)
@@ -816,6 +824,7 @@ void __THCusparseCheck(cusparseStatus_t status, const char *file, const int line
     _THError(file, line, "cusparse runtime error : %s", errmsg);
   }
 }
+#endif
 
 static ptrdiff_t heapSize = 0; // not thread-local
 static const ptrdiff_t heapMaxDelta = (ptrdiff_t)1e6;
