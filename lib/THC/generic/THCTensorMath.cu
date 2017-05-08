@@ -197,13 +197,13 @@ void THCTensor_(catArray)(THCState *state, THCTensor *result,
 
     // Next, let's initialize the size, stride arrays for the output Tensor.
     for (i = 0; i < maxDim; ++i) {
-      param.outputSize[i] = THCTensor_(size)(state, result, i);
-      param.outputStride[i] = THCTensor_(stride)(state, result, i);
+      param.devOutputSize[i] = THCTensor_(size)(state, result, i);
+      param.devOutputStride[i] = THCTensor_(stride)(state, result, i);
     }
 
     // Template Declarations for dim = 1, 2, 3, 4
 #define HANDLE_CASE(DIMS) \
-  hipLaunchKernelGGL((CatArrayBatchedCopy<real, unsigned int, DIMS>), applyGrid, applyBlock, 0, THCState_getCurrentStream(state), data, d_inputs, param, cat_dimension, param.outputStride[cat_dimension]);
+  hipLaunchKernelGGL((CatArrayBatchedCopy<real, unsigned int, DIMS>), applyGrid, applyBlock, 0, THCState_getCurrentStream(state), data, d_inputs, param, cat_dimension, param.devOutputStride[cat_dimension]);
 
     // Now we loop
     offset = 0;
@@ -286,7 +286,7 @@ void THCTensor_(nonzero)(THCState* state, THCudaLongTensor *tensor,
   THCAssertSameGPU(THCTensor_(checkGPU)(state, 1, self  ));
   THCAssertSameGPU(THCudaLongTensor_checkGPU(state, 1, tensor));
 
-
+#ifdef THRUST_PATH
   using namespace thrust::placeholders;
   THCThrustAllocator thrustAlloc(state);
   self = THCTensor_(newContiguous)(state, self);
@@ -340,6 +340,7 @@ void THCTensor_(nonzero)(THCState* state, THCudaLongTensor *tensor,
   }
 
   THCudaLongTensor_resize2d(state, tensor, num_nonzeros, num_dim);
+#endif
 
   THCTensor_(free)(state, self);
   THCudaLongTensor_free(state, tensor);
@@ -405,8 +406,10 @@ void THCTensor_(linspace)(THCState *state, THCTensor *r_, real a, real b, long n
     real step = THCNumerics<real>::div(THCNumerics<real>::sub(b, a), 
                                        ScalarConvert<long,real>::to(n - 1));
     LinspaceOp<real> linspace_method(a, step);
+#ifdef THRUST_PATH
     thrust::device_ptr<real> data_(THCTensor_(data)(state, r));
     thrust::tabulate(data_, data_ + n, linspace_method);
+#endif
     if (!THCTensor_(isContiguous)(state, r_)) { // We need to move data back to r_
       THCTensor_(freeCopyTo)(state, r, r_);
     }
@@ -418,7 +421,9 @@ void THCTensor_(logspace)(THCState *state, THCTensor *r_, real a, real b, long n
   THCAssertSameGPU(THCTensor_(checkGPU)(state, 1, r_));
   THArgCheck(n > 1 || (n == 1 && (a == b)), 3, "invalid number of points");
   if (THCTensor_(nElement)(state, r_) != n) THCTensor_(resize1d)(state, r_, n);
+#ifdef CUDA_PATH
   if (n == 1) THCTensor_(fill)(state, r_, THCNumerics<real>::exp10(a));
+#endif
   else {
     THCTensor *r = THCTensor_(isContiguous)(state, r_) 
                    ? r_ 
@@ -426,8 +431,10 @@ void THCTensor_(logspace)(THCState *state, THCTensor *r_, real a, real b, long n
     real step = THCNumerics<real>::div(THCNumerics<real>::sub(b, a), 
                                        ScalarConvert<long,real>::to(n - 1));
     LogspaceOp<real> logspace_method(a, step);
+#ifdef THRUST_PATH
     thrust::device_ptr<real> data_(THCTensor_(data)(state, r));
     thrust::tabulate(data_, data_ + n, logspace_method);
+#endif
     if (!THCTensor_(isContiguous)(state, r_)) {
       THCTensor_(freeCopyTo)(state, r, r_);
     }
@@ -448,8 +455,10 @@ void THCTensor_(range)(THCState *state, THCTensor *r_, accreal xmin, accreal xma
                  ? r_ 
                  : THCTensor_(newContiguous)(state, r_);
   LinspaceOp<real,accreal> linspace_method(xmin, step);
+#ifdef THRUST_PATH
   thrust::device_ptr<real> data_(THCTensor_(data)(state, r));
   thrust::tabulate(data_, data_ + size, linspace_method);
+#endif
   if (!THCTensor_(isContiguous)(state, r_)) THCTensor_(freeCopyTo)(state, r, r_);
   THCudaCheck(hipGetLastError());
 }

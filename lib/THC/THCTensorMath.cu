@@ -6,6 +6,7 @@
 #include "THCTensorMath.cuh"
 #include "THCThrustAllocator.cuh"
 
+#ifdef THRUST_PATH
 #include <thrust/copy.h>
 #include <thrust/count.h>
 #include <thrust/device_ptr.h>
@@ -18,6 +19,9 @@
 #if CUDA_VERSION >= 7000
 #include <thrust/system/cuda/execution_policy.h>
 #endif
+#else  // THRUST_PATH
+
+#endif // THRUST_PATH
 #include <cfloat>
 
 template <typename T>
@@ -29,6 +33,7 @@ struct TensorFillOp {
   const T val;
 };
 
+#ifdef THRUST_PATH
 // copypasta from https://github.com/thrust/thrust/blob/master/examples/strided_range.cu
 template <typename Iterator>
 class strided_range
@@ -80,6 +85,8 @@ class strided_range
   Iterator last;
   difference_type stride;
 };
+#else
+#endif
 
 struct idx_functor
 {

@@ -61,8 +61,18 @@ struct CatArrInputTensor {
 
 template<typename IndexType, unsigned int MaxDims>
 struct OutputTensorSizeStride {
-  IndexType outputSize[MaxDims];
-  IndexType outputStride[MaxDims];
+  IndexType* devOutputSize;
+  IndexType* devOutputStride;
+
+  // Create device Tensors
+  OutputTensorSizeStride() {
+    hipMalloc(&devOutputSize, MaxDims * sizeof(IndexType));
+    hipMalloc(&devOutputStride, MaxDims * sizeof(IndexType));
+  }
+
+  // Destroy device tensors
+  ~OutputTensorSizeStride() {
+   }  
 };
 
 /**
@@ -94,7 +104,7 @@ __global__ void CatArrayBatchedCopy(
       linearIndex < nElements;
       linearIndex += hipGridDim_x * hipBlockDim_x) {
     IndexType elementOffset = CatArrIndexToOffset<IndexType, Dims>::compute(
-        os.outputSize, os.outputStride, dimSize, concatDim, linearIndex);
+        os.devOutputSize, os.devOutputStride, dimSize, concatDim, linearIndex);
     output[dataOffset + elementOffset] = data[linearIndex];
   }
 }
