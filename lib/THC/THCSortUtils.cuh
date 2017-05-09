@@ -80,7 +80,7 @@ __device__ inline void bitonicSort(K keys[Power2SortSize],
     
       __syncthreads();
       
-      unsigned int pos = 2 * threadIdx.x - (threadIdx.x & (stride - 1));
+      unsigned int pos = 2 * hipThreadIdx_x - (hipThreadIdx_x & (stride - 1));
       bitonicSwap<Comparator, K, V>(
         keys[pos], values[pos], valid[pos],
         keys[pos + stride], values[pos + stride], valid[pos + stride],
@@ -93,7 +93,7 @@ __device__ inline void bitonicSort(K keys[Power2SortSize],
     
     __syncthreads();
     
-    unsigned int pos = 2 * threadIdx.x - (threadIdx.x & (stride - 1));
+    unsigned int pos = 2 * hipThreadIdx_x - (hipThreadIdx_x & (stride - 1));
     bitonicSwap<Comparator, K, V>(
       keys[pos], values[pos], valid[pos],
       keys[pos + stride], values[pos + stride], valid[pos + stride],
@@ -111,14 +111,14 @@ __device__ inline void bitonicSortKeys(K keys[Power2SortSize],
                                    const Comparator& comp) {
 #pragma unroll
   for (unsigned int size = 2; size < Power2SortSize; size *= 2) {
-    bool flag = ((threadIdx.x & (size / 2)) != 0);
+    bool flag = ((hipThreadIdx_x & (size / 2)) != 0);
 
 #pragma unroll
     for (unsigned int stride = size / 2; stride > 0; stride /= 2) {
 
       __syncthreads();
       
-      unsigned int pos = 2 * threadIdx.x - (threadIdx.x & (stride - 1));
+      unsigned int pos = 2 * hipThreadIdx_x - (hipThreadIdx_x & (stride - 1));
       bitonicSwapKeys<Comparator, K>(
         keys[pos], valid[pos],
         keys[pos + stride], valid[pos + stride],
@@ -130,7 +130,7 @@ __device__ inline void bitonicSortKeys(K keys[Power2SortSize],
   for (unsigned int stride = Power2SortSize / 2; stride > 0; stride /= 2) {
     __syncthreads();
     
-    unsigned int pos = 2 * threadIdx.x - (threadIdx.x & (stride - 1));
+    unsigned int pos = 2 * hipThreadIdx_x - (hipThreadIdx_x & (stride - 1));
     bitonicSwapKeys<Comparator, K>(
       keys[pos], valid[pos],
       keys[pos + stride], valid[pos + stride],

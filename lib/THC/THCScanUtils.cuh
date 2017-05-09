@@ -32,7 +32,7 @@ __device__ void inclusivePrefixScan(T *smem, BinaryOp binop) {
   // Reduce step ("upsweep")
 #pragma unroll
   for (int stride = 1; stride < Power2ScanSize; stride <<= 1) {
-    int index = (threadIdx.x + 1) * stride * 2 - 1;
+    int index = (hipThreadIdx_x + 1) * stride * 2 - 1;
     if (index < Power2ScanSize) {
       smem[index] = binop(smem[index], smem[index - stride]);
     }
@@ -42,7 +42,7 @@ __device__ void inclusivePrefixScan(T *smem, BinaryOp binop) {
   // Post-reduce step ("downsweep")
 #pragma unroll
   for (int stride = Power2ScanSize / 4; stride > 0; stride >>= 1) {
-    int index = (threadIdx.x + 1) * stride * 2 - 1;
+    int index = (hipThreadIdx_x + 1) * stride * 2 - 1;
     if ((index + stride) < Power2ScanSize) {
       smem[index + stride] = binop(smem[index + stride], smem[index]);
     }
@@ -80,7 +80,7 @@ __device__ void segmentedInclusivePrefixScan(T *smem, bool *bmem, BinaryOp binop
   // Reduce step ("upsweep")
 #pragma unroll
   for (int stride = 1; stride < Power2ScanSize; stride <<= 1) {
-    int index = (threadIdx.x + 1) * stride * 2 - 1;
+    int index = (hipThreadIdx_x + 1) * stride * 2 - 1;
     if (index < Power2ScanSize) {
       smem[index] = bmem[index] ? smem[index] : binop(smem[index], smem[index - stride]);
       bmem[index] = bmem[index] | bmem[index - stride];
@@ -91,7 +91,7 @@ __device__ void segmentedInclusivePrefixScan(T *smem, bool *bmem, BinaryOp binop
   // Post-reduce step ("downsweep")
 #pragma unroll
   for (int stride = Power2ScanSize / 4; stride > 0; stride >>= 1) {
-    int index = (threadIdx.x + 1) * stride * 2 - 1;
+    int index = (hipThreadIdx_x + 1) * stride * 2 - 1;
     if ((index + stride) < Power2ScanSize) {
       smem[index + stride] = bmem[index + stride] ? smem[index + stride] : binop(smem[index + stride], smem[index]);
       bmem[index + stride] = bmem[index + stride] | bmem[index];
@@ -113,7 +113,7 @@ __device__ void inclusivePrefixScan(T* smem, T in, T* out, BinaryFunction binop)
     T val = 0;
 
     if (hipThreadIdx_x >= offset) {
-      val = binop(smem[threadIdx.x - offset], smem[threadIdx.x]);
+      val = binop(smem[hipThreadIdx_x - offset], smem[hipThreadIdx_x]);
     }
 
     __syncthreads();

@@ -5,12 +5,17 @@
 #include "THCReduceApplyUtils.cuh"
 #include "THCTensorMathReduce.cuh"
 
+#ifdef CURAND_PATH
 #include <curand_kernel.h>
-
+#else
+  #include <hip/hip_hcc.h>
+  #include "MTGP/hiprand_mtgp32.h"
+#endif
 #define MAX_NUM_BLOCKS 64
 #define BLOCK_SIZE 256
 /* Separate kernel because curand_log_normal gets extra parameters. */
 
+#ifdef CURAND_PATH
 template <typename T>
 __global__ void generateLogNormal(curandStateMtgp32 *state, int size, T *result, double mean, double stddev)
 {
@@ -36,6 +41,9 @@ __global__ void generateLogNormal<double>(curandStateMtgp32 *state, int size, do
     }
   }
 }
+#else
+// TODO: HIPRAND PATH
+#endif
 
 #undef MAX_NUM_BLOCKS
 #undef BLOCK_SIZE
@@ -43,7 +51,12 @@ __global__ void generateLogNormal<double>(curandStateMtgp32 *state, int size, do
 // Normalizes the L1 norm of every row to 1; used by multinomial
 template <typename T>
 __global__ void renormRowsL1(T* dist, long rows, long cols) {
+#ifdef CURAND_PATH
   extern __shared__ __align__(sizeof(T)) unsigned char my_smem[];
+#else
+  // TODO: Check the vulnerability of this change
+  extern __shared__ unsigned char my_smem[];
+#endif
   T *smem = reinterpret_cast<T *>(my_smem);
 
   for (long row = hipBlockIdx_x; row < rows; row += hipGridDim_x) {
@@ -104,7 +117,12 @@ sampleMultinomialOnce(long* dest,
                       int categories,
                       T* sampled,
                       T* dist) {
+#ifdef CURAND_PATH 
   extern __shared__ __align__(sizeof(AccT)) unsigned char my_smem[];
+#else
+  // TODO: Check vulnerability of this change
+  extern __shared__  unsigned char my_smem[];
+#endif
   __shared__ bool found;
 
   // Shared Memory hold blockdim.x T for holding the cumulative sum,
@@ -227,13 +245,24 @@ sampleMultinomialOnce(long* dest,
 }
 
 template <typename T>
+#ifdef CURAND_PATH
 __global__ void
 sampleMultinomialWithReplacement(curandStateMtgp32* state,
                                  int totalSamples,
-                                 long* dest,
+                                 float* dest,
                                  long distributions,
                                  int categories,
-                                 T* normDistPrefixSum) {
+                                 float* normDistPrefixSum) {
+#else
+__global__ void
+sampleMultinomialWithReplacement(HipRandStateMtgp32* state,
+                                 int totalSamples,
+                                 float* dest,
+                                 long distributions,
+                                 int categories,
+                                 float* normDistPrefixSum) {
+
+#endif
   // At the moment, each warp computes one sample value in the binary
   // search due to divergence. It seems possible to compute multiple
   // values and limit divergence though later on. However, no matter
@@ -250,7 +279,12 @@ sampleMultinomialWithReplacement(curandStateMtgp32* state,
       int sample = sampleBase + hipThreadIdx_y;
 
       // All threads participate in this
-      T r = ScalarConvert<float, T>::to(curand_uniform(&state[hipBlockIdx_x]));
+      #ifdef CURAND_PATH
+        T r = ScalarConvert<float, T>::to(curand_uniform(&state[hipBlockIdx_x]));
+      #else
+      //  TODO:  HIPRAND_PATH
+        T r = 0;
+      #endif
 
       if (hipThreadIdx_x == 0 && sample < totalSamples) {
         // Find the bucket that a uniform sample lies in
@@ -290,9 +324,12 @@ sampleMultinomialWithoutReplacement(curandStateMtgp32* state,
     // The warp determines the distribution
     long curDist = curDistBase + hipThreadIdx_y;
 
+#ifdef CURAND_PATH
     // All threads must participate in this
     T r = ScalarConvert<float, T>::to(curand_uniform(&state[hipBlockIdx_x]));
-
+#else
+     // TODO: HIPRAND_PATH
+#endif
     if (hipThreadIdx_x == 0 && curDist < distributions) {
       // Find the bucket that a uniform sample lies in
       int choice = binarySearchForMultinomial<T>(
