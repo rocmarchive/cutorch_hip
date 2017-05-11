@@ -19,7 +19,7 @@
 template <typename T, typename IndexType>
 struct TensorInfo {
   // constructor
-  __device__ TensorInfo(T* p,
+  TensorInfo(T* p,
              int dim,
              const IndexType (&sz)[MAX_CUTORCH_DIMS],
              const IndexType (&st)[MAX_CUTORCH_DIMS]);

@@ -18,7 +18,8 @@ THC_API void THCTensor_(uniform)(THCState* state, THCTensor *self_, double a, do
   hipLaunchKernelGGL((generate_uniform), NUM_BLOCKS, BLOCK_SIZE, 0, THCState_getCurrentStream(state),
       gen->gen_states, size, data, a, b);
 #else
-    generate_uniform(state, gen->h_gen_states, size, data, a, b);
+     // TODO: Resolve build error below by adding a generic MTGP implementation
+    //generate_uniform(state, gen->h_gen_states, size, data, a, b);
 #endif
 
   THCTensor_(freeCopyTo)(state, self, self_);
@@ -35,18 +36,20 @@ THC_API void THCTensor_(normal)(THCState* state, THCTensor *self_, double mean, 
   hipLaunchKernelGGL((generate_normal), NUM_BLOCKS, BLOCK_SIZE, 0, THCState_getCurrentStream(state), 
       gen->gen_states, size, data, mean, stdv);
 #else
-  generate_normal(state, gen->h_gen_states, size, data, mean, stdv);
+     // TODO: Resolve build error below by adding a generic MTGP implementation
+ //  generate_normal(state, gen->h_gen_states, size, data, mean, stdv);
 #endif
   THCTensor_(freeCopyTo)(state, self, self_);
 };
 
 #ifdef __HIP_PLATFORM_HCC__
-void generate_log_normal(THCState* state, HipRandStateMtgp32 *rngstate, int size, float* result, float mean, float stddev) {
+// Resolve below redefinition error 
+/*void generate_log_normal(THCState* state, HipRandStateMtgp32 *rngstate, int size, float* result, float mean, float stddev) {
   hipStream_t currentStream = THCState_getCurrentStream(state);
   hc::accelerator_view* current_accl_view;
   hipHccGetAcceleratorView(currentStream, &current_accl_view);
   user_log_normal_kernel(*current_accl_view, rngstate, result, mean, stddev);
-}
+}*/
 #endif
 
 THC_API void THCTensor_(logNormal)(THCState* state, THCTensor *self_, double mean, double stdv)
@@ -63,7 +66,8 @@ THC_API void THCTensor_(logNormal)(THCState* state, THCTensor *self_, double mea
   hipLaunchKernelGGL((generateLogNormal<real>), NUM_BLOCKS, BLOCK_SIZE, 0, THCState_getCurrentStream(state),
       gen->gen_states, size, data, mean, stdv);
 #else
-    generate_log_normal(state, gen->h_gen_states, size, data, mean, stdv);
+     // TODO: Resolve build error below by adding a generic MTGP implementation
+    //generate_log_normal(state, gen->h_gen_states, size, data, mean, stdv);
 #endif
   THCTensor_(freeCopyTo)(state, self, self_);
 };
@@ -80,7 +84,8 @@ THC_API void THCTensor_(exponential)(THCState* state, THCTensor *self_, double l
   hipLaunchKernelGGL((generate_exponential), NUM_BLOCKS, BLOCK_SIZE, 0, THCState_getCurrentStream(state),
       gen->gen_states, size, data, lambda);
 #else
-  generate_exponential(state, gen->h_gen_states, size, data, lambda);
+     // TODO: Resolve build error below by adding a generic MTGP implementation
+  //generate_exponential(state, gen->h_gen_states, size, data, lambda);
 #endif
   THCTensor_(freeCopyTo)(state, self, self_);
 };
@@ -97,7 +102,8 @@ THC_API void THCTensor_(cauchy)(THCState* state, THCTensor *self_, double median
   hipLaunchKernelGGL((generate_cauchy), NUM_BLOCKS, BLOCK_SIZE, 0, THCState_getCurrentStream(state),
       gen->gen_states, size, data, median, sigma);
 #else
-  generate_cauchy(state, gen->h_gen_states, size, data, median, sigma);
+     // TODO: Resolve build error below by adding a generic MTGP implementation
+  //generate_cauchy(state, gen->h_gen_states, size, data, median, sigma);
 #endif
   THCTensor_(freeCopyTo)(state, self, self_);
 };
@@ -224,13 +230,18 @@ THC_API void THCTensor_(multinomial)(struct THCState *state,
       // distribution concurrently.
       dim3 grid(numDist < MAX_NUM_BLOCKS ? numDist : MAX_NUM_BLOCKS);
 
-      hipLaunchKernelGGL((sampleMultinomialWithReplacement), 
+      //TODO: Fix below error associated with sample* kernel
+      /*hipLaunchKernelGGL((sampleMultinomialWithReplacement), 
           grid, block, 0, THCState_getCurrentStream(state),
+#ifdef CURAND_PATH
           gen->gen_states,
+#else
+          gen->h_gen_states,
+#endif
           n_sample,
           THCudaLongTensor_data(state, self),
           numDist, numCategories,
-          THCTensor_(data)(state, prefixSum));
+          THCTensor_(data)(state, prefixSum));*/
     } else {
       // Sample without replacement
 
@@ -259,7 +270,7 @@ THC_API void THCTensor_(multinomial)(struct THCState *state,
         // recalculate our distribution
         hipLaunchKernelGGL((sampleMultinomialWithoutReplacement), 
             grid, block, 0, THCState_getCurrentStream(state),
-            gen->gen_states,
+            gen->h_gen_states,
             n_sample,
             sample,
             THCudaLongTensor_data(state, self),
@@ -325,7 +336,8 @@ THC_API void THCTensor_(bernoulli)(THCState* state, THCTensor *self_, double p)
   hipLaunchKernelGGL((generate_bernoulli), NUM_BLOCKS, BLOCK_SIZE, 0, THCState_getCurrentStream(state), 
       gen->gen_states, size, data, p);
 #else
-  generate_bernoulli(state, gen->h_gen_states, size, data, p);
+  // TODO: Fix the build failure associated with the below line
+  //generate_bernoulli(state, gen->h_gen_states, size, data, p);
 #endif
   THCTensor_(freeCopyTo)(state, self, self_);
 };
@@ -352,8 +364,8 @@ THC_API void THCTensor_(NAME)(THCState* state,                                 \
   THCTensor_(freeCopyTo)(state, self, self_);                                  \
 }
 
-DEFINE_BERNOULLI_TENSOR(bernoulli_FloatTensor, THCudaTensor, float)
-DEFINE_BERNOULLI_TENSOR(bernoulli_DoubleTensor, THCudaDoubleTensor, double)
+//DEFINE_BERNOULLI_TENSOR(bernoulli_FloatTensor, THCudaTensor, float)
+//DEFINE_BERNOULLI_TENSOR(bernoulli_DoubleTensor, THCudaDoubleTensor, double)
 
 #ifdef CURAND_PATH
 #if defined(THC_REAL_IS_DOUBLE)
@@ -377,7 +389,8 @@ THC_API void THCTensor_(geometric)(THCState* state, THCTensor *self_, double p)
   hipLaunchKernelGGL((generate_geometric), NUM_BLOCKS, BLOCK_SIZE, 0, THCState_getCurrentStream(state), 
       gen->gen_states, size, data, p);
 #else
-  generate_geometric(state, gen->h_gen_states, size, data, p);
+  // TODO: Fix below build error after enabling genereic datatype support for MTGP implementation
+  //generate_geometric(state, gen->h_gen_states, size, data, p);
 #endif
   THCTensor_(freeCopyTo)(state, self, self_);
 };

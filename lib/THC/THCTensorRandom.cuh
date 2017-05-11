@@ -301,6 +301,7 @@ sampleMultinomialWithReplacement(HipRandStateMtgp32* state,
 }
 
 template <typename T>
+#ifdef CURAND_PATH
 __global__ void
 sampleMultinomialWithoutReplacement(curandStateMtgp32* state,
                                     int totalSamples,
@@ -310,6 +311,17 @@ sampleMultinomialWithoutReplacement(curandStateMtgp32* state,
                                     int categories,
                                     T* origDist,
                                     T* normDistPrefixSum) {
+#else
+__global__ void
+sampleMultinomialWithoutReplacement(HipRandStateMtgp32* state,
+                                    int totalSamples,
+                                    int sample,
+                                    long* dest,
+                                    long distributions,
+                                    int categories,
+                                    T* origDist,
+                                    T* normDistPrefixSum) {
+#endif
   // At the moment, each warp computes one sample value in the binary
   // search due to divergence. It seems possible to compute multiple
   // values and limit divergence though later on. However, no matter
@@ -328,7 +340,8 @@ sampleMultinomialWithoutReplacement(curandStateMtgp32* state,
     // All threads must participate in this
     T r = ScalarConvert<float, T>::to(curand_uniform(&state[hipBlockIdx_x]));
 #else
-     // TODO: HIPRAND_PATH
+    // TODO: HIPRAND_PATH
+    T r = 0;
 #endif
     if (hipThreadIdx_x == 0 && curDist < distributions) {
       // Find the bucket that a uniform sample lies in

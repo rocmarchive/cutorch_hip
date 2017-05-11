@@ -6,12 +6,15 @@
 #include "generic/THCTensorRandom.h"
 #include "THCGenerateAllTypes.h"
 
-/* Generator */
 typedef struct _Generator {
+#ifdef CURAND_PATH
   struct curandStateMtgp32* gen_states;
   struct mtgp32_kernel_params *kernel_params;
+#else
+  struct HipRandStateMtgp32* h_gen_states;
+#endif
   int initf;
-  unsigned long long initial_seed;
+  unsigned long initial_seed;
 } Generator;
 
 typedef struct THCRNGState {
@@ -32,6 +35,9 @@ THC_API unsigned long long THCRandom_initialSeed(struct THCState *state);
 THC_API void THCRandom_getRNGState(struct THCState *state, THByteTensor *rng_state);
 THC_API void THCRandom_setRNGState(struct THCState *state, THByteTensor *rng_state);
 
+#ifdef CURAND_PATH
 THC_API struct curandStateMtgp32* THCRandom_generatorStates(struct THCState* state);
-
+#else
+THC_API struct HipRandStateMtgp32* THCRandom_generatorStates(struct THCState* state);
+#endif
 #endif

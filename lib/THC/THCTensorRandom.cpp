@@ -5,7 +5,7 @@
 
 
 void initializeGenerator(THCState *state, Generator* gen);
-void createGeneratorState(Generator* gen, unsigned long long seed);
+void createGeneratorState(THCState *state, Generator* gen, unsigned long long seed);
 
 
 /* Frees memory allocated during setup. */
@@ -76,7 +76,7 @@ Generator* THCRandom_getGenerator(THCState* state)
   if (gen->initf == 0)
   {
     initializeGenerator(state, gen);
-    createGeneratorState(gen, gen->initial_seed);
+    createGeneratorState(state, gen, gen->initial_seed);
     gen->initf = 1;
   }
   return gen;
@@ -110,7 +110,7 @@ void THCRandom_manualSeed(THCState* state, unsigned long long seed)
   Generator* gen = THCRandom_rawGenerator(state);
   gen->initial_seed = seed;
   if (gen->initf) {
-    createGeneratorState(gen, seed);
+    createGeneratorState(state, gen, seed);
   }
 }
 
