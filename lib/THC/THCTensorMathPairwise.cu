@@ -436,7 +436,7 @@ struct TensorFmodOp<double> {
 #ifdef CUDA_HALF_TENSOR
 template <>
 struct TensorFmodOp<half> {
-#ifdef CUDA
+#ifdef CUDA_PATH
 __host__ __device__  TensorFmodOp(half v): fval(THC_half2float(v)) {}
 #else
 __host__ __device__  TensorFmodOp(half v): fval((v)) {}

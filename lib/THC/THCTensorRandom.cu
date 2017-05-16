@@ -264,15 +264,6 @@ void NAME(THCState* state, HipRandStateMtgp32 *rngstate, int size, float *result
   HIPRAND_FUNC##_kernel(*current_accl_view, rngstate, result, FUNCTOR);                                                 \
 }
 
-#endif
-#ifdef CURAND_PATH
-GENERATE_KERNEL2(generate_uniform, double a, double b, curand_uniform, x * (b-a) + a)
-GENERATE_KERNEL1(generate_bernoulli, double p, curand_uniform, (float)x <= p)
-GENERATE_KERNEL2(generate_normal, double mean, double stdv, curand_normal, (x * stdv) + mean)
-GENERATE_KERNEL1(generate_geometric, double p, curand_uniform, (log(1-x) / log(p)) + 1)
-GENERATE_KERNEL1(generate_exponential, double lambda, curand_uniform, (float)(-1. / lambda * log(1-x)))
-GENERATE_KERNEL2(generate_cauchy, double median, double sigma, curand_uniform, (float)(median + sigma * tan(M_PI*(x-0.5))))
-#else
 
 // Adding All HC based constructors
 

@@ -270,7 +270,11 @@ THC_API void THCTensor_(multinomial)(struct THCState *state,
         // recalculate our distribution
         hipLaunchKernelGGL((sampleMultinomialWithoutReplacement), 
             grid, block, 0, THCState_getCurrentStream(state),
+#ifdef CURAND_PATH
+            gen->gen_states,
+#else
             gen->h_gen_states,
+#endif
             n_sample,
             sample,
             THCudaLongTensor_data(state, self),
