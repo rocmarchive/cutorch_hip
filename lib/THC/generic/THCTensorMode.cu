@@ -24,11 +24,11 @@ THC_API void THCTensor_(calculateMode)(THCState *state,
   THCThrustAllocator thrustAlloc(state);
 
   // Wrap input data, sortBuffer, in Thrust device vectors
+#ifdef THRUST_PATH
   thrust::device_ptr<real> vecPtr = thrust::device_pointer_cast(data);
   thrust::device_vector<real> iter(vecPtr, vecPtr + nElement);
   thrust::device_ptr<long> sbPtr = thrust::device_pointer_cast(THCudaLongStorage_data(state, sortBuffer));
   thrust::device_vector<long> seq(sbPtr, sbPtr + nElement);
-
   // Fill sortBuffer with [0, 1, 2, ... nElement - 1]
   thrust::sequence(
 #if CUDA_VERSION >= 7000
@@ -112,8 +112,16 @@ THC_API void THCTensor_(calculateMode)(THCState *state,
     iter.begin(), iter.end(), mode);
 #endif
 
+#else
+   // TODO: BOLT alternatives
+#endif
+  
+#ifdef THRUST_PATH
   THAssert(positionIter != iter.end());
   long index = TH_INDEX_BASE + seq[positionIter - iter.begin()];
+#else
+// TODO: BOLT alternative path
+#endif
 
   // Place mode, index in output
   ptrdiff_t valuesOffset = THCTensor_(storageOffset)(state, values);
@@ -124,8 +132,12 @@ THC_API void THCTensor_(calculateMode)(THCState *state,
     valuesOffset += THCTensor_(stride)(state, values, i) * pos;
     indicesOffset += THCudaLongTensor_stride(state, indices, i) * pos;
   }
+#ifdef THRUST_PATH
   THCStorage_(set)(state, THCTensor_(storage)(state, values), valuesOffset, mode);
   THCudaLongStorage_set(state, THCudaLongTensor_storage(state, indices), indicesOffset, index);
+#else
+   //TODO: Bolt alternative path
+#endif
 }
 
 // this probably could be a loop, not a recursive algorithm
@@ -233,7 +245,7 @@ THC_API void THCTensor_(mode)(THCState *state,
     int memsize = (sizeof(real) * SIZE) + (2 * SIZE * sizeof(unsigned int)); \
     hipLaunchKernelGGL((computeMode<real, SIZE>), \
         grid, blockSize, memsize, THCState_getCurrentStream(state), \
-        THCTensor_(data)(state, contiguous), tiValues, tiIndices, sliceSize); \
+        THCTensor_(data)(state, contiguous), make_magic_wrapper(tiValues), make_magic_wrapper(tiIndices), sliceSize); \
   }
 
     // Tradeoff between compilation time and the number of specializations. Ideally we would have

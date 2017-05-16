@@ -330,6 +330,7 @@ struct TensorRemainderOp {
     }
   }
 
+  __host__ __device__ ~TensorRemainderOp() {};
   const T val;
 };
 
@@ -344,6 +345,7 @@ struct TensorRemainderOp<float> {
     *v = *v - val * floorf(*v / val);
   }
 
+  __host__ __device__ ~TensorRemainderOp() {};
   const float val;
 };
 
@@ -358,6 +360,7 @@ struct TensorRemainderOp<double> {
     *v = *v - val * floor(*v / val);
   }
 
+  __host__ __device__ ~TensorRemainderOp() {};
   const double val;
 };
 
@@ -367,7 +370,11 @@ struct TensorRemainderOp<half> {
 #ifdef CUDA_HALF_INSTRUCTIONS
   __host__ __device__ TensorRemainderOp(half v) : val(v) {}
 #else
+#ifdef __NVCC__
   __host__ __device__ TensorRemainderOp(half v): fval(THC_half2float(v)) {}
+#else
+  __host__ __device__ TensorRemainderOp(half v): fval(v) {}
+#endif
 #endif
 
   __device__ __forceinline__ void operator()(half* out, half* in) {
@@ -414,7 +421,7 @@ struct TensorFmodOp {
 
 template <>
 struct TensorFmodOp<double> {
-  TensorFmodOp(double v) : val(v) {}
+  __host__ __device__ TensorFmodOp(double v) : val(v) {}
   __device__ __forceinline__ void operator()(double* out, double* in) {
     *out = fmod(*in, val);
   }
@@ -429,8 +436,11 @@ struct TensorFmodOp<double> {
 #ifdef CUDA_HALF_TENSOR
 template <>
 struct TensorFmodOp<half> {
-  TensorFmodOp(half v): fval(THC_half2float(v)) {}
-
+#ifdef CUDA
+__host__ __device__  TensorFmodOp(half v): fval(THC_half2float(v)) {}
+#else
+__host__ __device__  TensorFmodOp(half v): fval((v)) {}
+#endif
   __device__ __forceinline__ void operator()(half* out, half* in) {
     *out = __float2half(fmodf(__half2float(*in), fval));
   }
@@ -489,6 +499,7 @@ struct TensorLShiftConstantOp {
     *v <<= val;
   }
 
+  __host__ __device__ ~TensorLShiftConstantOp() {};
   const T val;
 };
 
@@ -503,6 +514,7 @@ struct TensorRShiftConstantOp {
     *v >>= val;
   }
 
+  __host__ __device__ ~TensorRShiftConstantOp() {};
   const T val;
 };
 
@@ -516,7 +528,8 @@ struct TensorBitAndConstantOp {
   __device__ __forceinline__ void operator()(T* v) {
     *v &= val;
   }
-
+  
+  __host__ __device__ ~TensorBitAndConstantOp() {}
   const T val;
 };
 
@@ -531,6 +544,7 @@ struct TensorBitOrConstantOp {
     *v |= val;
   }
 
+  __host__ __device__ ~TensorBitOrConstantOp() {}
   const T val;
 };
 
@@ -545,6 +559,7 @@ struct TensorBitXorConstantOp {
     *v ^= val;
   }
 
+  __host__ __device__ ~TensorBitXorConstantOp() {}
   const T val;
 };
 

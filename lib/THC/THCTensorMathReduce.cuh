@@ -82,19 +82,21 @@ struct ReduceMultiply<half, float> {
 
 template <typename ResT, typename ArgT>
 struct SquareFunctor {
-    SquareFunctor(ResT mean): mean_(mean) {}
+    __host__ __device__ SquareFunctor(ResT mean): mean_(mean) {}
 
     inline __device__ ResT operator()(ArgT x) const {
       return (((ResT) x) - mean_) * (((ResT) x) - mean_);
     }
 
+
+    __host__ __device__ ~SquareFunctor() {}
     const ResT mean_;
 };
 
 #ifdef CUDA_HALF_TENSOR
 template <typename ResT>
 struct SquareFunctor<ResT, half> {
-    SquareFunctor(ResT mean): mean_(mean) {}
+    __host__ __device__ SquareFunctor(ResT mean): mean_(mean) {}
 
     inline __device__ ResT operator()(half x) const {
       return THCNumerics<ResT>::mul(
@@ -103,6 +105,7 @@ struct SquareFunctor<ResT, half> {
       );
     }
 
+    __host__ __device__ ~SquareFunctor() {}
     const ResT mean_;
 };
 #endif // CUDA_HALF_TENSOR
@@ -199,7 +202,7 @@ struct TensorNonZeroOp
 template <typename T, int StaticExp>
 struct TensorNormOp
 {
-  TensorNormOp(T exp) : exponent(exp) {}
+  __host__ __device__ TensorNormOp(T exp) : exponent(exp) {}
 
   __host__ __device__ T operator()(T x) const {
     if (StaticExp == 1) {
@@ -217,7 +220,7 @@ struct TensorNormOp
 template <int StaticExp>
 struct TensorNormOp<double, StaticExp>
 {
-  TensorNormOp(double exp) : exponent(exp) {}
+  __host__ __device__ TensorNormOp(double exp) : exponent(exp) {}
 
   __host__ __device__ double operator()(double x) const {
     if (StaticExp == 1) {
@@ -236,7 +239,7 @@ struct TensorNormOp<double, StaticExp>
 template <int StaticExp>
 struct TensorNormOp<half, StaticExp>
 {
-  TensorNormOp(half exp) : exponent(exp) {}
+  __host__ __device__ TensorNormOp(half exp) : exponent(exp) {}
 
   __host__ __device__ half operator()(half x) const {
     if (StaticExp == 1) {
@@ -255,7 +258,7 @@ struct TensorNormOp<half, StaticExp>
 template <typename Tacc, typename T>
 struct TensorDistOp
 {
-  TensorDistOp(Tacc exp) : exponent(exp) {}
+  __host__ __device__ TensorDistOp(Tacc exp) : exponent(exp) {}
 
   __host__ __device__ Tacc operator()(T x, T y) const {
     Tacc xr = ScalarConvert<T, Tacc>::to(x);

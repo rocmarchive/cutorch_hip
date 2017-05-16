@@ -1,7 +1,7 @@
 #include "THCStream.h"
 
 #include <mutex>
-#include <cuda_runtime_api.h>
+#include <hip/hip_runtime_api.h>
 #include "THAtomic.h"
 
 #define MAX_DEVICES 256

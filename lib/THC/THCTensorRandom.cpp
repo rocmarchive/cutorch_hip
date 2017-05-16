@@ -1,7 +1,9 @@
 #include "THCTensorRandom.h"
 
 #include <random>
+#ifdef CURAND_PATH
 #include <curand.h>
+#endif
 
 
 void initializeGenerator(THCState *state, Generator* gen);
@@ -11,6 +13,7 @@ void createGeneratorState(THCState *state, Generator* gen, unsigned long long se
 /* Frees memory allocated during setup. */
 void destroyGenerator(THCState *state, Generator* gen)
 {
+#ifdef CURAND_PATH
   if (gen->gen_states)
   {
     THCudaCheck(THCudaFree(state, gen->gen_states));
@@ -21,6 +24,14 @@ void destroyGenerator(THCState *state, Generator* gen)
     THCudaCheck(THCudaFree(state, gen->kernel_params));
     gen->kernel_params = NULL;
   }
+#else
+  if (gen->h_gen_states)
+  {
+    THCudaCheck(THCudaFree(state, gen->h_gen_states));
+    gen->h_gen_states = NULL;
+  }
+
+#endif
 }
 
 static unsigned long long createSeed(std::random_device& rd)
@@ -41,8 +52,12 @@ void THCRandom_init(THCState* state, int devices, int current_device)
   {
     rng_state->gen[i].initf = 0;
     rng_state->gen[i].initial_seed = createSeed(rd);
+#ifdef CURAND_PATH
     rng_state->gen[i].gen_states = NULL;
     rng_state->gen[i].kernel_params = NULL;
+#else
+    rng_state->gen[i].h_gen_states = NULL;
+#endif
   }
 }
 
@@ -82,9 +97,17 @@ Generator* THCRandom_getGenerator(THCState* state)
   return gen;
 }
 
+#ifdef CURAND_PATH
 struct curandStateMtgp32* THCRandom_generatorStates(struct THCState* state)
+#else
+struct HipRandStateMtgp32* THCRandom_generatorStates(struct THCState* state)
+#endif
 {
+#ifdef CURAND_PATH
   return THCRandom_getGenerator(state)->gen_states;
+#else
+  return THCRandom_getGenerator(state)->h_gen_states;
+#endif
 }
 
 /* Random seed */

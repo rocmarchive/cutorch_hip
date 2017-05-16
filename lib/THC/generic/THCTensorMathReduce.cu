@@ -242,6 +242,7 @@ accreal THCTensor_(dist)(THCState *state, THCTensor *self,
   self = THCTensor_(newContiguous)(state, self);
   ptrdiff_t size = THCTensor_(nElement)(state, self);
   src = THCTensor_(newContiguous)(state, src);
+#ifdef THRUST_PATH
   thrust::device_ptr<real> self_data(THCTensor_(data)(state, self));
   thrust::device_ptr<real> src_data(THCTensor_(data)(state, src));
 
@@ -253,11 +254,17 @@ accreal THCTensor_(dist)(THCState *state, THCTensor *self,
     self_data, self_data+size, src_data, ScalarConvert<int, accreal>::to(0),
     thrust::plus<accreal>(),
     TensorDistOp<accreal, real>(ScalarConvert<real, accreal>::to(value)));
-
+#else
+ //TODO: Bolt alternative 
+#endif
   THCTensor_(free)(state, src);
   THCTensor_(free)(state, self);
 
+#ifdef THRUST_PATH
   return THCNumerics<accreal>::pow(result, 1.0 / ScalarConvert<real, accreal>::to(value));
+#else
+  return 0;
+#endif 
 }
 
 #endif

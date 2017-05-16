@@ -31,17 +31,17 @@ THC_API void THCTensor_(topk)(THCState* state,
 #define RUN_K(INDEX_T, DIM, DIR)                                        \
   hipLaunchKernelGGL((gatherTopK<real, INDEX_T, DIM, DIR>),                                         \
       grid, block, 0, THCState_getCurrentStream(state),             \
-      inputInfo,                                                        \
+      make_magic_wrapper(inputInfo),                                                        \
       sliceSize,                                                        \
       k,                                                                \
       inputSlices,                                                      \
       /* The actual dimension that the k-selection is running in */     \
       /* may have changed from collapseDims() */                        \
       inputInfo.strides[collapseInputDim],                              \
-      topKInfo,                                                         \
+      make_magic_wrapper(topKInfo),                                                         \
       topKSlices,                                                       \
       topKInfo.strides[collapseTopKDim],                                \
-      indicesInfo,                                                      \
+      make_magic_wrapper(indicesInfo),                                                      \
       indicesInfo.strides[collapseIndicesDim])
 
 #define RUN_DIR(INDEX_T, DIM)                   \

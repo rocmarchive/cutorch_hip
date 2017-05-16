@@ -183,7 +183,9 @@ void THCudaShutdown(THCState* state)
 
     free(res->streams);
     free(res->blasHandles);
+#ifdef CUSPARSE_PATH
     free(res->sparseHandles);
+#endif
     free(res->devScratchSpacePerStream);
     THCStream_free((THCStream*)THCThreadLocal_get(state->currentStreams[dev]));
     THCThreadLocal_free(state->currentStreams[dev]);
@@ -751,6 +753,7 @@ void __THCublasCheck(hipblasStatus_t status, const char *file, const int line)
       case HIPBLAS_STATUS_INVALID_VALUE:
         errmsg = "an invalid numeric value was used as an argument";
         break;
+#ifdef CUDA
       case CUBLAS_STATUS_ARCH_MISMATCH:
         errmsg = "an absent device architectural feature is required";
         break;
@@ -766,7 +769,7 @@ void __THCublasCheck(hipblasStatus_t status, const char *file, const int line)
       case CUBLAS_STATUS_INTERNAL_ERROR:
         errmsg = "an internal operation failed";
         break;
-
+#endif
       default:
         errmsg = "unknown error";
         break;
@@ -931,13 +934,20 @@ void THCHeapUpdate(THCState *state, ptrdiff_t size) {
 half THC_float2half(float f)
 {
   half h;
+#ifdef CUDA_PATH
   TH_float2halfbits(&f, &h.x);
+#else
+ //  TH_float2halfbits(&f, h);
+#endif
   return h;
 }
 
 float  THC_half2float(half h)
 {
   float f;
+#ifdef CUDA_PATH
   TH_halfbits2float(&h.x, &f);
+#else
+#endif
   return f;
 }
