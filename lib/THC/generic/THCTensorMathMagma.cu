@@ -12,7 +12,7 @@ static void THCTensor_(copyArray1d)(THCState *state, THCTensor *self, real *src,
   long stride[1] = { 1 };
   THCTensor_(resizeNd)(state, self, 1, size, stride);
   size_t len = k * sizeof(real);
-  THCudaCheck(cudaMemcpy(self->storage->data + self->storageOffset, src, len, cudaMemcpyHostToDevice));
+  THCudaCheck(hipMemcpy(self->storage->data + self->storageOffset, src, len, hipMemcpyHostToDevice));
 }
 
 static void THCTensor_(copyArray2d)(THCState *state, THCTensor *self, real *src, int m, int n)
@@ -21,7 +21,7 @@ static void THCTensor_(copyArray2d)(THCState *state, THCTensor *self, real *src,
   long stride[2] = { 1, m };
   THCTensor_(resizeNd)(state, self, 2, size, stride);
   size_t len = m * n * sizeof(real);
-  THCudaCheck(cudaMemcpy(self->storage->data + self->storageOffset, src, len, cudaMemcpyHostToDevice));
+  THCudaCheck(hipMemcpy(self->storage->data + self->storageOffset, src, len, hipMemcpyHostToDevice));
 }
 
 static void THCTensor_(copyTensor2d)(THCState *state, real *dst, THCTensor *self)
@@ -30,7 +30,7 @@ static void THCTensor_(copyTensor2d)(THCState *state, real *dst, THCTensor *self
   size_t len = THCTensor_(nElement)(state, self)*sizeof(real);
   THCTensor *temp = THCTensor_(newTranspose)(state, self, 0, 1);
   THCTensor *selfc = THCTensor_(newContiguous)(state, temp);
-  THCudaCheck(cudaMemcpy(dst, selfc->storage->data + selfc->storageOffset, len, cudaMemcpyDeviceToHost));
+  THCudaCheck(hipMemcpy(dst, selfc->storage->data + selfc->storageOffset, len, hipMemcpyDeviceToHost));
   THCTensor_(free)(state, temp);
   THCTensor_(free)(state, selfc);
 }
@@ -250,8 +250,8 @@ THC_API void THCTensor_(geev)(THCState *state, THCTensor *re_, THCTensor *rv_, T
   {
     THCTensor_(resize2d)(state, re_, 2, n);
     THCTensor *re = THCTensor_(newContiguous)(state, re_);
-    THCudaCheck(cudaMemcpy(re->storage->data + re->storageOffset, wr, n*sizeof(real), cudaMemcpyHostToDevice));
-    THCudaCheck(cudaMemcpy(re->storage->data + re->storageOffset + n, wi, n*sizeof(real), cudaMemcpyHostToDevice));
+    THCudaCheck(hipMemcpy(re->storage->data + re->storageOffset, wr, n*sizeof(real), hipMemcpyHostToDevice));
+    THCudaCheck(hipMemcpy(re->storage->data + re->storageOffset + n, wi, n*sizeof(real), hipMemcpyHostToDevice));
     THCTensor_(freeCopyTo)(state, re, re_);
     THCTensor_(transpose)(state, re_, NULL, 0, 1);
   }
@@ -417,12 +417,12 @@ THC_API void THCTensor_(getri)(THCState *state, THCTensor *ra_, THCTensor *a)
   THCudaCheck(THCudaMalloc(state, (void**)&d_matrices1_const, matrices_size));
   THCudaCheck(THCudaMalloc(state, (void**)&d_matrices2, matrices_size));
 
-  THCudaCheck(cudaMemcpyAsync(d_matrices1, matrices1, matrices_size,
-                              cudaMemcpyHostToDevice, THCState_getCurrentStream(state)));
-  THCudaCheck(cudaMemcpyAsync(d_matrices1_const, matrices1_const, matrices_size,
-                              cudaMemcpyHostToDevice, THCState_getCurrentStream(state)));
-  THCudaCheck(cudaMemcpyAsync(d_matrices2, matrices2, matrices_size,
-                              cudaMemcpyHostToDevice, THCState_getCurrentStream(state)));
+  THCudaCheck(hipMemcpyAsync(d_matrices1, matrices1, matrices_size,
+                              hipMemcpyHostToDevice, THCState_getCurrentStream(state)));
+  THCudaCheck(hipMemcpyAsync(d_matrices1_const, matrices1_const, matrices_size,
+                              hipMemcpyHostToDevice, THCState_getCurrentStream(state)));
+  THCudaCheck(hipMemcpyAsync(d_matrices2, matrices2, matrices_size,
+                              hipMemcpyHostToDevice, THCState_getCurrentStream(state)));
   int info;
   int *info_gpu;
   THCudaCheck(THCudaMalloc(state, (void**)&info_gpu, sizeof(int)));
@@ -437,7 +437,7 @@ THC_API void THCTensor_(getri)(THCState *state, THCTensor *ra_, THCTensor *a)
   THCudaBlas_Dgetrf(state, n, d_matrices1, n, ipiv_gpu, info_gpu, 1);
 #endif
 
-  THCudaCheck(cudaMemcpy(&info, info_gpu, sizeof(int), cudaMemcpyDeviceToHost));
+  THCudaCheck(hipMemcpy(&info, info_gpu, sizeof(int), hipMemcpyDeviceToHost));
 
   if (info > 0)
     THError("CUBLAS getrf : U(%d,%d) is 0, U is singular", info, info);

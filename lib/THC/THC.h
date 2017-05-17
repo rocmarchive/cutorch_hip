@@ -4,6 +4,9 @@
 #include "THCGeneral.h"
 #include "THCAllocator.h"
 #include "THCBlas.h"
+#include "THCCachingAllocator.h"
+#include "THCCachingHostAllocator.h"
+#include "THCSleep.h"
 #include "THCStorage.h"
 #include "THCStorageCopy.h"
 #include "THCStream.h"
@@ -12,6 +15,6 @@
 #include "THCTensorRandom.h"
 #include "THCTensorMath.h"
 #include "THCTensorConv.h"
-#include "THCTensorTopK.h"
+
 
 #endif

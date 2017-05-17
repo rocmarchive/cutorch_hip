@@ -13,6 +13,7 @@
 #include "THAllocator.h"
 #include "THCThreadLocal.h"
 #undef log1p
+
 #include "hip/hip_runtime_api.h"
 #include "hip/hip_runtime.h"
 #include "hipblas.h"
@@ -139,7 +140,7 @@ THC_API void THCState_free(THCState* state);
 
 THC_API void THCudaInit(THCState* state);
 THC_API void THCudaShutdown(THCState* state);
-THC_API void THCudaEnablePeerToPeerAccess(THCState* state);
+
 
 /* If device `dev` can access allocations on device `devToAccess`, this will return */
 /* 1; otherwise, 0. */

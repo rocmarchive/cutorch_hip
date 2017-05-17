@@ -5,7 +5,7 @@
 #ifdef CUDA_TEXTURE
 cudaTextureObject_t THCTensor_(getTextureObject)(THCState *state, THCTensor *self)
 {
-  THAssert(THCTensor_(checkGPU)(state, 1, self));
+  THCAssertSameGPU(THCTensor_(checkGPU)(state, 1, self));
   cudaTextureObject_t texObj;
   struct cudaResourceDesc resDesc;
   memset(&resDesc, 0, sizeof(resDesc));
