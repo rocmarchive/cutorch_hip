@@ -604,7 +604,7 @@ struct TensorLerpOp {
       *a, THCNumerics<T>::mul(w, THCNumerics<T>::sub(*b, *a)));
   }
 
-  T w;
+  const T w;
 };
 
 template <typename T>

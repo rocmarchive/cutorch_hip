@@ -197,13 +197,17 @@ void THCTensor_(catArray)(THCState *state, THCTensor *result,
 
     // Next, let's initialize the size, stride arrays for the output Tensor.
     for (i = 0; i < maxDim; ++i) {
-      param.devOutputSize[i] = THCTensor_(size)(state, result, i);
-      param.devOutputStride[i] = THCTensor_(stride)(state, result, i);
+      param.outputSize[i] = THCTensor_(size)(state, result, i);
+      param.outputStride[i] = THCTensor_(stride)(state, result, i);
+
     }
 
+      // Memcpy to device side buffer
+      hipMemcpy(param.devOutputStride, param.outputStride, sizeof(unsigned int) * maxDim, hipMemcpyHostToDevice);  
+      hipMemcpy(param.devOutputSize, param.outputSize, sizeof(unsigned int) * maxDim, hipMemcpyHostToDevice);  
     // Template Declarations for dim = 1, 2, 3, 4
 #define HANDLE_CASE(DIMS) \
-  hipLaunchKernelGGL((CatArrayBatchedCopy<real, unsigned int, DIMS>), applyGrid, applyBlock, 0, THCState_getCurrentStream(state), data, d_inputs, param, cat_dimension, param.devOutputStride[cat_dimension]);
+  hipLaunchKernelGGL((CatArrayBatchedCopy<real, unsigned int, DIMS>), applyGrid, applyBlock, 0, THCState_getCurrentStream(state), data, d_inputs, param, cat_dimension, param.devOutputStride);
 
     // Now we loop
     offset = 0;

@@ -61,6 +61,8 @@ struct CatArrInputTensor {
 
 template<typename IndexType, unsigned int MaxDims>
 struct OutputTensorSizeStride {
+  IndexType outputSize[MaxDims];
+  IndexType outputStride[MaxDims];
   IndexType* devOutputSize;
   IndexType* devOutputStride;
 
@@ -93,12 +95,12 @@ __global__ void CatArrayBatchedCopy(
     CatArrInputTensor<T, IndexType>* inputs,
     OutputTensorSizeStride<IndexType, CAT_ARRAY_MAX_INPUT_DIMS> os,
     const int concatDim,
-    IndexType dimStride) {
+    IndexType* dimStride) {
   T* data = inputs[hipBlockIdx_y].input;
   IndexType offset = inputs[hipBlockIdx_y].offset;
   IndexType dimSize = inputs[hipBlockIdx_y].dimSize;
   IndexType nElements = inputs[hipBlockIdx_y].nElements;
-  IndexType dataOffset = offset * dimStride;
+  IndexType dataOffset = offset * dimStride[concatDim];
 
   for (IndexType linearIndex = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;
       linearIndex < nElements;
