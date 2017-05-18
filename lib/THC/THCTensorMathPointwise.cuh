@@ -594,7 +594,6 @@ struct TensorClampOp {
 template <typename T>
 struct TensorLerpOp {
   __host__ __device__
-  explicit
   TensorLerpOp(T w) : w(w) {}
 
   __device__ __forceinline__
@@ -603,6 +602,9 @@ struct TensorLerpOp {
     *out = THCNumerics<T>::add(
       *a, THCNumerics<T>::mul(w, THCNumerics<T>::sub(*b, *a)));
   }
+
+  __host__ __device__
+  ~TensorLerpOp() {}
 
   const T w;
 };

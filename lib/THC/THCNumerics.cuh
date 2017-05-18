@@ -35,7 +35,7 @@ struct THCNumerics<unsigned char> {
   static inline __host__ __device__  unsigned char mul(unsigned char a, unsigned char b) { return a * b; }
   static inline __host__ __device__  unsigned char sub(unsigned char a, unsigned char b) { return a - b; }
   static inline __host__ __device__  unsigned char div(unsigned char a, unsigned char b) { return a / b; }
-  static inline __host__ __device__  unsigned char abs(unsigned char a) { return a; }
+  static inline __host__ __device__  unsigned char abs(unsigned char a) { return abs(a); }
 };
 
 template <>

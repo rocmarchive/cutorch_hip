@@ -44,7 +44,7 @@ void kernelReduceAll(
   }
 
   // Reduce within the block
-  HIP_DYNAMIC_SHARED( char, smemChar)
+  extern __shared__ char smemChar[];
   AccT* smem = (AccT*) smemChar;
   r = reduceBlock<AccT, ReduceAccOp>(smem, hipBlockDim_x, r, reduceAccOp, init);
 
@@ -95,7 +95,7 @@ void kernelReduceAllPass1(
   }
 
   // Reduce within the block
-  HIP_DYNAMIC_SHARED( char, smemChar)
+  extern __shared__ char smemChar[];
   AccT* smem = (AccT*) smemChar;
   r = reduceBlock<AccT, ReduceAccOp>(smem, hipBlockDim_x, r, reduceAccOp, init);
 
@@ -118,7 +118,7 @@ kernelReduceAllPass2(int numPass1Blocks,
   }
 
   // Reduce within the block
-  HIP_DYNAMIC_SHARED( char, smemChar)
+  extern __shared__ char smemChar[];
   T* smem = (T*) smemChar;
   r = reduceBlock<T, ReduceOp>(smem, numPass1Blocks, r, reduceOp, init);
 
@@ -141,6 +141,11 @@ inline ptrdiff_t getTwoPassBlocks(THCState* state, ptrdiff_t elements) {
   ptrdiff_t scratchSpace =
     THCState_getCurrentDeviceScratchSpaceSize(state) / sizeof(AccT);
   THAssert(scratchSpace > 0);
+
+  // Limit to 1024 due to dimensionality constraint
+  if (scratchSpace > 1024) {
+    scratchSpace = 1024;
+  }
 
   if (numBlocks > scratchSpace) {
     numBlocks = scratchSpace;
@@ -355,7 +360,7 @@ bool THC_reduceAll(THCState* state,
   // If our destination is not on the device, copy the value back to
   // the host (synchronous!)
   if (!outOnDevice) {
-    hipMemcpy(out, devOut, sizeof(AccT), hipMemcpyDeviceToHost);
+    THCudaCheck(hipMemcpy(out, devOut, sizeof(AccT), hipMemcpyDeviceToHost));
   }
 
   if (freeDevOut) {

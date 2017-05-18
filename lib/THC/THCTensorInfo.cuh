@@ -297,7 +297,7 @@ struct IndexToOffset<T, IndexType, -1> {
         explicit
         Magic_wrapper(const T& x)
         {
-            hipHostMalloc(&p_, sizeof(T)); new (p_) T{x};
+            hipMallocHost(&p_, sizeof(T)); new (p_) T{x};
         }
 
         operator const T&() const [[hc]] { return p_[0]; }

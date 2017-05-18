@@ -368,8 +368,8 @@ THC_API void THCTensor_(NAME)(THCState* state,                                 \
   THCTensor_(freeCopyTo)(state, self, self_);                                  \
 }
 
-//DEFINE_BERNOULLI_TENSOR(bernoulli_FloatTensor, THCudaTensor, float)
-//DEFINE_BERNOULLI_TENSOR(bernoulli_DoubleTensor, THCudaDoubleTensor, double)
+DEFINE_BERNOULLI_TENSOR(bernoulli_FloatTensor, THCudaTensor, float)
+DEFINE_BERNOULLI_TENSOR(bernoulli_DoubleTensor, THCudaDoubleTensor, double)
 
 #ifdef CURAND_PATH
 #if defined(THC_REAL_IS_DOUBLE)

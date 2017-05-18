@@ -85,10 +85,10 @@ struct HostAllocator
     *ptr = 0;
 
     // allocate a new block if no cached allocation is found
-    //err = hipHostAlloc(ptr, size, hipHostAllocDefault);
-    /*if (err != hipSuccess) {
+    err = hipHostMalloc(ptr, size);
+    if (err != hipSuccess) {
       return err;
-    }*/
+    }
 
     blocks.insert({*ptr, Block(size, *ptr, true)});
     return hipSuccess;
@@ -208,7 +208,7 @@ struct HostAllocator
     for (auto it = blocks.begin(); it != blocks.end();) {
       Block& block = it->second;
       if (!block.allocated) {
-        THCudaCheckWarn(hipFreeHost(block.ptr));
+        THCudaCheckWarn(hipHostFree(block.ptr));
         it = blocks.erase(it);
       } else {
         ++it;

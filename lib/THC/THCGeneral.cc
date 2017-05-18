@@ -141,7 +141,6 @@ void THCudaShutdown(THCState* state)
   THCRandom_shutdown(state);
 
   free(state->rngState);
-  free(state->hipHostAllocator);
   free(state->deviceProperties);
 
   int deviceCount = 0;
@@ -360,14 +359,10 @@ void THCState_reserveStreams(THCState* state, int numStreams, int nonBlocking)
 
     /* Allocate new stream resources */
     size_t scratchSpaceSize = THCState_getDeviceScratchSpaceSize(state, dev);
-    // TODO: HIP Equivalent for below line of code hipStreamNonBlocking and hipStreamDefault
-#ifdef __HCC__
+
     unsigned int flags =
       nonBlocking ? hipStreamNonBlocking : hipStreamDefault;
-#else
-    unsigned int flags =
-      nonBlocking ? hipStreamNonBlocking : hipStreamDefault;
-#endif
+
     for (int stream = state->numUserStreams + 1; stream <= numStreams; ++stream) {
       newStreams[stream] = THCStream_new(flags);
       newScratchSpace[stream] = NULL;
