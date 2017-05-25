@@ -66,14 +66,20 @@ struct OutputTensorSizeStride {
   IndexType* devOutputSize;
   IndexType* devOutputStride;
 
+  __host__ __device__ OutputTensorSizeStride(IndexType, IndexType, IndexType*, IndexType*) {}   
   // Create device Tensors
-  OutputTensorSizeStride() {
+  __host__ __device__ OutputTensorSizeStride() {
+#if __HIP_DEVICE_COMPILE__
+   // Do Nothing
+#else
     hipMalloc(&devOutputSize, MaxDims * sizeof(IndexType));
     hipMalloc(&devOutputStride, MaxDims * sizeof(IndexType));
+#endif
   }
 
   // Destroy device tensors
-  ~OutputTensorSizeStride() {
+  __host__ __device__ ~OutputTensorSizeStride() {
+     //TODO Device Tensors destructions
    }  
 };
 

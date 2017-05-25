@@ -189,7 +189,7 @@ __global__ void THCTensor_kernel_renorm(Real *data, const Real value, const ptrd
 template <typename T>
 struct TensorNonZeroOp
 {
-  TensorNonZeroOp() {}
+  __host__ __device__ TensorNonZeroOp() {}
   __host__ __device__ T operator()(T lhs) const {
     if (THCNumerics<T>::eq(lhs, ScalarConvert<float, T>::to(0.0))) {
       return ScalarConvert<int, T>::to(0);

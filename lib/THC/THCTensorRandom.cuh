@@ -150,7 +150,9 @@ sampleMultinomialOnce(long* dest,
     // Broadcast sum and sample value
     if (hipThreadIdx_x == 0) {
       // Make sure the sum of our distribution didn't overflow
+     #ifdef CUDA_PATH
       assert(!isinf(sum));
+     #endif
 
       asmem[0] = sum;
       smem[0] = sampled[curDist];

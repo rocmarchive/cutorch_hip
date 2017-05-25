@@ -115,7 +115,7 @@ struct Bitfield<unsigned long long int> {
 };
 #endif
 
-__device__ __forceinline__ int getLaneId() {
+__device__ inline __forceinline__ int getLaneId() {
 #if defined(__HIP_PLATFORM_HCC__)
     return hc::__lane_id();
 #else

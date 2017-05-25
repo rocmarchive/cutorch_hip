@@ -59,7 +59,9 @@ struct TopKTypeConfig<short> {
   typedef unsigned int RadixType;
 
   static inline __device__ RadixType convert(short v) {
+#ifdef CUDA_PATH
     assert(sizeof(short) == 2);
+#endif
     return 32768u + v;
   }
 
@@ -73,7 +75,9 @@ struct TopKTypeConfig<int> {
   typedef unsigned int RadixType;
 
   static inline __device__ RadixType convert(int v) {
+#ifdef CUDA_PATH
     assert(sizeof(int) == 4);
+#endif
     return 2147483648u + v;
   }
 
@@ -87,7 +91,9 @@ struct TopKTypeConfig<long> {
   typedef unsigned long long int RadixType;
 
   static inline __device__ RadixType convert(long v) {
+#ifdef CUDA_PATH
     assert(sizeof(long) == 8);
+#endif
     return 9223372036854775808ull + v;
   }
 
@@ -123,7 +129,9 @@ struct TopKTypeConfig<half> {
     RadixType mask = -((x >> 15)) | 0x8000;
     return (x ^ mask);
 #else
+#ifdef CUDA_PATH
     assert(false);
+#endif
     return 0u;
 #endif
   }
@@ -133,7 +141,9 @@ struct TopKTypeConfig<half> {
     RadixType mask = ((v >> 15) - 1) | 0x8000;
     return __ushort_as_half(v ^ mask);
 #else
+#ifdef CUDA_PATH
     assert(false);
+#endif
     return ScalarConvert<int, half>::to(0);
 #endif
   }
@@ -248,7 +258,9 @@ __device__ DataType findPattern(DataType* smem,
   }
 
   // should not get here
+#ifdef CUDA_PATH
   assert(false);
+#endif
   return ScalarConvert<int, DataType>::to(0);
 }
 
@@ -428,7 +440,9 @@ __global__ void gatherTopK(TensorInfo<T, IndexType> input,
 
     if (hasTopK) {
       int writeIndex = writeIndexStart + index;
+#ifdef CUDA_PATH
       assert(writeIndex < outputSliceSize);
+#endif
 
       IndexType topKOffset = writeIndex * topKWithinSliceStride;
       IndexType indexOffset = writeIndex * indicesWithinSliceStride;
@@ -445,7 +459,9 @@ __global__ void gatherTopK(TensorInfo<T, IndexType> input,
   // writeIndexStart. There might be more than that number available,
   // in which case we have to choose the first seen set. We do this
   // via a prefix sum to calculate indices for writing results.
+#ifdef CUDA_PATH
   assert(outputSliceSize >= writeIndexStart);
+#endif
   IndexType topKRemaining = (outputSliceSize - writeIndexStart);
 
   for (IndexType i = hipThreadIdx_x; i < numIterations; i += hipBlockDim_x) {
@@ -460,8 +476,9 @@ __global__ void gatherTopK(TensorInfo<T, IndexType> input,
 
     if (hasTopK && index < topKRemaining) {
       int writeIndex = writeIndexStart + index;
+#ifdef CUDA_PATH
       assert(writeIndex < outputSliceSize);
-
+#endif
       IndexType topKOffset = writeIndex * topKWithinSliceStride;
       IndexType indexOffset = writeIndex * indicesWithinSliceStride;
 
