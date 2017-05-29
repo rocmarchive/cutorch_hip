@@ -202,17 +202,9 @@ void THCTensor_(catArray)(THCState *state, THCTensor *result,
 
     }
 
-      // Memcpy to device side buffer
-      hipMemcpy(param.devOutputStride, param.outputStride, sizeof(unsigned int) * maxDim, hipMemcpyHostToDevice);  
-      hipMemcpy(param.devOutputSize, param.outputSize, sizeof(unsigned int) * maxDim, hipMemcpyHostToDevice);  
     // Template Declarations for dim = 1, 2, 3, 4
-#ifdef CUDA_PATH
 #define HANDLE_CASE(DIMS) \
-  hipLaunchKernelGGL((CatArrayBatchedCopy<real, unsigned int, DIMS>), applyGrid, applyBlock, 0, THCState_getCurrentStream(state), data, d_inputs, param, cat_dimension, param.devOutputStride);
-#else
-// TODO: Serialization fix
-#define HANDLE_CASE(DIMS) 
-#endif
+  hipLaunchKernelGGL((CatArrayBatchedCopy<real, unsigned int, DIMS>), applyGrid, applyBlock, 0, THCState_getCurrentStream(state), data, d_inputs, make_magic_wrapper(param), cat_dimension, param.outputStride[cat_dimension]);
     // Now we loop
     offset = 0;
     for (i = 0; i < numInputs; i += CAT_ARRAY_BATCH_SIZE) {

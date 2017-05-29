@@ -63,24 +63,6 @@ template<typename IndexType, unsigned int MaxDims>
 struct OutputTensorSizeStride {
   IndexType outputSize[MaxDims];
   IndexType outputStride[MaxDims];
-  IndexType* devOutputSize;
-  IndexType* devOutputStride;
-
-  __host__ __device__ OutputTensorSizeStride(IndexType, IndexType, IndexType*, IndexType*) {}   
-  // Create device Tensors
-  __host__ __device__ OutputTensorSizeStride() {
-#if __HIP_DEVICE_COMPILE__
-   // Do Nothing
-#else
-    hipMalloc(&devOutputSize, MaxDims * sizeof(IndexType));
-    hipMalloc(&devOutputStride, MaxDims * sizeof(IndexType));
-#endif
-  }
-
-  // Destroy device tensors
-  __host__ __device__ ~OutputTensorSizeStride() {
-     //TODO Device Tensors destructions
-   }  
 };
 
 /**
@@ -99,20 +81,20 @@ template <typename T, typename IndexType, int Dims>
 __global__ void CatArrayBatchedCopy(
     T* output,
     CatArrInputTensor<T, IndexType>* inputs,
-    OutputTensorSizeStride<IndexType, CAT_ARRAY_MAX_INPUT_DIMS> os,
+    reference_to_const(OutputTensorSizeStride<IndexType, CAT_ARRAY_MAX_INPUT_DIMS>) os,
     const int concatDim,
-    IndexType* dimStride) {
+    IndexType dimStride) {
   T* data = inputs[hipBlockIdx_y].input;
   IndexType offset = inputs[hipBlockIdx_y].offset;
   IndexType dimSize = inputs[hipBlockIdx_y].dimSize;
   IndexType nElements = inputs[hipBlockIdx_y].nElements;
-  IndexType dataOffset = offset * dimStride[concatDim];
+  IndexType dataOffset = offset * dimStride;
 
   for (IndexType linearIndex = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;
       linearIndex < nElements;
       linearIndex += hipGridDim_x * hipBlockDim_x) {
     IndexType elementOffset = CatArrIndexToOffset<IndexType, Dims>::compute(
-        os.devOutputSize, os.devOutputStride, dimSize, concatDim, linearIndex);
+        os.outputSize, os.outputStride, dimSize, concatDim, linearIndex);
     output[dataOffset + elementOffset] = data[linearIndex];
   }
 }
