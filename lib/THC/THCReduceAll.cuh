@@ -192,8 +192,6 @@ void callReduceAll(THCState* state,
                    const ReduceOp& reduceOp,
                    const ReduceAccOp& reduceAccOp,
                    AccT* devOut) {
-#ifdef CUDA_PATH
-//TODO: DEBUG below linktime failure caused by kernelReudceAll
   dim3 grid;
   dim3 block;
 
@@ -258,7 +256,6 @@ void callReduceAll(THCState* state,
         reduceAccOp,
         devOut);
   }
-#endif
 }
 
 // Reduces the entire tensor to one value. `out` points to

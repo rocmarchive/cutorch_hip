@@ -791,7 +791,7 @@ function test.copyNoncontiguous()
    end
 end
 
---[[function test.copyAsync()
+function test.copyAsync()
    local sz = chooseInt(maxsize, 2 * maxsize)
    local host_tensors = {
      cutorch.createCudaHostTensor(sz),
@@ -821,7 +821,7 @@ end
       tester:assertTensorEq(device_tensor:double(), host_tensor:double(), 0,
                             "Async copy to host failed.")
    end
-end]]--
+end
 
 function test.largeNoncontiguous()
    local x = torch.FloatTensor():randn(20, 1, 60, 60)

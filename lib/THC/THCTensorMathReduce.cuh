@@ -112,14 +112,16 @@ struct SquareFunctor<ResT, half> {
 
 template <typename T>
 struct ReduceMin {
-  inline __device__ T operator()(T a, T b) const {
+   __device__ 
+    const T& operator()(const T& a, const T& b) const {
     return THCNumerics<T>::lt(a, b) ? a : b;
   }
 };
 
 template <typename T>
 struct ReduceMax {
-  inline __device__ T operator()(T a, T b) const {
+  __device__ 
+   const T& operator()(const T& a, const T& b) const {
     return THCNumerics<T>::gt(a, b) ? a : b;
   }
 };
