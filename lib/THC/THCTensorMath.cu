@@ -20,7 +20,9 @@
 #include <thrust/system/cuda/execution_policy.h>
 #endif
 #else  // THRUST_PATH
-
+#include <bolt/amp/iterator/ubiquitous_iterator.h>
+#include <bolt/amp/iterator/counting_iterator.h>
+#include <bolt/amp/transform.h>
 #endif // THRUST_PATH
 #include <cfloat>
 
@@ -119,7 +121,7 @@ template<typename T, typename accT = T>
 struct LinspaceOp {
   __host__ __device__ LinspaceOp(accT start, accT step): 
     start_(start), step_(step) { }
-  __device__ __forceinline__ T operator()(ptrdiff_t index) {
+  __device__ __forceinline__ T operator()(ptrdiff_t index) const {
     accT increment = THCNumerics<accT>::mul(step_, ScalarConvert<ptrdiff_t,accT>::to(index));
     accT value = THCNumerics<accT>::add(start_, increment);
     return ScalarConvert<accT,T>::to(value);
@@ -132,9 +134,13 @@ template<typename T, typename accT = T>
 struct LogspaceOp {
   __host__ __device__ LogspaceOp(accT start, accT step): 
     start_(start), step_(step) { }
-  __device__ __forceinline__ T operator()(ptrdiff_t index) {
+  __device__ __forceinline__ T operator()(ptrdiff_t index) const {
     accT increment = THCNumerics<accT>::mul(step_, ScalarConvert<ptrdiff_t,accT>::to(index));
-    accT value = THCNumerics<accT>::exp10(THCNumerics<accT>::add(start_, increment));
+#ifdef CUDA_PATH 
+   accT value = THCNumerics<accT>::exp10(THCNumerics<accT>::add(start_, increment));
+#else
+   accT value=0; 
+#endif
     return ScalarConvert<accT,T>::to(value);
   }
 

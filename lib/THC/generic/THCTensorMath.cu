@@ -409,6 +409,10 @@ void THCTensor_(linspace)(THCState *state, THCTensor *r_, real a, real b, long n
 #ifdef THRUST_PATH
     thrust::device_ptr<real> data_(THCTensor_(data)(state, r));
     thrust::tabulate(data_, data_ + n, linspace_method);
+#else
+   auto data_  = bolt::amp::make_ubiquitous_iterator(THCTensor_(data)(state, r));
+   bolt::amp::counting_iterator<int> iter(0);
+   bolt::amp::transform(iter, iter + n , data_, linspace_method); 
 #endif
     if (!THCTensor_(isContiguous)(state, r_)) { // We need to move data back to r_
       THCTensor_(freeCopyTo)(state, r, r_);
@@ -422,7 +426,7 @@ void THCTensor_(logspace)(THCState *state, THCTensor *r_, real a, real b, long n
   THArgCheck(n > 1 || (n == 1 && (a == b)), 3, "invalid number of points");
   if (THCTensor_(nElement)(state, r_) != n) THCTensor_(resize1d)(state, r_, n);
 #ifdef CUDA_PATH
-  if (n == 1) THCTensor_(fill)(state, r_, THCNumerics<real>::exp10(a));
+  if (n == 1) THCTensor_(fill)(state, r_, THCNumerics<real>::exp10l(a));
 #endif
   else {
     THCTensor *r = THCTensor_(isContiguous)(state, r_) 
@@ -434,6 +438,10 @@ void THCTensor_(logspace)(THCState *state, THCTensor *r_, real a, real b, long n
 #ifdef THRUST_PATH
     thrust::device_ptr<real> data_(THCTensor_(data)(state, r));
     thrust::tabulate(data_, data_ + n, logspace_method);
+#else
+   auto data_  = bolt::amp::make_ubiquitous_iterator(THCTensor_(data)(state, r));
+   bolt::amp::counting_iterator<int> iter(0);
+   bolt::amp::transform(iter, iter + n , data_, logspace_method); 
 #endif
     if (!THCTensor_(isContiguous)(state, r_)) {
       THCTensor_(freeCopyTo)(state, r, r_);
@@ -458,6 +466,10 @@ void THCTensor_(range)(THCState *state, THCTensor *r_, accreal xmin, accreal xma
 #ifdef THRUST_PATH
   thrust::device_ptr<real> data_(THCTensor_(data)(state, r));
   thrust::tabulate(data_, data_ + size, linspace_method);
+#else
+   auto data_  = bolt::amp::make_ubiquitous_iterator(THCTensor_(data)(state, r));
+   bolt::amp::counting_iterator<int> iter(0);
+   bolt::amp::transform(iter, iter + size , data_, linspace_method); 
 #endif
   if (!THCTensor_(isContiguous)(state, r_)) THCTensor_(freeCopyTo)(state, r, r_);
   THCudaCheck(hipGetLastError());
