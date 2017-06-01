@@ -147,7 +147,7 @@ template <typename K, typename V,
           int KeyDims, int ValueDims,
           typename Comparator, typename IndexType, int Power2SortSize>
 __global__ void
-bitonicSortKVInPlace(TensorInfo<K, IndexType> keys,
+bitonicSortKVInPlace(reference_to_const(TensorInfo<K, IndexType>) keys,
                      IndexType keySlices,
                      IndexType keySliceSize,
                      IndexType keySliceStride,
