@@ -18,6 +18,9 @@
 #else   // THRUST_PATH
     #include <bolt/amp/functional.h>
     #include <bolt/amp/pair.h>
+    #include <bolt/amp/inner_product.h>
+    #include <bolt/amp/iterator/ubiquitous_iterator.h>
+    #include "hip/hcc_detail/hip_fp16.h"
 #endif  // THRUST_PATH
 
 
