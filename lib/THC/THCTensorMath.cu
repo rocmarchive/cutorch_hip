@@ -23,6 +23,9 @@
 #include <bolt/amp/iterator/ubiquitous_iterator.h>
 #include <bolt/amp/iterator/counting_iterator.h>
 #include <bolt/amp/transform.h>
+#ifdef __HCC__
+#include "hip/hcc_detail/device_functions.h"
+#endif
 #endif // THRUST_PATH
 #include <cfloat>
 
@@ -136,11 +139,7 @@ struct LogspaceOp {
     start_(start), step_(step) { }
   __device__ __forceinline__ T operator()(ptrdiff_t index) const {
     accT increment = THCNumerics<accT>::mul(step_, ScalarConvert<ptrdiff_t,accT>::to(index));
-#ifdef CUDA_PATH 
-   accT value = THCNumerics<accT>::exp10(THCNumerics<accT>::add(start_, increment));
-#else
-   accT value=0; 
-#endif
+    accT value = THCNumerics<accT>::exp10(THCNumerics<accT>::add(start_, increment));
     return ScalarConvert<accT,T>::to(value);
   }
 

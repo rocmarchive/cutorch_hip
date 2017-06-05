@@ -427,6 +427,8 @@ void THCTensor_(logspace)(THCState *state, THCTensor *r_, real a, real b, long n
   if (THCTensor_(nElement)(state, r_) != n) THCTensor_(resize1d)(state, r_, n);
 #ifdef CUDA_PATH
   if (n == 1) THCTensor_(fill)(state, r_, THCNumerics<real>::exp10l(a));
+#else  
+  if (n == 1) THCTensor_(fill)(state, r_, THCNumerics<real>::exp10(a));
 #endif
   else {
     THCTensor *r = THCTensor_(isContiguous)(state, r_) 

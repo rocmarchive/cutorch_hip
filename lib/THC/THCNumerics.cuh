@@ -675,6 +675,26 @@ struct THCNumerics<half> {
   __device__
   static
   inline
+  half exp10(half a)
+  {
+    #if defined(__CUDA_ARCH__) && defined(CUDA_HALF_INSTRUCTIONS)
+      return hexp(a);
+    #else
+      float fa = __half2float(a);
+      return __float2half(exp10f(fa));
+    #endif
+  }
+  __host__
+  static
+  inline
+  half exp10(half a)
+  {
+    return THC_float2half(exp10f(THC_half2float(a)));
+  }
+
+  __device__
+  static
+  inline
   half log(half a)
   {
     #ifdef CUDA_HALF_INSTRUCTIONS
