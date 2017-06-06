@@ -182,7 +182,7 @@ void sortViaThrust(
 
   ptrdiff_t totalElements = THCTensor_(nElement)(state, input);
   long sliceSize = THCTensor_(size)(state, input, dim);
-  //long sliceStride = THCTensor_(stride)(state, input, dim);
+  long sliceStride = THCTensor_(stride)(state, input, dim);
 
   // We perform a vectorized segmented sort in Thrust.
   // Say we are sorting a (2, 3) tensor. We have in flattened form:
@@ -230,6 +230,7 @@ void sortViaThrust(
   THCudaLongTensor_free(state, trIndices);
 
 #if defined(THRUST_PATH)
+  THCThrustAllocator thrustAlloc(state);
   thrust::device_ptr<real> keyIter(THCTensor_(data)(state, trContigKey));
 #else
   auto keyIter =
@@ -252,7 +253,7 @@ void sortViaThrust(
 
   thrust::copy(
     #if CUDA_VERSION >= 7000
-        thrust::cuda::par.on(THCState_getCurrentStream(state)),
+    thrust::cuda::par(thrustAlloc).on(THCState_getCurrentStream(state)),
     #endif
     countIter, countIter + totalElements, indexIter);
 #else
@@ -267,7 +268,7 @@ void sortViaThrust(
     #if defined(THRUST_PATH)
       thrust::stable_sort_by_key(
         #if CUDA_VERSION >= 7000
-          thrust::cuda::par.on(THCState_getCurrentStream(state)),
+      thrust::cuda::par(thrustAlloc).on(THCState_getCurrentStream(state)),
         #endif
           keyIter, keyIter + totalElements, indexIter, ThrustGTOp<real>());
     #else
@@ -278,7 +279,7 @@ void sortViaThrust(
   #if defined(THRUST_PATH)
     thrust::stable_sort_by_key(
       #if CUDA_VERSION >= 7000
-        thrust::cuda::par.on(THCState_getCurrentStream(state)),
+      thrust::cuda::par(thrustAlloc).on(THCState_getCurrentStream(state)),
       #endif
         keyIter, keyIter + totalElements, indexIter, ThrustLTOp<real>());
   #else
@@ -294,7 +295,7 @@ void sortViaThrust(
   #if defined(THRUST_PATH)
     thrust::stable_sort_by_key(
       #if CUDA_VERSION >= 7000
-        thrust::cuda::par.on(THCState_getCurrentStream(state)),
+    thrust::cuda::par(thrustAlloc).on(THCState_getCurrentStream(state)),
       #endif
       indexIter, indexIter + totalElements, keyIter, SliceComp(sliceSize));
   #else
@@ -307,7 +308,7 @@ void sortViaThrust(
   #if defined(THRUST_PATH)
     thrust::for_each(
       #if CUDA_VERSION >= 7000
-        thrust::cuda::par.on(THCState_getCurrentStream(state)),
+    thrust::cuda::par(thrustAlloc).on(THCState_getCurrentStream(state)),
       #endif
       indexIter,
       indexIter + totalElements,
@@ -335,8 +336,8 @@ THC_API void THCTensor_(sort)(THCState* state,
                                THCudaLongTensor *indices,
                                THCTensor *input,
                                int dim, int order) {
-  THAssert(THCTensor_(checkGPU)(state, 2, sorted, input));
-  THAssert(THCudaLongTensor_checkGPU(state, 1, indices));
+  THCAssertSameGPU(THCTensor_(checkGPU)(state, 2, sorted, input));
+  THCAssertSameGPU(THCudaLongTensor_checkGPU(state, 1, indices));
   long dims = THCTensor_(nDimension)(state, sorted);
   THArgCheck(dims <= MAX_CUTORCH_DIMS, 2, CUTORCH_DIM_WARNING);
   dims = THCTensor_(nDimension)(state, input);
@@ -352,8 +353,23 @@ THC_API void THCTensor_(sort)(THCState* state,
 
   // How large are the slices that we are sorting?
   long sliceSize = THCTensor_(size)(state, input, dim);
+  
+  // Workaround:
+  // CUDA 8 uses more shared memory than 7.5 for bitonicSortKVInPlace,
+  // and so for the double word types,
+  // we get "too many resources requested for launch" in the 2048 case
+#if CUDA_VERSION >= 8000
+#if defined(THC_REAL_IS_DOUBLE) || defined(THC_REAL_IS_LONG)
+  int maxSliceSize = 1024;
+#else
+  int maxSliceSize = 2048;
+#endif
+#else
+  int maxSliceSize = 2048;
+#endif
 
-  if (sliceSize <= 2048) {
+
+  if (sliceSize <= maxSliceSize) {
     // Fill `indices` (the values) with the
     // slice-relative index.
     THCudaLongTensor_fillSliceWithIndex(state, indices, dim);
@@ -372,5 +388,6 @@ THC_API void THCTensor_(sort)(THCState* state,
 
   THCudaCheck(hipGetLastError());
 }
+
 #endif
 

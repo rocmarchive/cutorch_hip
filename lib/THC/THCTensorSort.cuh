@@ -8,6 +8,7 @@
 #include "THCTensorTypeUtils.cuh"
 
 #ifdef THRUST_PATH
+    #include "THCThrustAllocator.cuh"
     #include <thrust/device_ptr.h>
     #include <thrust/sort.h>
     #if CUDA_VERSION >= 7000
@@ -77,7 +78,7 @@ struct SliceComp {
     return segA < segB;
   }
 
-  long sliceSize;
+  const long sliceSize;
 };
 
 // For sorting in Thurst; extracts a within-slice index from a linear index
@@ -91,10 +92,9 @@ struct GlobalIndexToPerSliceIndex {
     v = v % sliceSize + TH_INDEX_BASE;
   }
 
-  long sliceSize;
+  const long sliceSize;
 };
 
-unsigned long nextHighestPowerOf2(unsigned long n);
 void THCudaLongTensor_fillSliceWithIndex(
     THCState* state, THCudaLongTensor* t, int dim);
 #endif // THC_TENSORSORT_CUH
