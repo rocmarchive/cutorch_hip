@@ -255,7 +255,11 @@ accreal THCTensor_(dist)(THCState *state, THCTensor *self,
     thrust::plus<accreal>(),
     TensorDistOp<accreal, real>(ScalarConvert<real, accreal>::to(value)));
 #else
- //TODO: Bolt alternative 
+    auto self_data = bolt::amp::make_ubiquitous_iterator<real>(THCTensor_(data)(state, self));
+    auto src_data = bolt::amp::make_ubiquitous_iterator<real>(THCTensor_(data)(state, src));
+    //accreal result = bolt::amp::inner_product(self_data, self_data+size, src_data,
+    //                   ScalarConvert<int, accreal>::to(0), bolt::amp::plus<accreal>(), TensorDistOp<accreal, real>(ScalarConvert<real, accreal>::to(value)));
+    accreal result = 0; 
 #endif
   THCTensor_(free)(state, src);
   THCTensor_(free)(state, self);
