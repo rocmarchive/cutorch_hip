@@ -330,7 +330,6 @@ THC_API real
 THCTensor_(minall)(THCState *state, THCTensor *self) {
   THCAssertSameGPU(THCTensor_(checkGPU)(state, 1, self));
   real val;
-#ifdef CUDA_PATH
   if (!THC_reduceAll(state, self,
 #ifdef THRUST_PATH
                      thrust::identity<real>(),
@@ -343,7 +342,6 @@ THCTensor_(minall)(THCState *state, THCTensor *self) {
     THArgCheck(false, 1, CUTORCH_DIM_WARNING);
   }
   THCudaCheck(hipGetLastError());
-#endif
   return val;
 }
 
@@ -351,7 +349,6 @@ THC_API real
 THCTensor_(maxall)(THCState *state, THCTensor *self) {
   THCAssertSameGPU(THCTensor_(checkGPU)(state, 1, self));
   real val;
-#ifdef CUDA_PATH
   if (!THC_reduceAll(state, self,
 #ifdef THRUST_PATH
                      thrust::identity<real>(),
@@ -364,7 +361,6 @@ THCTensor_(maxall)(THCState *state, THCTensor *self) {
     THArgCheck(false, 1, CUTORCH_DIM_WARNING);
   }
   THCudaCheck(hipGetLastError());
-#endif
   return val;
 }
 

@@ -117,7 +117,8 @@ template <typename T>
 struct ReduceMin {
    __device__ 
     const T& operator()(const T& a, const T& b) const {
-    return THCNumerics<T>::lt(a, b) ? a : b;
+    T diff = THCNumerics<T>::sub(a, b);
+    return (diff > 0 ) ? a : b;
   }
 };
 
@@ -125,7 +126,8 @@ template <typename T>
 struct ReduceMax {
   __device__ 
    const T& operator()(const T& a, const T& b) const {
-    return THCNumerics<T>::gt(a, b) ? a : b;
+    T diff = THCNumerics<T>::sub(a, b);
+    return (diff < 0 ) ? a : b;
   }
 };
 
