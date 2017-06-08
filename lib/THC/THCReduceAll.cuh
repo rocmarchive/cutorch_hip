@@ -44,7 +44,7 @@ void kernelReduceAll(
   }
 
   // Reduce within the block
-  extern __shared__ char smemChar[];
+  HIP_DYNAMIC_SHARED(char, smemChar)
   AccT* smem = (AccT*) smemChar;
   r = reduceBlock<AccT, ReduceAccOp>(smem, hipBlockDim_x, r, reduceAccOp, init);
 
@@ -95,7 +95,7 @@ void kernelReduceAllPass1(
   }
 
   // Reduce within the block
-  extern __shared__ char smemChar[];
+  HIP_DYNAMIC_SHARED(char, smemChar)
   AccT* smem = (AccT*) smemChar;
   r = reduceBlock<AccT, ReduceAccOp>(smem, hipBlockDim_x, r, reduceAccOp, init);
 
@@ -118,7 +118,7 @@ kernelReduceAllPass2(int numPass1Blocks,
   }
 
   // Reduce within the block
-  extern __shared__ char smemChar[];
+  HIP_DYNAMIC_SHARED(char, smemChar)
   T* smem = (T*) smemChar;
   r = reduceBlock<T, ReduceOp>(smem, numPass1Blocks, r, reduceOp, init);
 

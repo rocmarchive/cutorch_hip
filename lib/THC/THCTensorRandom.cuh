@@ -12,9 +12,7 @@
   #include "MTGP/hiprand_mtgp32.h"
 #endif
 #define MAX_NUM_BLOCKS 64
-#define BLOCK_SIZE 256
-/* Separate kernel because curand_log_normal gets extra parameters. */
-
+#define BLOCK_SIZE 256 /* Separate kernel because curand_log_normal gets extra parameters. */ 
 #ifdef CURAND_PATH
 template <typename T>
 __global__ void generateLogNormal(curandStateMtgp32 *state, int size, T *result, double mean, double stddev)
@@ -55,7 +53,7 @@ __global__ void renormRowsL1(T* dist, long rows, long cols) {
   extern __shared__ __align__(sizeof(T)) unsigned char my_smem[];
 #else
   // TODO: Check the vulnerability of this change
-  extern __shared__ unsigned char my_smem[];
+  HIP_DYNAMIC_SHARED(unsigned char, my_smem)
 #endif
   T *smem = reinterpret_cast<T *>(my_smem);
 
@@ -121,7 +119,7 @@ sampleMultinomialOnce(long* dest,
   extern __shared__ __align__(sizeof(AccT)) unsigned char my_smem[];
 #else
   // TODO: Check vulnerability of this change
-  extern __shared__  unsigned char my_smem[];
+  HIP_DYNAMIC_SHARED(unsigned char, my_smem)
 #endif
   __shared__ bool found;
 

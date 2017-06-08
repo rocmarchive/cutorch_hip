@@ -114,7 +114,7 @@ void kernelReduceContigDim(
 
   // Reduce within the block
   // FIXME: extern name
-  extern __shared__ char smemChar[];
+  HIP_DYNAMIC_SHARED(char, smemChar)
   T* smem = (T*) smemChar;
   r = reduceBlock<T, ReduceOp>(smem, hipBlockDim_x, r, reduceOp, init);
 
