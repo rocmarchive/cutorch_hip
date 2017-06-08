@@ -179,22 +179,22 @@ __global__ void NAME(curandStateMtgp32 *state, int size, T *result, ARG1, ARG2) 
 }
 #else
 
-#define GENERATE_KERNEL1(NAME, ARG1, HIPRAND_FUNC, FUNCTOR)                   \
-void NAME(THCState* state, HipRandStateMtgp32 *rngstate, int size, float *result, ARG1)  \
+#define GENERATE_KERNEL1(NAME, T, ARG1, CURAND_T, HIPRAND_FUNC, TRANSFORM)      \
+void NAME(THCState* state, HipRandStateMtgp32 *rngstate, int size, T *result, ARG1)  \
 { \
   hipStream_t currentStream = THCState_getCurrentStream(state); \
   hc::accelerator_view* current_accl_view; \
   hipHccGetAcceleratorView(currentStream, &current_accl_view); \
-  HIPRAND_FUNC##_kernel(*current_accl_view, rngstate, result, FUNCTOR); \
+  HIPRAND_FUNC##_kernel(*current_accl_view, rngstate, result, TRANSFORM); \
 }
 
-#define GENERATE_KERNEL2(NAME, ARG1, ARG2, HIPRAND_FUNC, FUNCTOR)                   \
-void NAME(THCState* state, HipRandStateMtgp32 *rngstate, int size, float *result, ARG1, ARG2)  \
+#define GENERATE_KERNEL2(NAME, T, ARG1, ARG2, CURAND_T, HIPRAND_FUNC, TRANSFORM)      \
+void NAME(THCState* state, HipRandStateMtgp32 *rngstate, int size, T *result, ARG1, ARG2)  \
 {                                                                                    \
   hipStream_t currentStream = THCState_getCurrentStream(state); \
   hc::accelerator_view* current_accl_view; \
   hipHccGetAcceleratorView(currentStream, &current_accl_view); \
-  HIPRAND_FUNC##_kernel(*current_accl_view, rngstate, result, FUNCTOR);                                                 \
+  HIPRAND_FUNC##_kernel(*current_accl_view, rngstate, result, TRANSFORM);                                                 \
 }
 
 
@@ -245,28 +245,11 @@ GENERATE_KERNEL1(generate_exponential, half, double lambda, float, curand_unifor
 GENERATE_KERNEL2(generate_cauchy, half, double median, double sigma, float, curand_uniform, (ScalarConvert<float, half>::to((float)(median + sigma * tan(M_PI*(x-0.5))))))
 #endif // CUDA_HALF_TENSOR
 
-#else
-#define GENERATE_KERNEL1(NAME, ARG1, HIPRAND_FUNC, FUNCTOR)                   \
-void NAME(THCState* state, HipRandStateMtgp32 *rngstate, int size, float *result, ARG1)  \
-{ \
-  hipStream_t currentStream = THCState_getCurrentStream(state); \
-  hc::accelerator_view* current_accl_view; \
-  hipHccGetAcceleratorView(currentStream, &current_accl_view); \
-  HIPRAND_FUNC##_kernel(*current_accl_view, rngstate, result, FUNCTOR); \
-}
-
-#define GENERATE_KERNEL2(NAME, ARG1, ARG2, HIPRAND_FUNC, FUNCTOR)                   \
-void NAME(THCState* state, HipRandStateMtgp32 *rngstate, int size, float *result, ARG1, ARG2)  \
-{                                                                                    \
-  hipStream_t currentStream = THCState_getCurrentStream(state); \
-  hc::accelerator_view* current_accl_view; \
-  hipHccGetAcceleratorView(currentStream, &current_accl_view); \
-  HIPRAND_FUNC##_kernel(*current_accl_view, rngstate, result, FUNCTOR);                                                 \
-}
+#else // __HIP_PLATFORM_NVCC__
 
 
 // Adding All HC based constructors
-
+template<typename T, typename HIPRAND_T>
 class user_uniform_functor {
   double _a;
   double _b;
@@ -275,7 +258,7 @@ public:
   user_uniform_functor(double a, double b) : _a(a), _b(b) {}
 
   __host__ __device__
-  double operator()(float x) const { return x * (_b - _a) + _a; }
+  HIPRAND_T operator()(T x) const { return ScalarConvert<HIPRAND_T, T>::to(x * (_b - _a) + _a); }
 };
 
 
@@ -316,6 +299,7 @@ public:
   }
 };
 
+template<typename T, typename HIPRAND_T>
 class user_exponential_functor {
   double _lambda;
 public:
@@ -324,9 +308,9 @@ public:
   user_exponential_functor(double lambda) : _lambda(lambda) {}
 
   __device__
-  double operator()(float x) const
+  HIPRAND_T operator()(T x) const
   {
-    return (double)(-1. / _lambda * log((double)(1 - x)));
+    return ScalarConvert<HIPRAND_T, T>::to(-1. / _lambda * log((double)(1 - x)));
   }
 };
 
@@ -347,12 +331,38 @@ public:
 };
 
 
+GENERATE_KERNEL2(generate_uniform, float, double a, double b, float, user_uniform, (user_uniform_functor<float, float>(a, b)))
+GENERATE_KERNEL2(generate_uniform, double, double a, double b, double, user_uniform, (user_uniform_functor<double, float>(a, b)))
+GENERATE_KERNEL2(generate_uniform, half, double a, double b, float, user_uniform, (user_uniform_functor<half, float>(a, b)))
+
+/*GENERATE_KERNEL2(generate_normal, float, double mean, double stdv, float, curand_normal, (x * stdv) + mean)
+GENERATE_KERNEL2(generate_normal, double, double mean, double stdv, double, curand_normal_double, (x * stdv) + mean)*/
+
+GENERATE_KERNEL1(generate_exponential, float, double lambda, float, user_uniform, (user_exponential_functor<float, float>(lambda)))
+GENERATE_KERNEL1(generate_exponential, double, double lambda, double, user_uniform, (user_exponential_functor<double, float>(lambda)))
+GENERATE_KERNEL1(generate_exponential, half, double lambda, float, user_uniform, (user_exponential_functor<half, float>(lambda)))
+
+/*
+GENERATE_KERNEL2(generate_cauchy, float, double median, double sigma, float, curand_uniform, (float)(median + sigma * tan(M_PI*(x-0.5))))
+GENERATE_KERNEL2(generate_cauchy, double, double median, double sigma, double, curand_uniform_double, (double)(median + sigma * tan(M_PI*(x-0.5))))
+
+#ifdef CUDA_HALF_TENSOR
+GENERATE_KERNEL2(generate_uniform, half, double a, double b, float, curand_uniform, (ScalarConvert<float, half>::to(x * (b-a) + a)))
+GENERATE_KERNEL2(generate_normal, half, double mean, double stdv, float, curand_normal, (ScalarConvert<float, half>::to((x * stdv) + mean)))
+GENERATE_KERNEL1(generate_exponential, half, double lambda, float, curand_uniform, (ScalarConvert<float, half>::to((float)(-1. / lambda * log(1-x)))))
+GENERATE_KERNEL2(generate_cauchy, half, double median, double sigma, float, curand_uniform, (ScalarConvert<float, half>::to((float)(median + sigma * tan(M_PI*(x-0.5))))))
+#endif // CUDA_HALF_TENSOR
+
+*/
+
+/* Old Case
+
 GENERATE_KERNEL2(generate_uniform, double a, double b, user_uniform, user_uniform_functor(a, b))
 GENERATE_KERNEL1(generate_bernoulli, double p, user_uniform, user_bernoulli_functor(p))
 GENERATE_KERNEL2(generate_normal, double mean, double stdv, user_normal, user_normal_functor(stdv,  mean))
 GENERATE_KERNEL1(generate_geometric,  double p, user_uniform, user_geometric_functor(p))
 GENERATE_KERNEL1(generate_exponential, double lambda, user_uniform, user_exponential_functor(lambda))
-GENERATE_KERNEL2(generate_cauchy, double median, double sigma, user_uniform, user_cauchy_functor(median, sigma))
+GENERATE_KERNEL2(generate_cauchy, double median, double sigma, user_uniform, user_cauchy_functor(median, sigma))*/
 #endif
 
 
