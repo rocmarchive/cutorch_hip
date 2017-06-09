@@ -108,7 +108,7 @@ __global__ void computeMode(
   // Initially, the buffer will be organized as follows:
   //
   // [smem (slice elements) | bmem (valid indices) | <scratch space>]
-  HIP_DYNAMIC_SHARED(char, shmem)
+  extern __shared__ char shmem[];
 
   // smem represents a proportion of the shared memory buffer that is used to store
   // the elements from the slice:

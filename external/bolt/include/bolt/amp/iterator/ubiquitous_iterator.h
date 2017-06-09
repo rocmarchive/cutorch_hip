@@ -45,20 +45,6 @@ namespace bolt
                 return x.p_ - y.p_;
             }
 
-            friend
-            inline
-            bool operator==(const Ubiquitous_iterator& x, const Ubiquitous_iterator& y) [[cpu]][[hc]]
-            {
-                return x.p_ == y.p_;
-            }
-
-            friend
-            inline
-            bool operator!=(const Ubiquitous_iterator& x, const Ubiquitous_iterator& y) [[cpu]][[hc]]
-            {
-                return x.p_ != y.p_;
-            }
-
             T* p_;
         public:
             Ubiquitous_iterator() [[cpu]][[hc]] = default;
