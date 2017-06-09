@@ -18,6 +18,7 @@
 
 #include "../device_vector.h"
 
+#include "bolt/amp/iterator/iterator_traits.h"
 #include <cstddef>
 #include <iterator>
 
@@ -45,6 +46,22 @@ namespace bolt
                 return x.p_ - y.p_;
             }
 
+            friend
+            inline
+            bool operator==(const Ubiquitous_iterator& x, const Ubiquitous_iterator& y) [[cpu]][[hc]]
+            {
+                return (x.p_ == y.p_);
+            }
+
+            friend
+            inline
+            bool operator!=(const Ubiquitous_iterator& x, const Ubiquitous_iterator& y) [[cpu]][[hc]]
+            {
+                return (x.p_ != y.p_);
+            }
+
+
+
             T* p_;
         public:
             Ubiquitous_iterator() [[cpu]][[hc]] = default;
@@ -66,6 +83,11 @@ namespace bolt
                 return *this;
             }
 
+            Ubiquitous_iterator& operator++() [[cpu]][[hc]]
+            {
+                p_ += 1;
+                return *this;
+            }
             // Bolt glue.
             std::ptrdiff_t m_Index = 0;
             const Ubiquitous_iterator& getContainer() const { return *this; }
