@@ -18,7 +18,8 @@ THC_API void THCTensor_(uniform)(THCState* state, THCTensor *self_, double a, do
   hipLaunchKernelGGL((generate_uniform), NUM_BLOCKS, BLOCK_SIZE, 0, THCState_getCurrentStream(state),
       gen->gen_states, size, data, a, b);
 #else
-    generate_uniform(state, gen->h_gen_states, size, data, a, b);
+     // TODO: Resolve build error below by adding a generic MTGP implementation
+    //generate_uniform(state, gen->h_gen_states, size, data, a, b);
 #endif
 
   THCTensor_(freeCopyTo)(state, self, self_);
