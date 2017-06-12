@@ -245,7 +245,7 @@ THC_API void THCTensor_(mode)(THCState *state,
     int memsize = (sizeof(real) * SIZE) + (2 * SIZE * sizeof(unsigned int)); \
     hipLaunchKernelGGL((computeMode<real, SIZE>), \
         grid, blockSize, memsize, THCState_getCurrentStream(state), \
-        THCTensor_(data)(state, contiguous), make_magic_wrapper(tiValues), make_magic_wrapper(tiIndices), sliceSize); \
+        THCTensor_(data)(state, contiguous), (tiValues), (tiIndices), sliceSize); \
   }
 
     // Tradeoff between compilation time and the number of specializations. Ideally we would have

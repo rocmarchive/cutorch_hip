@@ -25,7 +25,7 @@ template <typename Op,
 __launch_bounds__(32 * 16, 4)
 #endif
 __global__ void
-kernelPointwiseApply1(reference_to_const(TensorInfo<Ta, IndexType>) a,
+kernelPointwiseApply1(TensorInfo<Ta, IndexType> a,
                       IndexType totalElements,
                       Op op)
 {
@@ -48,8 +48,8 @@ template <typename Op,
 __launch_bounds__(32 * 16, 4)
 #endif
 __global__ void
-kernelPointwiseApply2(reference_to_const(TensorInfo<Ta, IndexType>) a,
-                      reference_to_const(TensorInfo<Tb, IndexType>) b,
+kernelPointwiseApply2(TensorInfo<Ta, IndexType> a,
+                      TensorInfo<Tb, IndexType> b,
                       IndexType totalElements,
                       Op op)
 {
@@ -77,9 +77,9 @@ __launch_bounds__(32 * 16, 4)
 #endif
 __global__
 void kernelPointwiseApply3(
-    reference_to_const(TensorInfo<Ta, IndexType>) a,
-    reference_to_const(TensorInfo<Tb, IndexType>) b,
-    reference_to_const(TensorInfo<Tc, IndexType>) c,
+    TensorInfo<Ta, IndexType> a,
+    TensorInfo<Tb, IndexType> b,
+    TensorInfo<Tc, IndexType> c,
     IndexType totalElements,
     Op op)
 {
@@ -184,7 +184,7 @@ bool THC_pointwiseApply1(THCState* state,
     block,\
     0,\
     THCState_getCurrentStream(state),\
-    make_magic_wrapper(aInfo),\
+    (aInfo),\
     (TYPE) totalElements,\
     op);
 
@@ -232,7 +232,7 @@ bool THC_pointwiseApply1(THCState* state,
       block,
       0,
       THCState_getCurrentStream(state),
-      make_magic_wrapper(aInfo),
+      (aInfo),
       (unsigned long) totalElements,
       op);
     } else {
@@ -242,7 +242,7 @@ bool THC_pointwiseApply1(THCState* state,
       block,
       0,
       THCState_getCurrentStream(state),
-      make_magic_wrapper(aInfo),
+      (aInfo),
       (unsigned long) totalElements,
       op);
     }
@@ -340,8 +340,8 @@ bool THC_pointwiseApply2(THCState* state,
     block,\
     0,\
     THCState_getCurrentStream(state),\
-    make_magic_wrapper(aInfo),\
-    make_magic_wrapper(bInfo),\
+    (aInfo),\
+    (bInfo),\
     (TYPE) totalElements,\
     op);
 
@@ -419,8 +419,8 @@ bool THC_pointwiseApply2(THCState* state,
           block,
           0,
           THCState_getCurrentStream(state),
-          make_magic_wrapper(aInfo),
-          make_magic_wrapper(bInfo),
+          (aInfo),
+          (bInfo),
           (unsigned long) totalElements,
           op);
     } else {
@@ -436,8 +436,8 @@ bool THC_pointwiseApply2(THCState* state,
           block,
           0,
           THCState_getCurrentStream(state),
-          make_magic_wrapper(aInfo),
-          make_magic_wrapper(bInfo),
+          (aInfo),
+          (bInfo),
           (unsigned long) totalElements,
           op);
     }
@@ -550,9 +550,9 @@ bool THC_pointwiseApply3(THCState* state,
       block,\
       0,\
       THCState_getCurrentStream(state),\
-      make_magic_wrapper(aInfo),\
-      make_magic_wrapper(bInfo),\
-      make_magic_wrapper(cInfo),\
+      (aInfo),\
+      (bInfo),\
+      (cInfo),\
       (TYPE) totalElements,\
       op);
 
@@ -660,9 +660,9 @@ bool THC_pointwiseApply3(THCState* state,
           block,
           0,
           THCState_getCurrentStream(state),
-          make_magic_wrapper(aInfo),
-          make_magic_wrapper(bInfo),
-          make_magic_wrapper(cInfo),
+          (aInfo),
+          (bInfo),
+          (cInfo),
           (unsigned long) totalElements,
           op);
     } else {
@@ -680,9 +680,9 @@ bool THC_pointwiseApply3(THCState* state,
           block,
           0,
           THCState_getCurrentStream(state),
-          make_magic_wrapper(aInfo),
-          make_magic_wrapper(bInfo),
-          make_magic_wrapper(cInfo),
+          (aInfo),
+          (bInfo),
+          (cInfo),
           (unsigned long) totalElements,
           op);
     }

@@ -365,18 +365,18 @@ __device__ void radixSelect(DataType* data,
 }
 
 template <typename T, typename IndexType, int Dim, bool Order>
-__global__ void gatherTopK(reference_to_const(TensorInfo<T, IndexType>) input,
+__global__ void gatherTopK(TensorInfo<T, IndexType> input,
                            IndexType inputSliceSize,
                            IndexType outputSliceSize, // aka `k`
 
                            IndexType numInputSlices,
                            IndexType inputWithinSliceStride,
 
-                           reference_to_const(TensorInfo<T, IndexType>) topK,
+                           TensorInfo<T, IndexType> topK,
                            IndexType numTopKSlices,
                            IndexType topKWithinSliceStride,
 
-                           reference_to_const(TensorInfo<long, IndexType>) indices,
+                           TensorInfo<long, IndexType> indices,
                            IndexType indicesWithinSliceStride) {
   // Indices are limited to integer fp precision, so counts can fit in
   // int32, regardless of IndexType

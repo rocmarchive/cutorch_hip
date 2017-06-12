@@ -88,8 +88,8 @@ struct MatchReduceOp {
 template <typename T, unsigned int Power2Size>
 __global__ void computeMode(
     T *input,
-    reference_to_const(TensorInfo<T, unsigned int>) values,
-    reference_to_const(TensorInfo<long, unsigned int>) indices,
+    TensorInfo<T, unsigned int> values,
+    TensorInfo<long, unsigned int> indices,
     long sliceSize)
 {
   int tidx = hipThreadIdx_x;

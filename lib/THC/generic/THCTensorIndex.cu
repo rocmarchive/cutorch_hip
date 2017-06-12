@@ -56,9 +56,9 @@ void THCTensor_(indexCopy)(THCState *state, THCTensor *dst, int dim, THCudaLongT
     smallIndexBlock,\
     0,\
     stream,\
-    make_magic_wrapper(dstInfo),\
-    make_magic_wrapper(srcInfo),\
-    make_magic_wrapper(indicesInfo),\
+    dstInfo,\
+    srcInfo,\
+    indicesInfo,\
     dstCopyDim,\
     srcCopyDim,\
     sliceSize,\
@@ -71,9 +71,9 @@ void THCTensor_(indexCopy)(THCState *state, THCTensor *dst, int dim, THCudaLongT
     largeIndexBlock,\
     0,\
     stream,\
-    make_magic_wrapper(dstInfo),\
-    make_magic_wrapper(srcInfo),\
-    make_magic_wrapper(indicesInfo),\
+    dstInfo,\
+    srcInfo,\
+    indicesInfo,\
     dstCopyDim,\
     srcCopyDim,\
     sliceSize,\
@@ -203,9 +203,9 @@ void THCTensor_(indexAdd)(THCState *state, THCTensor *dst, int dim, THCudaLongTe
     smallIndexBlock,\
     0,\
     stream,\
-    make_magic_wrapper(dstInfo),\
-    make_magic_wrapper(srcInfo),\
-    make_magic_wrapper(indicesInfo),\
+    dstInfo,\
+    srcInfo,\
+    indicesInfo,\
     dstAddDim,\
     srcAddDim,\
     sliceSize,\
@@ -218,9 +218,9 @@ void THCTensor_(indexAdd)(THCState *state, THCTensor *dst, int dim, THCudaLongTe
     largeIndexBlock,\
     0,\
     stream,\
-    make_magic_wrapper(dstInfo),\
-    make_magic_wrapper(srcInfo),\
-    make_magic_wrapper(indicesInfo),\
+    dstInfo,\
+    srcInfo,\
+    indicesInfo,\
     dstAddDim,\
     srcAddDim,\
     sliceSize,\
@@ -344,8 +344,8 @@ void THCTensor_(indexFill)(THCState *state, THCTensor *dst, int dim, THCudaLongT
     smallIndexBlock,\
     0,\
     stream,\
-    make_magic_wrapper(dstInfo),\
-    make_magic_wrapper(indicesInfo),\
+    dstInfo,\
+    indicesInfo,\
     dstFillDim,\
     sliceSize,\
     dstFillDimSize,\
@@ -358,8 +358,8 @@ void THCTensor_(indexFill)(THCState *state, THCTensor *dst, int dim, THCudaLongT
     largeIndexBlock,\
     0,\
     stream,\
-    make_magic_wrapper(dstInfo),\
-    make_magic_wrapper(indicesInfo),\
+    dstInfo,\
+    indicesInfo,\
     dstFillDim,\
     sliceSize,\
     dstFillDimSize,\
@@ -481,9 +481,9 @@ void THCTensor_(indexSelect)(THCState *state, THCTensor *dst, THCTensor *src, in
     smallIndexBlock,\
     0,\
     stream,\
-    make_magic_wrapper(dstInfo),\
-    make_magic_wrapper(srcInfo),\
-    make_magic_wrapper(indicesInfo),\
+    dstInfo,\
+    srcInfo,\
+    indicesInfo,\
     dstSelectDim,\
     srcSelectDim,\
     sliceSize,\
@@ -496,9 +496,9 @@ void THCTensor_(indexSelect)(THCState *state, THCTensor *dst, THCTensor *src, in
     largeIndexBlock,\
     0,\
     stream,\
-    make_magic_wrapper(dstInfo),\
-    make_magic_wrapper(srcInfo),\
-    make_magic_wrapper(indicesInfo),\
+    dstInfo,\
+    srcInfo,\
+    indicesInfo,\
     dstSelectDim,\
     srcSelectDim,\
     dstTotalSize,\
