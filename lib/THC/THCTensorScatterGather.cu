@@ -78,9 +78,9 @@ struct IndexToScatterGatherOffsets<IndexType, Real, -1> {
 template <typename IndexType, typename Real, int Dims>
 __global__
 void THCudaTensor_gatherKernel(
-    TensorInfo<Real, IndexType> tensor,
-    TensorInfo<Real, IndexType> src,
-    TensorInfo<long, IndexType> index,
+    reference_to_const(TensorInfo<Real, IndexType>) tensor,
+    reference_to_const(TensorInfo<Real, IndexType>) src,
+    reference_to_const(TensorInfo<long, IndexType>) index,
     const int dim,
     const IndexType totalElements)
 {
@@ -106,9 +106,9 @@ void THCudaTensor_gatherKernel(
 template <typename IndexType, typename Real, int Dims>
 __global__
 void THCudaTensor_scatterKernel(
-    TensorInfo<Real, IndexType> tensor,
-    TensorInfo<Real, IndexType> src,
-    TensorInfo<long, IndexType> index,
+    reference_to_const(TensorInfo<Real, IndexType>) tensor,
+    reference_to_const(TensorInfo<Real, IndexType>) src,
+    reference_to_const(TensorInfo<long, IndexType>) index,
     int dim,
     IndexType totalElements)
 {
@@ -135,8 +135,8 @@ template <typename IndexType, typename Real, int Dims>
 __global__
 inline
 void THCudaTensor_scatterFillKernel(
-    TensorInfo<Real, IndexType> tensor,
-    TensorInfo<long, IndexType> index,
+    reference_to_const(TensorInfo<Real, IndexType>) tensor,
+    reference_to_const(TensorInfo<long, IndexType>) index,
     Real value,
     int dim,
     IndexType totalElements)

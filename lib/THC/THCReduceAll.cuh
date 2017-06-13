@@ -28,7 +28,7 @@ template <typename ModifyOp,
           int ADims>
 __global__
 void kernelReduceAll(
-    TensorInfo<InT, IndexType> in,
+    reference_to_const(TensorInfo<InT, IndexType>) in,
     IndexType totalElements,
     AccT init,
     ModifyOp modifyOp,
@@ -76,7 +76,7 @@ template <typename ModifyOp,
           int ADims>
 __global__
 void kernelReduceAllPass1(
-    TensorInfo<InT, IndexType> in,
+    reference_to_const(TensorInfo<InT, IndexType>) in,
     IndexType totalElements,
     AccT init,
     ModifyOp modifyOp,

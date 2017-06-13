@@ -25,7 +25,7 @@ template <typename Op,
 __launch_bounds__(32 * 16, 4)
 #endif
 __global__ void
-kernelPointwiseApply1(TensorInfo<Ta, IndexType> a,
+kernelPointwiseApply1(reference_to_const(TensorInfo<Ta, IndexType>) a,
                       IndexType totalElements,
                       Op op)
 {
@@ -48,8 +48,8 @@ template <typename Op,
 __launch_bounds__(32 * 16, 4)
 #endif
 __global__ void
-kernelPointwiseApply2(TensorInfo<Ta, IndexType> a,
-                      TensorInfo<Tb, IndexType> b,
+kernelPointwiseApply2(reference_to_const(TensorInfo<Ta, IndexType>) a,
+                      reference_to_const(TensorInfo<Tb, IndexType>) b,
                       IndexType totalElements,
                       Op op)
 {
@@ -77,9 +77,9 @@ __launch_bounds__(32 * 16, 4)
 #endif
 __global__
 void kernelPointwiseApply3(
-    TensorInfo<Ta, IndexType> a,
-    TensorInfo<Tb, IndexType> b,
-    TensorInfo<Tc, IndexType> c,
+    reference_to_const(TensorInfo<Ta, IndexType>) a,
+    reference_to_const(TensorInfo<Tb, IndexType>) b,
+    reference_to_const(TensorInfo<Tc, IndexType>) c,
     IndexType totalElements,
     Op op)
 {

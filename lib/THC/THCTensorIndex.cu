@@ -23,9 +23,9 @@
 template <typename T, typename IndexType, int DstDim, int SrcDim, int IdxDim>
 __global__
 void indexCopySmallIndex(
-    TensorInfo<T, IndexType> dst,
-    TensorInfo<T, IndexType> src,
-    TensorInfo<long, IndexType> indices,
+    reference_to_const(TensorInfo<T, IndexType>) dst,
+    reference_to_const(TensorInfo<T, IndexType>) src,
+    reference_to_const(TensorInfo<long, IndexType>) indices,
     int dstCopyDim,
     int srcCopyDim,
     IndexType innerSize,
@@ -71,9 +71,9 @@ void indexCopySmallIndex(
 template <typename T, typename IndexType, int DstDim, int SrcDim, int IdxDim>
 __global__
 void indexCopyLargeIndex(
-    TensorInfo<T, IndexType> dst,
-    TensorInfo<T, IndexType> src,
-    TensorInfo<long, IndexType> indices,
+    reference_to_const(TensorInfo<T, IndexType>) dst,
+    reference_to_const(TensorInfo<T, IndexType>) src,
+    reference_to_const(TensorInfo<long, IndexType>) indices,
     int dstCopyDim,
     int srcCopyDim,
     IndexType innerSize,
@@ -114,9 +114,9 @@ void indexCopyLargeIndex(
 template <typename T, typename IndexType, int DstDim, int SrcDim, int IdxDim>
 __global__
 void indexAddSmallIndex(
-    TensorInfo<T, IndexType> dst,
-    TensorInfo<T, IndexType> src,
-    TensorInfo<long, IndexType> indices,
+    reference_to_const(TensorInfo<T, IndexType>) dst,
+    reference_to_const(TensorInfo<T, IndexType>) src,
+    reference_to_const(TensorInfo<long, IndexType>) indices,
     int dstAddDim,
     int srcAddDim,
     IndexType innerSize,
@@ -161,9 +161,9 @@ void indexAddSmallIndex(
 template <typename T, typename IndexType, int DstDim, int SrcDim, int IdxDim>
 __global__
 void indexAddLargeIndex(
-    TensorInfo<T, IndexType> dst,
-    TensorInfo<T, IndexType> src,
-    TensorInfo<long, IndexType> indices,
+    reference_to_const(TensorInfo<T, IndexType>) dst,
+    reference_to_const(TensorInfo<T, IndexType>) src,
+    reference_to_const(TensorInfo<long, IndexType>) indices,
     int dstAddDim,
     int srcAddDim,
     IndexType innerSize,
@@ -204,8 +204,8 @@ void indexAddLargeIndex(
 template <typename T, typename IndexType, int DstDim, int IdxDim>
 __global__
 void indexFillSmallIndex(
-    TensorInfo<T, IndexType> dst,
-    TensorInfo<long, IndexType> indices,
+    reference_to_const(TensorInfo<T, IndexType>) dst,
+    reference_to_const(TensorInfo<long, IndexType>) indices,
     int dstFillDim,
     IndexType innerSize,
     long dstFillDimSize,
@@ -246,8 +246,8 @@ void indexFillSmallIndex(
 template <typename T, typename IndexType, int DstDim, int IdxDim>
 __global__
 void indexFillLargeIndex(
-    TensorInfo<T, IndexType> dst,
-    TensorInfo<long, IndexType> indices,
+    reference_to_const(TensorInfo<T, IndexType>) dst,
+    reference_to_const(TensorInfo<long, IndexType>) indices,
     int dstFillDim,
     IndexType innerSize,
     long dstFillDimSize,
@@ -284,9 +284,9 @@ void indexFillLargeIndex(
 template <typename T, typename IndexType, int DstDim, int SrcDim, int IdxDim>
 __global__
 void indexSelectSmallIndex(
-    TensorInfo<T, IndexType> dst,
-    TensorInfo<T, IndexType> src,
-    TensorInfo<long, IndexType> indices,
+    reference_to_const(TensorInfo<T, IndexType>) dst,
+    reference_to_const(TensorInfo<T, IndexType>) src,
+    reference_to_const(TensorInfo<long, IndexType>) indices,
     int dstSelectDim,
     int srcSelectDim,
     IndexType innerSize,
@@ -331,9 +331,9 @@ void indexSelectSmallIndex(
 template <typename T, typename IndexType, int DstDim, int SrcDim, int IdxDim>
 __global__
 void indexSelectLargeIndex(
-    TensorInfo<T, IndexType> dst,
-    TensorInfo<T, IndexType> src,
-    TensorInfo<long, IndexType> indices,
+    reference_to_const(TensorInfo<T, IndexType>) dst,
+    reference_to_const(TensorInfo<T, IndexType>) src,
+    reference_to_const(TensorInfo<long, IndexType>) indices,
     int dstSelectDim,
     int srcSelectDim,
     IndexType totalSize,

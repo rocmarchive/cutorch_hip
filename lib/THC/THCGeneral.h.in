@@ -58,6 +58,12 @@
   } while(0)
 #endif
 
+#ifdef __HCC__
+#define reference_to_const(...) __VA_ARGS__ const&
+#else
+#define reference_to_const(...) __VA_ARGS__
+#endif
+
 struct THCRNGState;  /* Random number generator state. */
 typedef struct THCStream THCStream;
 typedef struct THCState THCState;

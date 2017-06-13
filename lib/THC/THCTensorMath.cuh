@@ -81,7 +81,7 @@ template <typename T, typename IndexType, int Dims>
 __global__ void CatArrayBatchedCopy(
     T* output,
     CatArrInputTensor<T, IndexType>* inputs,
-    OutputTensorSizeStride<IndexType, CAT_ARRAY_MAX_INPUT_DIMS> os,
+    reference_to_const(OutputTensorSizeStride<IndexType, CAT_ARRAY_MAX_INPUT_DIMS>) os,
     const int concatDim,
     IndexType dimStride) {
   T* data = inputs[hipBlockIdx_y].input;

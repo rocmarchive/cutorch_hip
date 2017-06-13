@@ -32,8 +32,8 @@ __launch_bounds__(32 * 16, 4)
 #endif
 __global__
 void kernelReduceNoncontigDim(
-    TensorInfo<T, IndexType> out,
-    TensorInfo<T, IndexType> in,
+    reference_to_const(TensorInfo<T, IndexType>) out,
+    reference_to_const(TensorInfo<T, IndexType>) in,
     IndexType reductionStride,
     IndexType reductionSize,
     IndexType totalSlices,
@@ -82,8 +82,8 @@ template <typename ModifyOp,
           int ADims, int BDims>
 __global__
 void kernelReduceContigDim(
-    TensorInfo<T, IndexType> out,
-    TensorInfo<T, IndexType> in,
+    reference_to_const(TensorInfo<T, IndexType>) out,
+    reference_to_const(TensorInfo<T, IndexType>) in,
     IndexType reductionSize,
     IndexType totalSlices,
     T init,
