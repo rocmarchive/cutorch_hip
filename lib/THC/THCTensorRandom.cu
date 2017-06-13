@@ -30,7 +30,7 @@
 Generator* THCRandom_getGenerator(THCState* state);
 
 /* Sets up generator. Allocates but does not create the generator states. */
-__host__ void initializeGenerator(THCState *state, Generator* gen)
+void initializeGenerator(THCState *state, Generator* gen)
 {
 #ifdef CURAND_PATH
   THCudaCheck(THCudaMalloc(state, (void**)&gen->gen_states, MAX_NUM_BLOCKS * sizeof(curandStateMtgp32)));
@@ -47,7 +47,7 @@ __host__ void initializeGenerator(THCState *state, Generator* gen)
 }
 
 /* Creates a new generator state given the seed. */
-__host__ void createGeneratorState(THCState* state, Generator* gen, unsigned long long seed)
+void createGeneratorState(THCState* state, Generator* gen, unsigned long long seed)
 {
 #ifdef CURAND_PATH
   if (curandMakeMTGP32Constants(mtgp32dc_params_fast_11213, gen->kernel_params) != CURAND_STATUS_SUCCESS)
@@ -76,7 +76,7 @@ __host__ void createGeneratorState(THCState* state, Generator* gen, unsigned lon
 
 }
 
-__host__ void THCRandom_getRNGState(THCState* state, THByteTensor *rng_state)
+void THCRandom_getRNGState(THCState* state, THByteTensor *rng_state)
 {
   Generator* gen = THCRandom_getGenerator(state);
 
@@ -113,7 +113,7 @@ __global__ void set_rngstate_kernel(curandStateMtgp32 *state, mtgp32_kernel_para
 #endif
 
 
-__host__ void THCRandom_setRNGState(THCState* state, THByteTensor *rng_state)
+void THCRandom_setRNGState(THCState* state, THByteTensor *rng_state)
 {
   Generator* gen = THCRandom_getGenerator(state);
 
@@ -179,22 +179,22 @@ __global__ void NAME(curandStateMtgp32 *state, int size, T *result, ARG1, ARG2) 
 }
 #else
 
-#define GENERATE_KERNEL1(NAME, ARG1, HIPRAND_FUNC, FUNCTOR)                   \
-void NAME(THCState* state, HipRandStateMtgp32 *rngstate, int size, float *result, ARG1)  \
+#define GENERATE_KERNEL1(NAME, T, ARG1, HIPRAND_T, HIPRAND_FUNC, TRANSFORM)      \
+void NAME(THCState* state, HipRandStateMtgp32 *rngstate, int size, T *result, ARG1)  \
 { \
   hipStream_t currentStream = THCState_getCurrentStream(state); \
   hc::accelerator_view* current_accl_view; \
   hipHccGetAcceleratorView(currentStream, &current_accl_view); \
-  HIPRAND_FUNC##_kernel(*current_accl_view, rngstate, result, FUNCTOR); \
+  HIPRAND_FUNC##_kernel(*current_accl_view, rngstate, result, TRANSFORM); \
 }
 
-#define GENERATE_KERNEL2(NAME, ARG1, ARG2, HIPRAND_FUNC, FUNCTOR)                   \
-void NAME(THCState* state, HipRandStateMtgp32 *rngstate, int size, float *result, ARG1, ARG2)  \
+#define GENERATE_KERNEL2(NAME, T, ARG1, ARG2, HIPRAND_T, HIPRAND_FUNC, TRANSFORM)      \
+void NAME(THCState* state, HipRandStateMtgp32 *rngstate, int size, T *result, ARG1, ARG2)  \
 {                                                                                    \
   hipStream_t currentStream = THCState_getCurrentStream(state); \
   hc::accelerator_view* current_accl_view; \
   hipHccGetAcceleratorView(currentStream, &current_accl_view); \
-  HIPRAND_FUNC##_kernel(*current_accl_view, rngstate, result, FUNCTOR);                                                 \
+  HIPRAND_FUNC##_kernel(*current_accl_view, rngstate, result, TRANSFORM);                                                 \
 }
 
 
@@ -246,24 +246,6 @@ GENERATE_KERNEL2(generate_cauchy, half, double median, double sigma, float, cura
 #endif // CUDA_HALF_TENSOR
 
 #else
-#define GENERATE_KERNEL1(NAME, ARG1, HIPRAND_FUNC, FUNCTOR)                   \
-void NAME(THCState* state, HipRandStateMtgp32 *rngstate, int size, float *result, ARG1)  \
-{ \
-  hipStream_t currentStream = THCState_getCurrentStream(state); \
-  hc::accelerator_view* current_accl_view; \
-  hipHccGetAcceleratorView(currentStream, &current_accl_view); \
-  HIPRAND_FUNC##_kernel(*current_accl_view, rngstate, result, FUNCTOR); \
-}
-
-#define GENERATE_KERNEL2(NAME, ARG1, ARG2, HIPRAND_FUNC, FUNCTOR)                   \
-void NAME(THCState* state, HipRandStateMtgp32 *rngstate, int size, float *result, ARG1, ARG2)  \
-{                                                                                    \
-  hipStream_t currentStream = THCState_getCurrentStream(state); \
-  hc::accelerator_view* current_accl_view; \
-  hipHccGetAcceleratorView(currentStream, &current_accl_view); \
-  HIPRAND_FUNC##_kernel(*current_accl_view, rngstate, result, FUNCTOR);                                                 \
-}
-
 
 // Adding All HC based constructors
 
@@ -347,12 +329,24 @@ public:
 };
 
 
-GENERATE_KERNEL2(generate_uniform, double a, double b, user_uniform, user_uniform_functor(a, b))
-GENERATE_KERNEL1(generate_bernoulli, double p, user_uniform, user_bernoulli_functor(p))
-GENERATE_KERNEL2(generate_normal, double mean, double stdv, user_normal, user_normal_functor(stdv,  mean))
-GENERATE_KERNEL1(generate_geometric,  double p, user_uniform, user_geometric_functor(p))
-GENERATE_KERNEL1(generate_exponential, double lambda, user_uniform, user_exponential_functor(lambda))
-GENERATE_KERNEL2(generate_cauchy, double median, double sigma, user_uniform, user_cauchy_functor(median, sigma))
+GENERATE_KERNEL2(generate_uniform, float, double a, double b, float, user_uniform, (user_uniform_functor(a, b)))
+GENERATE_KERNEL2(generate_uniform, double, double a, double b, double, user_uniform, (user_uniform_functor(a, b)))
+GENERATE_KERNEL2(generate_uniform, half, double a, double b, float, user_uniform, (user_uniform_functor(a, b)))
+
+GENERATE_KERNEL2(generate_normal, float, double mean, double stdv, float, user_normal, user_normal_functor(stdv, mean))
+GENERATE_KERNEL2(generate_normal, double, double mean, double stdv, double, user_normal, user_normal_functor(stdv, mean))
+GENERATE_KERNEL2(generate_normal, half, double mean, double stdv, float, user_normal, user_normal_functor(stdv, mean))
+
+GENERATE_KERNEL1(generate_exponential, float, double lambda, float, user_uniform, user_exponential_functor(lambda))
+GENERATE_KERNEL1(generate_exponential, double, double lambda, double, user_uniform, user_exponential_functor(lambda))
+GENERATE_KERNEL1(generate_exponential, half, double lambda, float, user_uniform, user_exponential_functor(lambda))
+
+GENERATE_KERNEL2(generate_cauchy, float, double median, double sigma, float, user_uniform, user_cauchy_functor(median, sigma))
+GENERATE_KERNEL2(generate_cauchy, double, double median, double sigma, double, user_uniform, user_cauchy_functor(median, sigma))
+GENERATE_KERNEL2(generate_cauchy, half, double median, double sigma, float, user_uniform, user_cauchy_functor(median, sigma))
+
+
+
 #endif
 
 

@@ -253,8 +253,6 @@ THC_API void THCTensor_(mode)(THCState *state,
     // one HANDLE_MODE for each power of 2
     switch(ceilPowerOf2) {
       case 2048:
-        HANDLE_MODE(2048)
-        break;
       case 1024:
       case 512:
       case 256:

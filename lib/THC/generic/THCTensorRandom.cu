@@ -18,8 +18,7 @@ THC_API void THCTensor_(uniform)(THCState* state, THCTensor *self_, double a, do
   hipLaunchKernelGGL((generate_uniform), NUM_BLOCKS, BLOCK_SIZE, 0, THCState_getCurrentStream(state),
       gen->gen_states, size, data, a, b);
 #else
-     // TODO: Resolve build error below by adding a generic MTGP implementation
-    //generate_uniform(state, gen->h_gen_states, size, data, a, b);
+  generate_uniform(state, gen->h_gen_states, size, data, a, b);
 #endif
 
   THCTensor_(freeCopyTo)(state, self, self_);
@@ -36,8 +35,7 @@ THC_API void THCTensor_(normal)(THCState* state, THCTensor *self_, double mean, 
   hipLaunchKernelGGL((generate_normal), NUM_BLOCKS, BLOCK_SIZE, 0, THCState_getCurrentStream(state), 
       gen->gen_states, size, data, mean, stdv);
 #else
-     // TODO: Resolve build error below by adding a generic MTGP implementation
- //  generate_normal(state, gen->h_gen_states, size, data, mean, stdv);
+   generate_normal(state, gen->h_gen_states, size, data, mean, stdv);
 #endif
   THCTensor_(freeCopyTo)(state, self, self_);
 };
@@ -84,8 +82,7 @@ THC_API void THCTensor_(exponential)(THCState* state, THCTensor *self_, double l
   hipLaunchKernelGGL((generate_exponential), NUM_BLOCKS, BLOCK_SIZE, 0, THCState_getCurrentStream(state),
       gen->gen_states, size, data, lambda);
 #else
-     // TODO: Resolve build error below by adding a generic MTGP implementation
-  //generate_exponential(state, gen->h_gen_states, size, data, lambda);
+  generate_exponential(state, gen->h_gen_states, size, data, lambda);
 #endif
   THCTensor_(freeCopyTo)(state, self, self_);
 };
@@ -102,8 +99,7 @@ THC_API void THCTensor_(cauchy)(THCState* state, THCTensor *self_, double median
   hipLaunchKernelGGL((generate_cauchy), NUM_BLOCKS, BLOCK_SIZE, 0, THCState_getCurrentStream(state),
       gen->gen_states, size, data, median, sigma);
 #else
-     // TODO: Resolve build error below by adding a generic MTGP implementation
-  //generate_cauchy(state, gen->h_gen_states, size, data, median, sigma);
+  generate_cauchy(state, gen->h_gen_states, size, data, median, sigma);
 #endif
   THCTensor_(freeCopyTo)(state, self, self_);
 };
@@ -325,7 +321,7 @@ GENERATE_KERNEL1(generate_bernoulli, double, double p, double, curand_uniform_do
 GENERATE_KERNEL1(generate_bernoulli, real, double p, float, curand_uniform, (ScalarConvert<bool, real>::to(x <= p)))
 #endif
 #else
-// TODO: HIPRAND_PATH
+GENERATE_KERNEL1(generate_bernoulli, real, double p, float, user_uniform, user_bernoulli_functor(p))
 #endif
 
 THC_API void THCTensor_(bernoulli)(THCState* state, THCTensor *self_, double p)
@@ -340,8 +336,7 @@ THC_API void THCTensor_(bernoulli)(THCState* state, THCTensor *self_, double p)
   hipLaunchKernelGGL((generate_bernoulli), NUM_BLOCKS, BLOCK_SIZE, 0, THCState_getCurrentStream(state), 
       gen->gen_states, size, data, p);
 #else
-  // TODO: Fix the build failure associated with the below line
-  //generate_bernoulli(state, gen->h_gen_states, size, data, p);
+  generate_bernoulli(state, gen->h_gen_states, size, data, p);
 #endif
   THCTensor_(freeCopyTo)(state, self, self_);
 };
@@ -380,7 +375,7 @@ GENERATE_KERNEL1(generate_geometric, double, double p, double, curand_uniform_do
 GENERATE_KERNEL1(generate_geometric, real, double p, float, curand_uniform, (ScalarConvert<float, real>::to(ceilf(logf(x) / log(1-p)))))
 #endif
 #else
-// TODO: HIPRAND_PATH
+GENERATE_KERNEL1(generate_geometric, real, double p, float, user_uniform, user_geometric_functor(p))
 #endif // CURAND_PATH
 
 THC_API void THCTensor_(geometric)(THCState* state, THCTensor *self_, double p)
@@ -395,8 +390,7 @@ THC_API void THCTensor_(geometric)(THCState* state, THCTensor *self_, double p)
   hipLaunchKernelGGL((generate_geometric), NUM_BLOCKS, BLOCK_SIZE, 0, THCState_getCurrentStream(state), 
       gen->gen_states, size, data, p);
 #else
-  // TODO: Fix below build error after enabling genereic datatype support for MTGP implementation
-  //generate_geometric(state, gen->h_gen_states, size, data, p);
+  generate_geometric(state, gen->h_gen_states, size, data, p);
 #endif
   THCTensor_(freeCopyTo)(state, self, self_);
 };
