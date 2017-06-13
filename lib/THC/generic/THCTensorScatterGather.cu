@@ -9,9 +9,9 @@
     block,\
     0,\
     THCState_getCurrentStream(state),\
-    (tensorInfo),\
-    (srcInfo),\
-    (indexInfo),\
+    make_magic_wrapper(tensorInfo),\
+    make_magic_wrapper(srcInfo),\
+    make_magic_wrapper(indexInfo),\
     dim,\
     (TYPE)totalElements);
 
@@ -111,9 +111,9 @@ void THCTensor_(gather)(THCState* state, THCTensor *tensor,
     block,\
     0,\
     THCState_getCurrentStream(state),\
-    (tensorInfo),\
-    (srcInfo),\
-    (indexInfo),\
+    make_magic_wrapper(tensorInfo),\
+    make_magic_wrapper(srcInfo),\
+    make_magic_wrapper(indexInfo),\
     dim,\
     (TYPE)totalElements);
 
@@ -205,8 +205,8 @@ void THCTensor_(scatter)(THCState* state, THCTensor *tensor, int dim, THCudaLong
     block,\
     0,\
     THCState_getCurrentStream(state),\
-    (tensorInfo),\
-    (indexInfo),\
+    make_magic_wrapper(tensorInfo),\
+    make_magic_wrapper(indexInfo),\
     value,\
     dim,\
     (TYPE)totalElements);

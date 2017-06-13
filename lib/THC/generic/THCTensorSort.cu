@@ -70,11 +70,11 @@ THC_API void THCTensor_(sortKeyValueInplace)(THCState* state,
         block,\
         0,\
         THCState_getCurrentStream(state),\
-        (keyInfo),\
+        make_magic_wrapper(keyInfo),\
         keySlices,\
         (TYPE) keySliceSize,\
         (TYPE) keyInfo.strides[collapseKeyDim],\
-        (valueInfo),\
+        make_magic_wrapper(valueInfo),\
         (TYPE) valueInfo.strides[collapseValueDim],\
         GTComp<real>());\
     } else {\
@@ -84,11 +84,11 @@ THC_API void THCTensor_(sortKeyValueInplace)(THCState* state,
         block,\
         0,\
         THCState_getCurrentStream(state),\
-        (keyInfo),\
+        make_magic_wrapper(keyInfo),\
         keySlices,\
         (TYPE) keySliceSize,\
         (TYPE) keyInfo.strides[collapseKeyDim],\
-        (valueInfo),\
+        make_magic_wrapper(valueInfo),\
         (TYPE) valueInfo.strides[collapseValueDim],\
         LTComp<real>());\
     }\

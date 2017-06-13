@@ -244,8 +244,8 @@ bool THC_reduceDim(THCState* state,
         block,\
         smemSize,\
         THCState_getCurrentStream(state),\
-        (outInfo),\
-        (inInfo),\
+        make_magic_wrapper(outInfo),\
+        make_magic_wrapper(inInfo),\
         reductionSize,\
         (TYPE) outElements,\
         init,\
@@ -264,8 +264,8 @@ bool THC_reduceDim(THCState* state,
       block,\
       0,\
       THCState_getCurrentStream(state),\
-      (outInfo),\
-      (inInfo),\
+      make_magic_wrapper(outInfo),\
+      make_magic_wrapper(inInfo),\
       reductionStride,\
       reductionSize,\
       (TYPE) outElements,\

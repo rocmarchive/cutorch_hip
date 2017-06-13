@@ -184,7 +184,7 @@ bool THC_pointwiseApply1(THCState* state,
     block,\
     0,\
     THCState_getCurrentStream(state),\
-    (aInfo),\
+    make_magic_wrapper(aInfo),\
     (TYPE) totalElements,\
     op);
 
@@ -232,7 +232,7 @@ bool THC_pointwiseApply1(THCState* state,
       block,
       0,
       THCState_getCurrentStream(state),
-      (aInfo),
+      make_magic_wrapper(aInfo),
       (unsigned long) totalElements,
       op);
     } else {
@@ -242,7 +242,7 @@ bool THC_pointwiseApply1(THCState* state,
       block,
       0,
       THCState_getCurrentStream(state),
-      (aInfo),
+      make_magic_wrapper(aInfo),
       (unsigned long) totalElements,
       op);
     }
@@ -340,8 +340,8 @@ bool THC_pointwiseApply2(THCState* state,
     block,\
     0,\
     THCState_getCurrentStream(state),\
-    (aInfo),\
-    (bInfo),\
+    make_magic_wrapper(aInfo),\
+    make_magic_wrapper(bInfo),\
     (TYPE) totalElements,\
     op);
 
@@ -419,8 +419,8 @@ bool THC_pointwiseApply2(THCState* state,
           block,
           0,
           THCState_getCurrentStream(state),
-          (aInfo),
-          (bInfo),
+          make_magic_wrapper(aInfo),
+          make_magic_wrapper(bInfo),
           (unsigned long) totalElements,
           op);
     } else {
@@ -436,8 +436,8 @@ bool THC_pointwiseApply2(THCState* state,
           block,
           0,
           THCState_getCurrentStream(state),
-          (aInfo),
-          (bInfo),
+          make_magic_wrapper(aInfo),
+          make_magic_wrapper(bInfo),
           (unsigned long) totalElements,
           op);
     }
@@ -550,9 +550,9 @@ bool THC_pointwiseApply3(THCState* state,
       block,\
       0,\
       THCState_getCurrentStream(state),\
-      (aInfo),\
-      (bInfo),\
-      (cInfo),\
+      make_magic_wrapper(aInfo),\
+      make_magic_wrapper(bInfo),\
+      make_magic_wrapper(cInfo),\
       (TYPE) totalElements,\
       op);
 
@@ -660,9 +660,9 @@ bool THC_pointwiseApply3(THCState* state,
           block,
           0,
           THCState_getCurrentStream(state),
-          (aInfo),
-          (bInfo),
-          (cInfo),
+          make_magic_wrapper(aInfo),
+          make_magic_wrapper(bInfo),
+          make_magic_wrapper(cInfo),
           (unsigned long) totalElements,
           op);
     } else {
@@ -680,9 +680,9 @@ bool THC_pointwiseApply3(THCState* state,
           block,
           0,
           THCState_getCurrentStream(state),
-          (aInfo),
-          (bInfo),
-          (cInfo),
+          make_magic_wrapper(aInfo),
+          make_magic_wrapper(bInfo),
+          make_magic_wrapper(cInfo),
           (unsigned long) totalElements,
           op);
     }
