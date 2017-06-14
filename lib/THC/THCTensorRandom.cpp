@@ -3,6 +3,8 @@
 #include <random>
 #ifdef CURAND_PATH
 #include <curand.h>
+#else
+  #include "MTGP/hiprand_mtgp32.h"
 #endif
 
 
@@ -27,7 +29,8 @@ void destroyGenerator(THCState *state, Generator* gen)
 #else
   if (gen->h_gen_states)
   {
-    THCudaCheck(THCudaFree(state, gen->h_gen_states));
+    HipRandStateMtgp32_release(gen->h_gen_states);
+    delete gen->h_gen_states;
     gen->h_gen_states = NULL;
   }
 
