@@ -257,7 +257,7 @@ public:
   user_uniform_functor(double a, double b) : _a(a), _b(b) {}
 
   __host__ __device__
-  double operator()(float x) const { return x * (_b - _a) + _a; }
+  double operator()(float x) const { return 0; }//x * (_b - _a) + _a; }
 };
 
 

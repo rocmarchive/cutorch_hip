@@ -41,13 +41,12 @@ THC_API void THCTensor_(normal)(THCState* state, THCTensor *self_, double mean, 
 };
 
 #ifdef __HIP_PLATFORM_HCC__
-// Resolve below redefinition error 
-/*void generate_log_normal(THCState* state, HipRandStateMtgp32 *rngstate, int size, float* result, float mean, float stddev) {
+void generate_log_normal(THCState* state, HipRandStateMtgp32 *rngstate, int size, real* result, double mean, double stddev) {
   hipStream_t currentStream = THCState_getCurrentStream(state);
   hc::accelerator_view* current_accl_view;
   hipHccGetAcceleratorView(currentStream, &current_accl_view);
   user_log_normal_kernel(*current_accl_view, rngstate, result, mean, stddev);
-}*/
+}
 #endif
 
 THC_API void THCTensor_(logNormal)(THCState* state, THCTensor *self_, double mean, double stdv)
@@ -64,8 +63,7 @@ THC_API void THCTensor_(logNormal)(THCState* state, THCTensor *self_, double mea
   hipLaunchKernelGGL((generateLogNormal<real>), NUM_BLOCKS, BLOCK_SIZE, 0, THCState_getCurrentStream(state),
       gen->gen_states, size, data, mean, stdv);
 #else
-     // TODO: Resolve build error below by adding a generic MTGP implementation
-    //generate_log_normal(state, gen->h_gen_states, size, data, mean, stdv);
+    generate_log_normal(state, gen->h_gen_states, size, data, mean, stdv);
 #endif
   THCTensor_(freeCopyTo)(state, self, self_);
 };
@@ -375,7 +373,7 @@ GENERATE_KERNEL1(generate_geometric, double, double p, double, curand_uniform_do
 GENERATE_KERNEL1(generate_geometric, real, double p, float, curand_uniform, (ScalarConvert<float, real>::to(ceilf(logf(x) / log(1-p)))))
 #endif
 #else
-GENERATE_KERNEL1(generate_geometric, real, double p, float, user_uniform, user_geometric_functor(p))
+GENERATE_KERNEL1(generate_geometric, real, double p, double, user_uniform, user_geometric_functor(p))
 #endif // CURAND_PATH
 
 THC_API void THCTensor_(geometric)(THCState* state, THCTensor *self_, double p)
