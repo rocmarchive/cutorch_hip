@@ -41,8 +41,6 @@ __global__ void generateLogNormal<double>(curandStateMtgp32 *state, int size, do
     }
   }
 }
-#else
-// TODO: HIPRAND PATH
 #endif
 
 #undef MAX_NUM_BLOCKS

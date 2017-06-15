@@ -294,7 +294,7 @@ public:
   __device__
   double operator()(float x) const
   {
-      return (log((double)(1 - x)) / log(_p)) + 1;
+      return ceilf(logf(x) / log(1-_p));
   }
 };
 
