@@ -185,7 +185,7 @@ void NAME(THCState* state, HipRandStateMtgp32 *rngstate, int size, T *result, AR
   hipStream_t currentStream = THCState_getCurrentStream(state); \
   hc::accelerator_view* current_accl_view; \
   hipHccGetAcceleratorView(currentStream, &current_accl_view); \
-  HIPRAND_FUNC##_kernel(*current_accl_view, rngstate, result, TRANSFORM); \
+  HIPRAND_FUNC##_kernel(*current_accl_view, rngstate, result, size, TRANSFORM); \
 }
 
 #define GENERATE_KERNEL2(NAME, T, ARG1, ARG2, HIPRAND_T, HIPRAND_FUNC, TRANSFORM)      \
@@ -194,7 +194,7 @@ void NAME(THCState* state, HipRandStateMtgp32 *rngstate, int size, T *result, AR
   hipStream_t currentStream = THCState_getCurrentStream(state); \
   hc::accelerator_view* current_accl_view; \
   hipHccGetAcceleratorView(currentStream, &current_accl_view); \
-  HIPRAND_FUNC##_kernel(*current_accl_view, rngstate, result, TRANSFORM);                                                 \
+  HIPRAND_FUNC##_kernel(*current_accl_view, rngstate, result, size, TRANSFORM);                                                 \
 }
 
 

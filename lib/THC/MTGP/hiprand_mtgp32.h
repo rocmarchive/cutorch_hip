@@ -432,12 +432,12 @@ void user_uniform_kernel(
     hc::accelerator_view accl_view,
     HipRandStateMtgp32 *s,
     T* &av_result,
+    int size,
     UnaryFunction f)
 {
   hc::accelerator accl = accl_view.get_accelerator();
   hc::AmPointerInfo resInfo(0, 0, 0, accl, 0, 0);
   hc::am_memtracker_getinfo(&resInfo, av_result);
-  const int  size = resInfo._sizeBytes/sizeof(T);
   int rounded_size = DIVUP(size, BLOCK_SIZE) * BLOCK_SIZE;
   int blocks = std::min((int)DIVUP(size, BLOCK_SIZE), MAX_NUM_BLOCKS);
   hc::extent<1> ext(blocks*BLOCK_SIZE);
@@ -482,12 +482,12 @@ void user_normal_kernel(
     hc::accelerator_view accl_view,
     HipRandStateMtgp32 *s,
     T* &av_result,
+    int size,
     UnaryFunction f)
 {
   hc::accelerator accl = accl_view.get_accelerator();
   hc::AmPointerInfo resInfo(0, 0, 0, accl, 0, 0);
   hc::am_memtracker_getinfo(&resInfo, av_result);
-  const int  size = resInfo._sizeBytes/sizeof(T);
   int rounded_size = DIVUP(size, BLOCK_SIZE) * BLOCK_SIZE;
   int blocks = std::min((int)DIVUP(size, BLOCK_SIZE), MAX_NUM_BLOCKS);
   hc::extent<1> ext(blocks*BLOCK_SIZE);
