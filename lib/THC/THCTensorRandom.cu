@@ -247,6 +247,51 @@ GENERATE_KERNEL2(generate_cauchy, half, double median, double sigma, float, cura
 
 #else
 
+template<typename real, typename prob_type>
+void generate_bernoulli_tensor(hc::accelerator_view accl_view, HipRandStateMtgp32 *s, int size,
+        real *&result, prob_type *probs)
+{
+  hc::accelerator accl = accl_view.get_accelerator();
+  int rounded_size = DIVUP(size, BLOCK_SIZE) * BLOCK_SIZE;
+  int blocks = std::min((int)DIVUP(size, BLOCK_SIZE), MAX_NUM_BLOCKS);
+  hc::extent<1> ext(blocks*BLOCK_SIZE);
+  hc::tiled_extent<1> t_ext = ext.tile(BLOCK_SIZE);
+  const uint32_t* av_param_tbl = (s->param_tbl);
+  const uint32_t* av_temper_tbl = (s->temper_tbl);
+  const uint32_t* av_sh1_tbl = (s->sh1_tbl);
+  const uint32_t* av_sh2_tbl = (s->sh2_tbl);
+  const uint32_t* av_offset = (s->offset);
+  const uint32_t* av_index = (s->index);
+  const uint32_t* av_pos_tbl = (s->pos_tbl);
+  const uint32_t* av_mask = (s->mask);
+  const uint32_t* av_d_status = (s->d_status);
+  hc::parallel_for_each(
+      accl_view, t_ext, [=] (const hc::tiled_index<1>& tidx) [[hc]] {
+    int threadId = tidx.global[0];
+    int groupId = tidx.tile[0];
+    if (groupId >= USER_GROUP_NUM)
+      return;
+    for (int i = threadId; i < rounded_size; i += BLOCK_SIZE * MAX_NUM_BLOCKS) {
+      float x = hiprand_uniform(
+          av_param_tbl,
+          av_temper_tbl,
+          av_sh1_tbl,
+          av_sh2_tbl,
+          av_offset,
+          av_index,
+          av_pos_tbl,
+          av_mask,
+          av_d_status,
+          tidx);
+      if (i < size) {
+        result[i] = ScalarConvert<bool, real>::to(x <= probs[i]);
+      }
+    }
+  }).wait();
+}
+
+
+
 // Adding All HC based constructors
 
 class user_uniform_functor {

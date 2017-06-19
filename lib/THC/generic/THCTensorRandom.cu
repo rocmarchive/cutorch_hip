@@ -339,6 +339,7 @@ THC_API void THCTensor_(bernoulli)(THCState* state, THCTensor *self_, double p)
   THCTensor_(freeCopyTo)(state, self, self_);
 };
 
+#ifdef CURAND_PATH
 #define DEFINE_BERNOULLI_TENSOR(NAME, PROB_TYPE, PROB_DATA_TYPE)               \
 THC_API void THCTensor_(NAME)(THCState* state,                                 \
         THCTensor *self_, PROB_TYPE *probs_)                                   \
@@ -360,11 +361,34 @@ THC_API void THCTensor_(NAME)(THCState* state,                                 \
   PROB_TYPE##_free(state, probs);                                              \
   THCTensor_(freeCopyTo)(state, self, self_);                                  \
 }
+#else
+#define DEFINE_BERNOULLI_TENSOR(NAME, PROB_TYPE, PROB_DATA_TYPE)               \
+THC_API void THCTensor_(NAME)(THCState* state,                                 \
+        THCTensor *self_, PROB_TYPE *probs_)                                   \
+{                                                                              \
+  THCAssertSameGPU(THCTensor_(checkGPU)(state, 2, self_, probs_));                     \
+  Generator* gen = THCRandom_getGenerator(state);                              \
+  THCTensor *self = THCTensor_(newContiguous)(state, self_);                   \
+  PROB_TYPE *probs = PROB_TYPE##_newContiguous(state, probs_);                 \
+  ptrdiff_t size = THCTensor_(nElement)(state, self);                          \
+  ptrdiff_t prob_size = PROB_TYPE##_nElement(state, probs);                    \
+  real *result_data = THCTensor_(data)(state, self);                           \
+  PROB_DATA_TYPE *probs_data = PROB_TYPE##_data(state, probs);                 \
+                                                                               \
+  THArgCheck(size == prob_size, 3, "inconsistent tensor size");                \
+                                                                               \
+  hipStream_t currentStream = THCState_getCurrentStream(state); \
+  hc::accelerator_view* current_accl_view; \
+  hipHccGetAcceleratorView(currentStream, &current_accl_view); \
+  generate_bernoulli_tensor(*current_accl_view,  \
+      gen->h_gen_states, size, result_data, probs_data);                         \
+  PROB_TYPE##_free(state, probs);                                              \
+  THCTensor_(freeCopyTo)(state, self, self_);                                  \
+}
+#endif
 
-#ifdef CUDA_PATH
 DEFINE_BERNOULLI_TENSOR(bernoulli_FloatTensor, THCudaTensor, float)
 DEFINE_BERNOULLI_TENSOR(bernoulli_DoubleTensor, THCudaDoubleTensor, double)
-#endif
 
 #ifdef CURAND_PATH
 #if defined(THC_REAL_IS_DOUBLE)
