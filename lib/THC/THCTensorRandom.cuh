@@ -244,23 +244,24 @@ sampleMultinomialOnce(long* dest,
   }
 }
 
-template <typename T>
 #ifdef CURAND_PATH
+template <typename T>
 __global__ void
 sampleMultinomialWithReplacement(curandStateMtgp32* state,
                                  int totalSamples,
-                                 float* dest,
+                                 long* dest,
                                  long distributions,
                                  int categories,
-                                 float* normDistPrefixSum) {
+                                 T* normDistPrefixSum) {
 #else
+template <typename T>
 __global__ void
 sampleMultinomialWithReplacement(HipRandStateMtgp32* state,
                                  int totalSamples,
-                                 float* dest,
+                                 long* dest,
                                  long distributions,
                                  int categories,
-                                 float* normDistPrefixSum) {
+                                 T* normDistPrefixSum) {
 
 #endif
   // At the moment, each warp computes one sample value in the binary

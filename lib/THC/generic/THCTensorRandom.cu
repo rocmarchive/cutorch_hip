@@ -225,7 +225,7 @@ THC_API void THCTensor_(multinomial)(struct THCState *state,
       dim3 grid(numDist < MAX_NUM_BLOCKS ? numDist : MAX_NUM_BLOCKS);
 
       //TODO: Fix below error associated with sample* kernel
-      /*hipLaunchKernelGGL((sampleMultinomialWithReplacement), 
+      hipLaunchKernelGGL(sampleMultinomialWithReplacement, 
           grid, block, 0, THCState_getCurrentStream(state),
 #ifdef CURAND_PATH
           gen->gen_states,
@@ -235,7 +235,7 @@ THC_API void THCTensor_(multinomial)(struct THCState *state,
           n_sample,
           THCudaLongTensor_data(state, self),
           numDist, numCategories,
-          THCTensor_(data)(state, prefixSum));*/
+          THCTensor_(data)(state, prefixSum));
     } else {
       // Sample without replacement
 
