@@ -21,8 +21,8 @@ struct THCNumerics {
 
 template <>
 struct THCNumerics<unsigned char> {
-  static inline __host__ __device__ unsigned char min() { return 0; }
-  static inline __host__ __device__ unsigned char max() { return UCHAR_MAX; }
+  static inline __host__ __device__ unsigned char (min)() { return 0; }
+  static inline __host__ __device__ unsigned char (max)() { return UCHAR_MAX; }
 
   static inline __host__ __device__ bool lt(unsigned char a, unsigned char b) { return a < b; }
   static inline __host__ __device__ bool le(unsigned char a, unsigned char b) { return a <= b; }
@@ -40,8 +40,8 @@ struct THCNumerics<unsigned char> {
 
 template <>
 struct THCNumerics<char> {
-  static inline __host__ __device__ char min() { return CHAR_MIN; }
-  static inline __host__ __device__ char max() { return CHAR_MAX; }
+  static inline __host__ __device__ char (min)() { return CHAR_MIN; }
+  static inline __host__ __device__ char (max)() { return CHAR_MAX; }
 
   static inline __host__ __device__ bool lt(char a, char b) { return a < b; }
   static inline __host__ __device__ bool le(char a, char b) { return a <= b; }
@@ -64,8 +64,8 @@ struct THCNumerics<char> {
 
 template <>
 struct THCNumerics<short> {
-  static inline __host__ __device__ short min() { return SHRT_MIN; }
-  static inline __host__ __device__ short max() { return SHRT_MAX; }
+  static inline __host__ __device__ short (min)() { return SHRT_MIN; }
+  static inline __host__ __device__ short (max)() { return SHRT_MAX; }
 
   static inline __host__ __device__ bool lt(short a, short b) { return a < b; }
   static inline __host__ __device__ bool le(short a, short b) { return a <= b; }
@@ -88,8 +88,8 @@ struct THCNumerics<short> {
 
 template <>
 struct THCNumerics<int> {
-  static inline __host__ __device__ int min() { return INT_MIN; }
-  static inline __host__ __device__ int max() { return INT_MAX; }
+  static inline __host__ __device__ int (min)() { return INT_MIN; }
+  static inline __host__ __device__ int (max)() { return INT_MAX; }
 
   static inline __host__ __device__ bool lt(int a, int b) { return a < b; }
   static inline __host__ __device__ bool le(int a, int b) { return a <= b; }
@@ -112,8 +112,8 @@ struct THCNumerics<int> {
 
 template <>
 struct THCNumerics<long> {
-  static inline __host__ __device__ long min() { return LONG_MIN; }
-  static inline __host__ __device__ long max() { return LONG_MAX; }
+  static inline __host__ __device__ long (min)() { return LONG_MIN; }
+  static inline __host__ __device__ long (max)() { return LONG_MAX; }
 
   static inline __host__ __device__ bool lt(long a, long b) { return a < b; }
   static inline __host__ __device__ bool le(long a, long b) { return a <= b; }
@@ -138,8 +138,8 @@ struct THCNumerics<long> {
 #ifdef CUDA_HALF_TENSOR
 template <>
 struct THCNumerics<half> {
-  static inline __host__ __device__ half min() { half h; h.x = 0xfbff; return h; }
-  static inline __host__ __device__ half max() { half h; h.x = 0x7bff; return h; }
+  static inline __host__ __device__ half (min)() { half h; h.x = 0xfbff; return h; }
+  static inline __host__ __device__ half (max)() { half h; h.x = 0x7bff; return h; }
 
   static inline __host__ __device__ bool lt(half a, half b) {
 #ifdef __CUDA_ARCH__
@@ -550,14 +550,14 @@ struct THCNumerics<half> {
     __host__ __device__
     static
     inline
-    half min()
+    half (min)()
     {
             return -65504;
     }
     __host__ __device__
     static
     inline
-    half max()
+    half (max)()
     {
             return 65504;
     }
@@ -1142,8 +1142,8 @@ struct THCNumerics<half> {
 
 template <>
 struct THCNumerics<float> {
-  static inline __host__ __device__ float min() { return -FLT_MAX; }
-  static inline __host__ __device__ float max() { return FLT_MAX; }
+  static inline __host__ __device__ float (min)() { return -FLT_MAX; }
+  static inline __host__ __device__ float (max)() { return FLT_MAX; }
 
   static inline __host__ __device__ bool lt(float a, float b) { return a < b; }
   static inline __host__ __device__ bool le(float a, float b) { return a <= b; }
@@ -1186,8 +1186,8 @@ struct THCNumerics<float> {
 
 template <>
 struct THCNumerics<double> {
-  static inline __host__ __device__ double min() { return -DBL_MAX; }
-  static inline __host__ __device__ double max() { return DBL_MAX; }
+  static inline __host__ __device__ double (min)() { return -DBL_MAX; }
+  static inline __host__ __device__ double (max)() { return DBL_MAX; }
 
   static inline __host__ __device__ bool lt(double a, double b) { return a < b; }
   static inline __host__ __device__ bool le(double a, double b) { return a <= b; }

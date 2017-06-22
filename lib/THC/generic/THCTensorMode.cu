@@ -113,7 +113,27 @@ THC_API void THCTensor_(calculateMode)(THCState *state,
 #endif
 
 #else
-   // TODO: BOLT alternatives
+  auto iter = bolt::amp::make_ubiquitous_iterator(data);
+  auto seq = bolt::amp::make_ubiquitous_iterator(THCudaLongStorage_data(state, sortBuffer));
+  // thrust sequence equivalent
+  bolt::amp::counting_iterator<int> it(0);
+  bolt::amp::transform(it, it + nElement, seq, sequence_functor<long>(0, 1));
+
+  //TODO: Fix ambiguous call to sort_by_key when enabled
+   /*bolt::amp::sort_by_key(iter, iter + nElement, seq
+#if defined(THC_REAL_IS_HALF)
+, ThrustHalfLess()
+#endif
+);*/
+
+  int unique = 1 + bolt::amp::inner_product(iter, iter + (nElement - 1), iter + 1, 0, bolt::amp::plus<int>(),
+#if defined(THC_REAL_IS_HALF)
+    ThrustHalfNotEqualTo()
+#else
+    not_equal_to<real>()
+#endif
+);
+  
 #endif
   
 #ifdef THRUST_PATH
