@@ -1342,7 +1342,7 @@ function test.mean()
 end
 
 function test.max()
-   local sz1 = chooseInt(minsize, maxsize)
+  local sz1 = chooseInt(minsize, maxsize)
    local sz2 = chooseInt(minsize, maxsize)
    local x = torch.randperm(sz1 * sz2):view(sz1, sz2):float()
    for k, typename in ipairs(typenames) do
@@ -3723,7 +3723,7 @@ end
 
 function test.sort()
    for tries = 1, 5 do
-      local t = createTestTensor(2 ^ 20)
+      local t = createTestTensor(2 ^ 5)
       local selectdim = chooseInt(1, t:nDimension())
       local dir = chooseInt(1, 2) == 1
 
@@ -3743,7 +3743,7 @@ function test.sort()
    -- Since the sorting mechanism is not guaranteed to be the
    -- same between GPU and CPU, we have to be careful when comparing
    -- the indices
-   local t_cpu = torch.FloatTensor(5000, 5000):uniform()
+   local t_cpu = torch.FloatTensor(500, 500):uniform()
    local t_gpu = t_cpu:cuda()
 
    local v_cpu, i_cpu = torch.sort(t_cpu, 2)
@@ -3787,7 +3787,7 @@ local function explore(typename, func, t, topk, indices)
    end
 end
 
---[[function test.topk()
+function test.topk()
    -- need to ensure unique values for index checking, so for the first pass we create Tensors
    -- with sizes less than the maximum range of values for that type
    local counts = {}
@@ -3828,8 +3828,8 @@ end
                indices = indices:long()
                topk = topk:type(t2cpu[typename])
                for i = 1, indices:size(1) do
-                  tester:assert(t[indices[i]]--==topk[i])]]--
---[[               end
+                  tester:assert(t[indices[i]]==topk[i])
+               end
             end
 
             local tt  = t:transpose(dim, t:nDimension())
@@ -3840,7 +3840,7 @@ end
          end
       end
    end
-end]]--
+end
 
 local function verifyMode1D(tensor)
    -- We cannot rely upon comparing against CPU-Torch as the way it resolves
@@ -4347,7 +4347,7 @@ end
 
 -- designed to specifically hit the batched kernel for catArray
 function test.catArrayBatched()
-    local batchSizes = {2, 16, 128, 1024, 4096}
+    local batchSizes = {2, 16, 128, 1024}
     for _, batchSize in ipairs(batchSizes) do
         -- first, batches for 1D Tensors
         local tensors = {}
@@ -4816,7 +4816,7 @@ if os.getenv('THC_CACHING_ALLOCATOR') ~= '0' then
    end
 
    function test.cachedPinnedMemory()
-      local cyclesPerMs = getCyclesPerMs()
+     local cyclesPerMs = getCyclesPerMs()
 
       -- check that allocations are re-used after deletion
       local t = cutorch.createCudaHostTensor({1})
