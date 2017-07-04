@@ -13,7 +13,7 @@
   #include <curand_mtgp32dc_p_11213.h>
 #else
   #include <hip/hip_hcc.h>
-  #include "MTGP/hiprand_mtgp32.h"
+  #include "hiprng.h"
 #endif
 
 #ifdef THRUST_PATH
@@ -34,16 +34,10 @@ void initializeGenerator(THCState *state, Generator* gen)
 {
 #ifdef CURAND_PATH
   THCudaCheck(THCudaMalloc(state, (void**)&gen->gen_states, MAX_NUM_BLOCKS * sizeof(curandStateMtgp32)));
-  THCudaCheck(THCudaMalloc(state, (void**)&gen->kernel_params, sizeof(mtgp32_kernel_params)));
 #else
-  assert(gen);
-  gen->h_gen_states = new HipRandStateMtgp32;
-  assert(gen->h_gen_states);
-  hipStream_t currentStream = THCState_getCurrentStream(state);
-  hc::accelerator_view* current_accl_view;
-  hipHccGetAcceleratorView(currentStream, &current_accl_view);
-  HipRandStateMtgp32_init(*current_accl_view, gen->h_gen_states);
+  THCudaCheck(THCudaMalloc(state, (void**)&gen->gen_states, MAX_NUM_BLOCKS * sizeof(hiprngStateMtgp32)));
 #endif
+  THCudaCheck(THCudaMalloc(state, (void**)&gen->kernel_params, sizeof(mtgp32_kernel_params)));
 }
 
 /* Creates a new generator state given the seed. */
@@ -60,16 +54,13 @@ void createGeneratorState(THCState* state, Generator* gen, unsigned long long se
     THError("Creating MTGP kernel state failed.");
   }
 #else
-  hipStream_t currentStream = THCState_getCurrentStream(state);
-  hc::accelerator_view* current_accl_view;
-  hipHccGetAcceleratorView(currentStream, &current_accl_view);
-
-  if (mtgp32_init_params_kernel(*current_accl_view, mtgp32_params_fast_11213, gen->h_gen_states)) {
+  if (hiprngMakeMTGP32Constants(mtgp32_params_fast_11213, gen->kernel_params) != HIPRNG_STATUS_SUCCESS)
+  {
     THError("Creating MTGP constants failed.");
   }
-
-  // Using device API
-  if (mtgp32_init_seed_kernel(*current_accl_view, gen->h_gen_states, seed)) {
+  if (hiprngMakeMTGP32KernelState(gen->gen_states, mtgp32_params_fast_11213,
+                                  gen->kernel_params, MAX_NUM_BLOCKS, seed) != HIPRNG_STATUS_SUCCESS)
+  {
     THError("Creating MTGP kernel state failed.");
   }
 #endif
@@ -84,20 +75,15 @@ void THCRandom_getRNGState(THCState* state, THByteTensor *rng_state)
 #ifdef CURAND_PATH
   static const size_t states_size = MAX_NUM_BLOCKS * sizeof(curandStateMtgp32);
 #else
-  static const size_t states_size = MAX_NUM_BLOCKS * sizeof(HipRandStateMtgp32);
+  static const size_t states_size = MAX_NUM_BLOCKS * sizeof(hiprngStateMtgp32);
 #endif
   static const size_t seed_size = sizeof(unsigned long);
   static const size_t total_size = states_size + seed_size;
   THByteTensor_resize1d(rng_state, total_size);
   THArgCheck(THByteTensor_nElement(rng_state) == total_size, 1, "RNG state is wrong size");
   THArgCheck(THByteTensor_isContiguous(rng_state), 1, "RNG state must be contiguous");
-#ifdef CURAND_PATH
   THCudaCheck(hipMemcpy(THByteTensor_data(rng_state), gen->gen_states,
                          states_size, hipMemcpyDeviceToHost));
-#else
-  THCudaCheck(hipMemcpy(THByteTensor_data(rng_state), gen->h_gen_states,
-                         states_size, hipMemcpyDeviceToHost));
-#endif
   memcpy(THByteTensor_data(rng_state) + states_size, &gen->initial_seed, seed_size);
 
 
@@ -109,7 +95,11 @@ __global__ void set_rngstate_kernel(curandStateMtgp32 *state, mtgp32_kernel_para
   state[hipThreadIdx_x].k = kernel;
 }
 #else
-
+__global__ void set_rngstate_kernel(hiprngStateMtgp32 *state, mtgp32_kernel_params *kernel)
+{
+  state[hipThreadIdx_x].k = kernel;
+}
+#
 #endif
 
 
@@ -120,14 +110,13 @@ void THCRandom_setRNGState(THCState* state, THByteTensor *rng_state)
 #ifdef CURAND_PATH
   static const size_t states_size = MAX_NUM_BLOCKS * sizeof(curandStateMtgp32);
 #else
-  static const size_t states_size = MAX_NUM_BLOCKS * sizeof(HipRandStateMtgp32);
+  static const size_t states_size = MAX_NUM_BLOCKS * sizeof(hiprngStateMtgp32);
 #endif
   static const size_t seed_size = sizeof(unsigned long);
   static const size_t total_size = states_size + seed_size;
   THArgCheck(THByteTensor_nElement(rng_state) == total_size, 1, "RNG state is wrong size");
   THArgCheck(THByteTensor_isContiguous(rng_state), 1, "RNG state must be contiguous");
 
-#ifdef CURAND_PATH
   THCudaCheck(hipMemcpy(gen->gen_states, THByteTensor_data(rng_state),
                          states_size, hipMemcpyHostToDevice));
   hipLaunchKernelGGL(
@@ -138,11 +127,8 @@ void THCRandom_setRNGState(THCState* state, THByteTensor *rng_state)
     THCState_getCurrentStream(state),
     gen->gen_states,
     gen->kernel_params);
-#else
-  THCudaCheck(hipMemcpy(gen->h_gen_states, THByteTensor_data(rng_state),
-                         states_size, hipMemcpyHostToDevice));
-#endif
-  memcpy(&gen->initial_seed, THByteTensor_data(rng_state) + states_size, seed_size);
+  
+   memcpy(&gen->initial_seed, THByteTensor_data(rng_state) + states_size, seed_size);
 
 }
 
@@ -180,7 +166,7 @@ __global__ void NAME(curandStateMtgp32 *state, int size, T *result, ARG1, ARG2) 
 #else
 
 #define GENERATE_KERNEL1(NAME, T, ARG1, HIPRAND_T, HIPRAND_FUNC, TRANSFORM)      \
-void NAME(THCState* state, HipRandStateMtgp32 *rngstate, int size, T *result, ARG1)  \
+void NAME(THCState* state, hiprngStateMtgp32 *rngstate, int size, T *result, ARG1)  \
 { \
   hipStream_t currentStream = THCState_getCurrentStream(state); \
   hc::accelerator_view* current_accl_view; \
@@ -189,7 +175,7 @@ void NAME(THCState* state, HipRandStateMtgp32 *rngstate, int size, T *result, AR
 }
 
 #define GENERATE_KERNEL2(NAME, T, ARG1, ARG2, HIPRAND_T, HIPRAND_FUNC, TRANSFORM)      \
-void NAME(THCState* state, HipRandStateMtgp32 *rngstate, int size, T *result, ARG1, ARG2)  \
+void NAME(THCState* state, hiprngStateMtgp32 *rngstate, int size, T *result, ARG1, ARG2)  \
 {                                                                                    \
   hipStream_t currentStream = THCState_getCurrentStream(state); \
   hc::accelerator_view* current_accl_view; \
@@ -248,7 +234,7 @@ GENERATE_KERNEL2(generate_cauchy, half, double median, double sigma, float, cura
 #else
 
 template<typename real, typename prob_type>
-void generate_bernoulli_tensor(hc::accelerator_view accl_view, HipRandStateMtgp32 *s, int size,
+void generate_bernoulli_tensor(hc::accelerator_view accl_view, hiprngStateMtgp32 *s, int size,
         real *&result, prob_type *probs)
 {
   hc::accelerator accl = accl_view.get_accelerator();
@@ -256,23 +242,24 @@ void generate_bernoulli_tensor(hc::accelerator_view accl_view, HipRandStateMtgp3
   int blocks = std::min((int)DIVUP(size, BLOCK_SIZE), MAX_NUM_BLOCKS);
   hc::extent<1> ext(blocks*BLOCK_SIZE);
   hc::tiled_extent<1> t_ext = ext.tile(BLOCK_SIZE);
-  const uint32_t* av_param_tbl = (s->param_tbl);
-  const uint32_t* av_temper_tbl = (s->temper_tbl);
-  const uint32_t* av_sh1_tbl = (s->sh1_tbl);
-  const uint32_t* av_sh2_tbl = (s->sh2_tbl);
-  const uint32_t* av_offset = (s->offset);
-  const uint32_t* av_index = (s->index);
-  const uint32_t* av_pos_tbl = (s->pos_tbl);
-  const uint32_t* av_mask = (s->mask);
-  const uint32_t* av_d_status = (s->d_status);
-  hc::parallel_for_each(
+ hc::parallel_for_each(
       accl_view, t_ext, [=] (const hc::tiled_index<1>& tidx) [[hc]] {
     int threadId = tidx.global[0];
     int groupId = tidx.tile[0];
     if (groupId >= USER_GROUP_NUM)
       return;
+  const uint32_t* av_param_tbl = (s[groupId].k->param_tbl);
+  const uint32_t* av_temper_tbl = (s[groupId].k->temper_tbl);
+  const uint32_t* av_sh1_tbl = (s[groupId].k->sh1_tbl);
+  const uint32_t* av_sh2_tbl = (s[groupId].k->sh2_tbl);
+  const uint32_t* av_offset = (s[groupId].k->offset);
+  const uint32_t* av_index = (s[groupId].k->index);
+  const uint32_t* av_pos_tbl = (s[groupId].k->pos_tbl);
+  const uint32_t* av_mask = (s[groupId].k->mask);
+  const uint32_t* av_d_status = (s[groupId].k->d_status);
+  
     for (int i = threadId; i < rounded_size; i += BLOCK_SIZE * MAX_NUM_BLOCKS) {
-      float x = hiprand_uniform(
+      float x = hiprng_uniform(
           av_param_tbl,
           av_temper_tbl,
           av_sh1_tbl,

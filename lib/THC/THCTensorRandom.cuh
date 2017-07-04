@@ -9,7 +9,7 @@
 #include <curand_kernel.h>
 #else
   #include <hip/hip_hcc.h>
-  #include "MTGP/hiprand_mtgp32.h"
+  #include "hiprng.h"
 #endif
 #define MAX_NUM_BLOCKS 64
 #define BLOCK_SIZE 256
@@ -256,7 +256,7 @@ sampleMultinomialWithReplacement(curandStateMtgp32* state,
 #else
 template <typename T>
 __global__ void
-sampleMultinomialWithReplacement(HipRandStateMtgp32* state,
+sampleMultinomialWithReplacement(hiprngStateMtgp32* state,
                                  int totalSamples,
                                  long* dest,
                                  long distributions,
@@ -314,7 +314,7 @@ sampleMultinomialWithoutReplacement(curandStateMtgp32* state,
                                     T* normDistPrefixSum) {
 #else
 __global__ void
-sampleMultinomialWithoutReplacement(HipRandStateMtgp32* state,
+sampleMultinomialWithoutReplacement(hiprngStateMtgp32* state,
                                     int totalSamples,
                                     int sample,
                                     long* dest,

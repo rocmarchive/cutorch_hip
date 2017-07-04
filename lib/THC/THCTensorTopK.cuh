@@ -188,7 +188,7 @@ __device__ void countRadixUsingMask(CountType counts[RadixSize],
 #pragma unroll
     for (unsigned int j = 0; j < RadixSize; ++j) {
       bool vote = hasVal && (digitInRadix == j);
-      counts[j] += __popc(__ballot(vote));
+      //counts[j] += __popc(__ballot(vote));
     }
   }
 

@@ -6,13 +6,17 @@
 #include "generic/THCTensorRandom.h"
 #include "THCGenerateAllTypes.h"
 
+// TODO: Remove this header and allow forward referencing 
+#include "hiprng.h"
+
 typedef struct _Generator {
 #ifdef CURAND_PATH
   struct curandStateMtgp32* gen_states;
-  struct mtgp32_kernel_params *kernel_params;
 #else
-  struct HipRandStateMtgp32* h_gen_states;
+  //TODO: Enable stuct below for forward referencing
+  /*struct*/hiprngStateMtgp32* gen_states;
 #endif
+  struct mtgp32_kernel_params *kernel_params;
   int initf;
   unsigned long initial_seed;
 } Generator;
@@ -38,6 +42,7 @@ THC_API void THCRandom_setRNGState(struct THCState *state, THByteTensor *rng_sta
 #ifdef CURAND_PATH
 THC_API struct curandStateMtgp32* THCRandom_generatorStates(struct THCState* state);
 #else
-THC_API struct HipRandStateMtgp32* THCRandom_generatorStates(struct THCState* state);
+  //TODO: Enable stuct below for forward referencing
+THC_API /*struct*/ hiprngStateMtgp32* THCRandom_generatorStates(struct THCState* state);
 #endif
 #endif
