@@ -61,6 +61,7 @@ ENDIF()
 
 INCLUDE_DIRECTORIES(${HIP_PATH}/include)
 INCLUDE_DIRECTORIES(${HIPBLAS_PATH}/include)
+INCLUDE_DIRECTORIES(${HIPRNG_PATH}/include)
 
 # TODO: temporary blunt implements.
 IF (${PLATFORM} MATCHES "hcc")

@@ -119,6 +119,7 @@ void THCRandom_setRNGState(THCState* state, THByteTensor *rng_state)
 
   THCudaCheck(hipMemcpy(gen->gen_states, THByteTensor_data(rng_state),
                          states_size, hipMemcpyHostToDevice));
+  printf("Set RNG kernel invoked\n");
   hipLaunchKernelGGL(
     set_rngstate_kernel,
     dim3(1),
@@ -128,6 +129,7 @@ void THCRandom_setRNGState(THCState* state, THByteTensor *rng_state)
     gen->gen_states,
     gen->kernel_params);
   
+  printf("Set RNG kernel invocation complete\n");
    memcpy(&gen->initial_seed, THByteTensor_data(rng_state) + states_size, seed_size);
 
 }
@@ -166,7 +168,7 @@ __global__ void NAME(curandStateMtgp32 *state, int size, T *result, ARG1, ARG2) 
 #else
 
 #define GENERATE_KERNEL1(NAME, T, ARG1, HIPRAND_T, HIPRAND_FUNC, TRANSFORM)      \
-void NAME(THCState* state, hiprngStateMtgp32 *rngstate, int size, T *result, ARG1)  \
+void NAME(THCState* state, hiprngStateMtgp32 *rngstate, int size, T *&result, ARG1)  \
 { \
   hipStream_t currentStream = THCState_getCurrentStream(state); \
   hc::accelerator_view* current_accl_view; \
@@ -175,7 +177,7 @@ void NAME(THCState* state, hiprngStateMtgp32 *rngstate, int size, T *result, ARG
 }
 
 #define GENERATE_KERNEL2(NAME, T, ARG1, ARG2, HIPRAND_T, HIPRAND_FUNC, TRANSFORM)      \
-void NAME(THCState* state, hiprngStateMtgp32 *rngstate, int size, T *result, ARG1, ARG2)  \
+void NAME(THCState* state, hiprngStateMtgp32 *rngstate, int size, T *&result, ARG1, ARG2)  \
 {                                                                                    \
   hipStream_t currentStream = THCState_getCurrentStream(state); \
   hc::accelerator_view* current_accl_view; \
@@ -259,7 +261,8 @@ void generate_bernoulli_tensor(hc::accelerator_view accl_view, hiprngStateMtgp32
   const uint32_t* av_d_status = (s[groupId].k->d_status);
   
     for (int i = threadId; i < rounded_size; i += BLOCK_SIZE * MAX_NUM_BLOCKS) {
-      float x = hiprng_uniform(
+        float x =0;
+     /* float x = hiprng_uniform(
           av_param_tbl,
           av_temper_tbl,
           av_sh1_tbl,
@@ -269,7 +272,7 @@ void generate_bernoulli_tensor(hc::accelerator_view accl_view, hiprngStateMtgp32
           av_pos_tbl,
           av_mask,
           av_d_status,
-          tidx);
+          tidx);*/
       if (i < size) {
         result[i] = ScalarConvert<bool, real>::to(x <= probs[i]);
       }
