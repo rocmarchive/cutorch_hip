@@ -69,11 +69,11 @@ namespace bolt
          *  \return The end of the output sequence.
          *
          *  \tparam InputIterator is a model of InputIterator
-         *                        and \c InputIterator's \c value_type is convertible to \c UnaryFunction's
+         *                        and \c InputIterator's \c value_type is convertible to \c UnaryFunction1's
          * \c second_argument_type.
          *  \tparam OutputIterator is a model of OutputIterator
-         *  \tparam UnaryFunction is a model of UnaryFunction
-         *                              and \c UnaryFunction's \c result_type is convertible to \c OutputIterator's
+         *  \tparam UnaryFunction1 is a model of UnaryFunction1
+         *                              and \c UnaryFunction1's \c result_type is convertible to \c OutputIterator's
          * \c value_type.
          *
          *  The following code snippet demonstrates how to use \p transform.
@@ -97,27 +97,27 @@ namespace bolt
          *  \sa http://www.sgi.com/tech/stl/transform.html
          *  \sa http://www.sgi.com/tech/stl/InputIterator.html
          *  \sa http://www.sgi.com/tech/stl/OutputIterator.html
-         *  \sa http://www.sgi.com/tech/stl/UnaryFunction.html
+         *  \sa http://www.sgi.com/tech/stl/UnaryFunction1.html
          *  \sa http://www.sgi.com/tech/stl/BinaryFunction.html
          */
 
 
-        template<typename InputIterator, typename OutputIterator, typename UnaryFunction>
+        template<typename InputIterator, typename OutputIterator, typename UnaryFunction1>
 	static
 	inline
         void transform(control &ctl,
                        InputIterator first,
                        InputIterator last,
                        OutputIterator result,
-                       UnaryFunction op);
+                       UnaryFunction1 op);
 
-        template<typename InputIterator, typename OutputIterator, typename UnaryFunction, void*>
+        template<typename InputIterator, typename OutputIterator, typename UnaryFunction1, void*>
 	static
 	inline
         void transform(InputIterator first,
                        InputIterator last,
                        OutputIterator result,
-                       UnaryFunction op);
+                       UnaryFunction1 op);
 
 
 
@@ -169,7 +169,7 @@ namespace bolt
          *  \sa http://www.sgi.com/tech/stl/transform.html
          *  \sa http://www.sgi.com/tech/stl/InputIterator.html
          *  \sa http://www.sgi.com/tech/stl/OutputIterator.html
-         *  \sa http://www.sgi.com/tech/stl/UnaryFunction.html
+         *  \sa http://www.sgi.com/tech/stl/UnaryFunction1.html
          *  \sa http://www.sgi.com/tech/stl/BinaryFunction.html
          */
 
@@ -212,10 +212,10 @@ namespace bolt
          *  \return The end of the output sequence.
          *
          *  \tparam InputIterator is a model of InputIterator
-         *                        and \c InputIterator's \c value_type is convertible to \c UnaryFunction's
+         *                        and \c InputIterator's \c value_type is convertible to \c UnaryFunction1's
          *  \tparam OutputIterator is a model of OutputIterator
-         *  \tparam UnaryFunction is a model of UnaryFunction
-         *                              and \c UnaryFunction's \c result_type is convertible to \c OutputIterator's
+         *  \tparam UnaryFunction1 is a model of UnaryFunction1
+         *                              and \c UnaryFunction1's \c result_type is convertible to \c OutputIterator's
          *  \c value_type.
          *
          *  \details The following code snippet demonstrates how to use \p transform_if.
@@ -254,23 +254,23 @@ namespace bolt
          */
 
 
-	template<typename InputIterator, typename OutputIterator, typename UnaryFunction, typename Predicate>
+	template<typename InputIterator, typename OutputIterator, typename UnaryFunction1, typename Predicate>
 	static
 	inline
         OutputIterator transform_if(control &ctl,
                        InputIterator first,
                        InputIterator last,
                        OutputIterator result,
-                       UnaryFunction op,
+                       UnaryFunction1 op,
 					   Predicate  	pred );
 
-        template<typename InputIterator, typename OutputIterator, typename UnaryFunction, typename Predicate>
+        template<typename InputIterator, typename OutputIterator, typename UnaryFunction1, typename Predicate>
 	static
 	inline
         OutputIterator transform_if(InputIterator first,
                        InputIterator last,
                        OutputIterator result,
-                       UnaryFunction op,
+                       UnaryFunction1 op,
 					   Predicate  	pred);
 
 
@@ -289,10 +289,10 @@ namespace bolt
          *  \return The end of the output sequence.
          *
          *  \tparam InputIterator is a model of InputIterator
-         *                        and \c InputIterator's \c value_type is convertible to \c UnaryFunction's
+         *                        and \c InputIterator's \c value_type is convertible to \c UnaryFunction1's
          *  \tparam OutputIterator is a model of OutputIterator
-         *  \tparam UnaryFunction is a model of UnaryFunction
-         *                              and \c UnaryFunction's \c result_type is convertible to \c OutputIterator's
+         *  \tparam UnaryFunction1 is a model of UnaryFunction1
+         *                              and \c UnaryFunction1's \c result_type is convertible to \c OutputIterator's
          *  \c value_type.
          *
          *  \details The following code snippet demonstrates how to use \p transform_if.
@@ -324,16 +324,16 @@ namespace bolt
          *
          */
 
-		template<typename InputIterator1, typename InputIterator2, typename OutputIterator, typename UnaryFunction, typename Predicate>
+		template<typename InputIterator1, typename InputIterator2, typename OutputIterator, typename UnaryFunction1, typename Predicate>
 		static
 		inline
-		OutputIterator  transform_if (InputIterator1 first, InputIterator1 last, InputIterator2 stencil, OutputIterator result, UnaryFunction op, Predicate pred);
+		OutputIterator  transform_if (InputIterator1 first, InputIterator1 last, InputIterator2 stencil, OutputIterator result, UnaryFunction1 op, Predicate pred);
 
 
-		template<typename InputIterator1, typename InputIterator2, typename OutputIterator, typename UnaryFunction, typename Predicate>
+		template<typename InputIterator1, typename InputIterator2, typename OutputIterator, typename UnaryFunction1, typename Predicate>
 		static
 		inline
-		OutputIterator  transform_if (control &ctl, InputIterator1 first, InputIterator1 last, InputIterator2 stencil, OutputIterator result, UnaryFunction op, Predicate pred);
+		OutputIterator  transform_if (control &ctl, InputIterator1 first, InputIterator1 last, InputIterator2 stencil, OutputIterator result, UnaryFunction1 op, Predicate pred);
 
 
 		/*! \brief This version of transform_if conditionally applies a binary function to each pair of elements from two input sequences

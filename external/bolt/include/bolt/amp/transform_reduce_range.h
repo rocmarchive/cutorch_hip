@@ -51,12 +51,12 @@ namespace bolt {
 	// May avoid copies on some compilers and deliver higher performance than the cleaner transform_reduce function,
 	// where transform op only takes a single index point.
 	// Useful for indexing over all points in an image or array
-	template<typename outputT, int Rank, typename UnaryFunction, typename BinaryFunction>
+	template<typename outputT, int Rank, typename UnaryFunction1, typename BinaryFunction>
 	static
 	inline
 	outputT transform_reduce_range(concurrency::accelerator_view av,
 		concurrency::index<Rank> origin, concurrency::extent<Rank> ext,
-		UnaryFunction transform_op,
+		UnaryFunction1 transform_op,
 		outputT init,  BinaryFunction reduce_op)
 	{
 		using namespace concurrency;
@@ -147,12 +147,12 @@ namespace bolt {
 
 	};
 
-	template<typename outputT, int Rank, typename UnaryFunction, typename BinaryFunction>
+	template<typename outputT, int Rank, typename UnaryFunction1, typename BinaryFunction>
 	static
 	inline
 	outputT transform_reduce_range(
 		concurrency::index<Rank> origin, concurrency::extent<Rank> ext,
-		UnaryFunction transform_op,
+		UnaryFunction1 transform_op,
 		outputT init,  BinaryFunction reduce_op)
 	{
 		return transform_reduce_range(concurrency::accelerator().default_view, origin, ext, transform_op, init, reduce_op);

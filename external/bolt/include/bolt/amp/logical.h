@@ -58,7 +58,7 @@ namespace bolt {
          * \return bool variable
          *
          * \tparam InputIterator is a model of InputIterator
-         *                        and \c InputIterator's \c value_type is convertible to \c UnaryFunction's
+         *                        and \c InputIterator's \c value_type is convertible to \c UnaryFunction1's
          *
          *  \details The following demonstrates how to use \p alll_of, any_of and none_of
          *

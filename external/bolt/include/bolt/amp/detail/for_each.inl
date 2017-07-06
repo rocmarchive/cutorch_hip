@@ -48,28 +48,28 @@ namespace detail
 namespace serial{
 
 
-    template<typename InputIterator, typename Size, typename UnaryFunction>
+    template<typename InputIterator, typename Size, typename UnaryFunction1>
     static
     inline
-    void for_each_n(  control& ctl,  InputIterator first,  Size n,  UnaryFunction f, std::random_access_iterator_tag )
+    void for_each_n(  control& ctl,  InputIterator first,  Size n,  UnaryFunction1 f, std::random_access_iterator_tag )
     {
         std::for_each(first, first+n, f);
     }
 
-    template<typename InputIterator, typename Size, typename UnaryFunction>
+    template<typename InputIterator, typename Size, typename UnaryFunction1>
     static
     inline
-    void for_each_n(  control& ctl,  InputIterator first,  Size n,  UnaryFunction f,  bolt::amp::device_vector_tag )
+    void for_each_n(  control& ctl,  InputIterator first,  Size n,  UnaryFunction1 f,  bolt::amp::device_vector_tag )
     {
 
 		auto mapped_first_itr = create_mapped_iterator(typename std::iterator_traits<InputIterator>::iterator_category(), ctl, first);
 		std::for_each(mapped_first_itr, mapped_first_itr+n, f);
     }
 
-	template<typename InputIterator, typename Size, typename UnaryFunction>
+	template<typename InputIterator, typename Size, typename UnaryFunction1>
     static
     inline	
-    void for_each_n(  control& ctl,  InputIterator first,  Size n,  UnaryFunction f,  bolt::amp::fancy_iterator_tag )
+    void for_each_n(  control& ctl,  InputIterator first,  Size n,  UnaryFunction1 f,  bolt::amp::fancy_iterator_tag )
 	{
 		std::for_each(first, first+n, f);
     }
@@ -79,10 +79,10 @@ namespace serial{
 #ifdef ENABLE_TBB
 namespace btbb{
 
-    template<typename InputIterator, typename Size, typename UnaryFunction>
+    template<typename InputIterator, typename Size, typename UnaryFunction1>
     static
     inline
-	void for_each_n( control& ctl, InputIterator& first,  Size& n,  UnaryFunction& f,  bolt::amp::device_vector_tag )
+	void for_each_n( control& ctl, InputIterator& first,  Size& n,  UnaryFunction1& f,  bolt::amp::device_vector_tag )
     {
 
 		auto mapped_first_itr = create_mapped_iterator(typename std::iterator_traits<InputIterator>::iterator_category(),
@@ -90,18 +90,18 @@ namespace btbb{
         bolt::btbb::for_each_n(mapped_first_itr,  n,  f);
     }
 
-	template<typename InputIterator, typename Size, typename UnaryFunction>
+	template<typename InputIterator, typename Size, typename UnaryFunction1>
     static
     inline
-    void for_each_n( control& ctl, InputIterator& first,  Size& n,  UnaryFunction& f, std::random_access_iterator_tag )
+    void for_each_n( control& ctl, InputIterator& first,  Size& n,  UnaryFunction1& f, std::random_access_iterator_tag )
     {
         bolt::btbb::for_each_n(first, n, f);
     }
 
-	template<typename InputIterator, typename Size, typename UnaryFunction>
+	template<typename InputIterator, typename Size, typename UnaryFunction1>
     static
     inline
-    void for_each_n( control& ctl,  InputIterator& first,  Size& n,  UnaryFunction& f,  bolt::amp::fancy_iterator_tag )
+    void for_each_n( control& ctl,  InputIterator& first,  Size& n,  UnaryFunction1& f,  bolt::amp::fancy_iterator_tag )
     {
 		bolt::btbb::for_each_n(first, n, f);
     }
@@ -111,10 +111,10 @@ namespace btbb{
 
 namespace amp{
 
-	template<typename DVInputIterator, typename Size, typename UnaryFunction>
+	template<typename DVInputIterator, typename Size, typename UnaryFunction1>
     static
     inline
-    void for_each_n( control& ctl, DVInputIterator first,  Size n,  UnaryFunction f, bolt::amp::device_vector_tag)
+    void for_each_n( control& ctl, DVInputIterator first,  Size n,  UnaryFunction1 f, bolt::amp::device_vector_tag)
     {
 
         concurrency::accelerator_view av = ctl.getAccelerator().get_default_view();
@@ -154,10 +154,10 @@ namespace amp{
 	/*! \brief This template function overload is used strictly for std random access vectors and AMP implementations.
         \detail
     */
-    template<typename InputIterator, typename Size, typename UnaryFunction>
+    template<typename InputIterator, typename Size, typename UnaryFunction1>
     static
     inline
-    void for_each_n(control& ctl,  InputIterator first,  Size n,  UnaryFunction f, std::random_access_iterator_tag )
+    void for_each_n(control& ctl,  InputIterator first,  Size n,  UnaryFunction1 f, std::random_access_iterator_tag )
     {
 
 		typedef typename std::iterator_traits<InputIterator>::value_type  iType;
@@ -168,10 +168,10 @@ namespace amp{
 
     }
 
-	template<typename InputIterator, typename Size, typename UnaryFunction>
+	template<typename InputIterator, typename Size, typename UnaryFunction1>
     static
     inline
-    void for_each_n(control& ctl,  InputIterator first,  Size n,  UnaryFunction f, bolt::amp::fancy_iterator_tag )
+    void for_each_n(control& ctl,  InputIterator first,  Size n,  UnaryFunction1 f, bolt::amp::fancy_iterator_tag )
     {
 
 		for_each_n(ctl, first, n, f, bolt::amp::device_vector_tag());
@@ -187,7 +187,7 @@ namespace amp{
 	/*! \brief This template function overload is used strictly for device vectors and std random access vectors.
         \detail Here we branch out into the SerialCpu, MultiCore TBB or The AMP code paths.
     */
-    template<typename InputIterator, typename Size, typename UnaryFunction >
+    template<typename InputIterator, typename Size, typename UnaryFunction1 >
     static
     inline
     typename std::enable_if<
@@ -195,7 +195,7 @@ namespace amp{
                              std::input_iterator_tag
                            >::value), InputIterator
                            >::type
-    for_each_n  ( control& ctl,  InputIterator  first,   Size n,  UnaryFunction f)
+    for_each_n  ( control& ctl,  InputIterator  first,   Size n,  UnaryFunction1 f)
     {
         if (n == 0)
             return first;
@@ -239,10 +239,10 @@ namespace amp{
         //  ForEach overloads
         //////////////////////////////////////////
         // default control
-        template<typename InputIterator, typename UnaryFunction>
+        template<typename InputIterator, typename UnaryFunction1>
         static
         inline
-        InputIterator  for_each (control &ctl, InputIterator first, InputIterator last, UnaryFunction f)
+        InputIterator  for_each (control &ctl, InputIterator first, InputIterator last, UnaryFunction1 f)
         {
 			  const int n =  static_cast< int >( std::distance( first, last ) );
               return for_each_n( ctl, first, n, f );
@@ -251,41 +251,41 @@ namespace amp{
 
 
         template<typename InputIterator,
-                 typename UnaryFunction,
+                 typename UnaryFunction1,
                  typename std::enable_if<sizeof(typename std::iterator_traits<InputIterator>::value_type) % sizeof(int) == 0>::type* = nullptr>
         static
         inline
-        InputIterator for_each(InputIterator first, InputIterator last, UnaryFunction f)
+        InputIterator for_each(InputIterator first, InputIterator last, UnaryFunction1 f)
         {
 			  const int n =  static_cast< int >( std::distance( first, last ) );
               return for_each_n( control::getDefault(), first, n, f);
         }
 
         template<typename InputIterator,
-                 typename UnaryFunction,
+                 typename UnaryFunction1,
                  typename std::enable_if<sizeof(typename std::iterator_traits<InputIterator>::value_type) % sizeof(int) != 0>::type* = nullptr>
         static
         inline
-        InputIterator for_each(InputIterator first, InputIterator last, UnaryFunction f)
+        InputIterator for_each(InputIterator first, InputIterator last, UnaryFunction1 f)
         {
             for_each(first, last, f);
             return first + std::distance(first, last);
         }
 
         // default control
-        template<typename InputIterator , typename Size , typename UnaryFunction >
+        template<typename InputIterator , typename Size , typename UnaryFunction1 >
         static
         inline
-        InputIterator for_each_n  ( control &ctl, InputIterator  first,  Size  n,  UnaryFunction  f)
+        InputIterator for_each_n  ( control &ctl, InputIterator  first,  Size  n,  UnaryFunction1  f)
         {
               return detail::for_each_n( ctl, first, n, f);
         }
 
 
-        template<typename InputIterator , typename Size , typename UnaryFunction >
+        template<typename InputIterator , typename Size , typename UnaryFunction1 >
         static
         inline
-        InputIterator for_each_n  (InputIterator  first,  Size  n,  UnaryFunction  f)
+        InputIterator for_each_n  (InputIterator  first,  Size  n,  UnaryFunction1  f)
         {
               return for_each_n( control::getDefault(), first, n,  f );
         }

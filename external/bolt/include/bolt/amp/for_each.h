@@ -89,16 +89,16 @@ namespace amp
 
 
 
-template<typename InputIterator , typename UnaryFunction, void* >
+template<typename InputIterator , typename UnaryFunction1, void* >
 static
 inline
-InputIterator for_each (InputIterator first, InputIterator last, UnaryFunction f);
+InputIterator for_each (InputIterator first, InputIterator last, UnaryFunction1 f);
 
 
-template<typename InputIterator , typename UnaryFunction >
+template<typename InputIterator , typename UnaryFunction1 >
 static
 inline
-InputIterator  for_each (control &ctl, InputIterator first, InputIterator last, UnaryFunction f);
+InputIterator  for_each (control &ctl, InputIterator first, InputIterator last, UnaryFunction1 f);
 
 
 
@@ -140,18 +140,18 @@ InputIterator  for_each (control &ctl, InputIterator first, InputIterator last, 
 *  \sa http://www.sgi.com/tech/stl/for_each.html
 */
 
-template<typename InputIterator , typename Size , typename UnaryFunction >
+template<typename InputIterator , typename Size , typename UnaryFunction1 >
 static
 inline
-InputIterator for_each_n  ( InputIterator  first,  Size  n,  UnaryFunction  f);
+InputIterator for_each_n  ( InputIterator  first,  Size  n,  UnaryFunction1  f);
 
 
 
 
- template<typename InputIterator , typename Size , typename UnaryFunction >
+ template<typename InputIterator , typename Size , typename UnaryFunction1 >
  static
  inline
- InputIterator for_each_n  ( control &ctl, InputIterator  first,  Size  n,  UnaryFunction  f);
+ InputIterator for_each_n  ( control &ctl, InputIterator  first,  Size  n,  UnaryFunction1  f);
 
 
  /*!   \}  */

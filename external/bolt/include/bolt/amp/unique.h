@@ -66,7 +66,7 @@ namespace bolt
          *  \return ForwardIterator or OutputIterator
          *
          *  \tparam ForwardIterator is a model of InputIterator
-         *                        and \c InputIterator's \c value_type is convertible to \c UnaryFunction's
+         *                        and \c InputIterator's \c value_type is convertible to \c UnaryFunction1's
 		 *
          *  The following code snippet demonstrates how to use \p replace and \p replace_if.
          *

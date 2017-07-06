@@ -85,18 +85,18 @@ namespace bolt {
          *  \sa http://www.sgi.com/tech/stl/transform.html
          *  \sa http://www.sgi.com/tech/stl/InputIterator.html
          *  \sa http://www.sgi.com/tech/stl/OutputIterator.html
-         *  \sa http://www.sgi.com/tech/stl/UnaryFunction.html
+         *  \sa http://www.sgi.com/tech/stl/UnaryFunction1.html
          *  \sa http://www.sgi.com/tech/stl/BinaryFunction.html
          */
 
 
-        template<typename InputIterator, typename OutputIterator, typename UnaryFunction>
+        template<typename InputIterator, typename OutputIterator, typename UnaryFunction1>
         void transform( ::bolt::cl::control &ctl, InputIterator first, InputIterator last, OutputIterator result,
-            UnaryFunction op, const std::string& user_code="");
+            UnaryFunction1 op, const std::string& user_code="");
 
-        template<typename InputIterator, typename OutputIterator, typename UnaryFunction>
+        template<typename InputIterator, typename OutputIterator, typename UnaryFunction1>
         void transform(InputIterator first, InputIterator last, OutputIterator result,
-            UnaryFunction op, const std::string& user_code="");
+            UnaryFunction1 op, const std::string& user_code="");
 
         /*! \brief This version of \p transform applies a binary function to each pair
          *  of elements from two input sequences and stores the result in the
@@ -144,7 +144,7 @@ namespace bolt {
          *  \sa http://www.sgi.com/tech/stl/transform.html
          *  \sa http://www.sgi.com/tech/stl/InputIterator.html
          *  \sa http://www.sgi.com/tech/stl/OutputIterator.html
-         *  \sa http://www.sgi.com/tech/stl/UnaryFunction.html
+         *  \sa http://www.sgi.com/tech/stl/UnaryFunction1.html
          *  \sa http://www.sgi.com/tech/stl/BinaryFunction.html
          */
         template< typename InputIterator1, typename InputIterator2, typename OutputIterator, typename BinaryFunction >

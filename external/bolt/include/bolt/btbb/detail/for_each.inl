@@ -30,12 +30,12 @@
 namespace bolt{
     namespace btbb {
 
-             template<typename InputIterator, typename  UnaryFunction>
+             template<typename InputIterator, typename  UnaryFunction1>
              struct ForEach
              {
                 ForEach () {}
 
-                void operator()(InputIterator first,  InputIterator last, UnaryFunction f)
+                void operator()(InputIterator first,  InputIterator last, UnaryFunction1 f)
                 {
 
                     tbb::parallel_for(  tbb::blocked_range<InputIterator>(first, last) ,
@@ -49,12 +49,12 @@ namespace bolt{
             };
       
 
-			template<typename InputIterator, typename Size, typename  UnaryFunction>
+			template<typename InputIterator, typename Size, typename  UnaryFunction1>
             struct ForEach_n {
 
                 ForEach_n () {}
 
-				void operator()( InputIterator first, Size n, UnaryFunction f)
+				void operator()( InputIterator first, Size n, UnaryFunction1 f)
                 {
                     tbb::parallel_for(  tbb::blocked_range<int>(0, (int) n) ,
                         [&] (const tbb::blocked_range<int> &r) -> void
@@ -74,24 +74,24 @@ namespace bolt{
             };
 
            
-		    template<typename InputIterator , typename UnaryFunction >   
-            void for_each (InputIterator first, InputIterator last, UnaryFunction f)
+		    template<typename InputIterator , typename UnaryFunction1 >   
+            void for_each (InputIterator first, InputIterator last, UnaryFunction1 f)
 		    {
 		    	 //This allows TBB to choose the number of threads to spawn.
                  tbb::task_scheduler_init initialize(tbb::task_scheduler_init::automatic);
 		    
-                 ForEach <InputIterator, UnaryFunction> for_each_op;
+                 ForEach <InputIterator, UnaryFunction1> for_each_op;
                  for_each_op(first, last, f);
 		    }
 		    
-		    template<typename InputIterator , typename Size , typename UnaryFunction >  
-            void for_each_n  ( InputIterator  first,  Size  n,  UnaryFunction  f)
+		    template<typename InputIterator , typename Size , typename UnaryFunction1 >  
+            void for_each_n  ( InputIterator  first,  Size  n,  UnaryFunction1  f)
 		    {
 
 				//This allows TBB to choose the number of threads to spawn.
                  tbb::task_scheduler_init initialize(tbb::task_scheduler_init::automatic);
 		    
-                 ForEach_n <InputIterator, Size, UnaryFunction> for_each_op;
+                 ForEach_n <InputIterator, Size, UnaryFunction1> for_each_op;
                  for_each_op(first,  n, f);
 		    }
        

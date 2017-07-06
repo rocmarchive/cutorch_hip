@@ -37,11 +37,11 @@ namespace cl{
         return itr;
     }
 
-    template <typename UnaryFunction, typename Iterator>
-    typename bolt::cl::transform_iterator<UnaryFunction, Iterator>::pointer 
-        addressof(const typename bolt::cl::transform_iterator<UnaryFunction, Iterator> itr)
+    template <typename UnaryFunction1, typename Iterator>
+    typename bolt::cl::transform_iterator<UnaryFunction1, Iterator>::pointer 
+        addressof(const typename bolt::cl::transform_iterator<UnaryFunction1, Iterator> itr)
     {
-        typedef typename bolt::cl::transform_iterator<UnaryFunction, Iterator>::pointer pointer;
+        typedef typename bolt::cl::transform_iterator<UnaryFunction1, Iterator>::pointer pointer;
         pointer ptr = const_cast<pointer>(itr.getPointer());
         return ptr;
     }

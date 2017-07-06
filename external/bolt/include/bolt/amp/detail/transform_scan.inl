@@ -55,7 +55,7 @@ namespace serial{
 template<
     typename InputIterator,
     typename OutputIterator,
-    typename UnaryFunction,
+    typename UnaryFunction1,
     typename T,
     typename BinaryFunction >
 typename std::enable_if< (std::is_same< typename std::iterator_traits< OutputIterator >::iterator_category ,
@@ -67,7 +67,7 @@ transform_scan(
     const InputIterator& first,
     const InputIterator& last,
     const OutputIterator& result,
-    const UnaryFunction& unary_op,
+    const UnaryFunction1& unary_op,
     const T& init,
 	const bool& inclusive,
     const BinaryFunction& binary_op)
@@ -122,7 +122,7 @@ transform_scan(
 template<
     typename InputIterator,
     typename OutputIterator,
-    typename UnaryFunction,
+    typename UnaryFunction1,
     typename T,
     typename BinaryFunction >
 typename std::enable_if< (std::is_same< typename std::iterator_traits< OutputIterator >::iterator_category ,
@@ -134,7 +134,7 @@ transform_scan(
     const InputIterator& first,
     const InputIterator& last,
     const OutputIterator& result,
-    const UnaryFunction& unary_op,
+    const UnaryFunction1& unary_op,
     const T& init,
 	const bool& inclusive,
     const BinaryFunction& binary_op)
@@ -195,7 +195,7 @@ namespace btbb
 template<
     typename InputIterator,
     typename OutputIterator,
-    typename UnaryFunction,
+    typename UnaryFunction1,
     typename T,
     typename BinaryFunction >
 typename std::enable_if< (std::is_same< typename std::iterator_traits< OutputIterator >::iterator_category ,
@@ -207,7 +207,7 @@ transform_scan(
     const InputIterator& first,
     const InputIterator& last,
     const OutputIterator& result,
-    const UnaryFunction& unary_op,
+    const UnaryFunction1& unary_op,
     const T& init,
 	const bool& inclusive,
     const BinaryFunction& binary_op)
@@ -227,7 +227,7 @@ transform_scan(
 template<
     typename InputIterator,
     typename OutputIterator,
-    typename UnaryFunction,
+    typename UnaryFunction1,
     typename T,
     typename BinaryFunction >
 typename std::enable_if< (std::is_same< typename std::iterator_traits< OutputIterator >::iterator_category ,
@@ -239,7 +239,7 @@ transform_scan(
     const InputIterator& first,
     const InputIterator& last,
     const OutputIterator& result,
-    const UnaryFunction& unary_op,
+    const UnaryFunction1& unary_op,
     const T& init,
 	const bool& inclusive,
     const BinaryFunction& binary_op)
@@ -275,7 +275,7 @@ namespace amp{
 template<
     typename DVInputIterator,
     typename DVOutputIterator,
-    typename UnaryFunction,
+    typename UnaryFunction1,
     typename T,
     typename BinaryFunction >
 typename std::enable_if< std::is_same< typename std::iterator_traits< DVOutputIterator >::iterator_category ,
@@ -287,7 +287,7 @@ transform_scan(
     const DVInputIterator& first,
     const DVInputIterator& last,
     const DVOutputIterator& result,
-    const UnaryFunction& unary_op,
+    const UnaryFunction1& unary_op,
     const T& init_T,
 	const bool& inclusive,
     const BinaryFunction& binary_op)
@@ -672,7 +672,7 @@ transform_scan(
 	<
     typename InputIterator,
     typename OutputIterator,
-    typename UnaryFunction,
+    typename UnaryFunction1,
     typename T,
     typename BinaryFunction 
     >
@@ -685,7 +685,7 @@ transform_scan(
     const InputIterator& first,
     const InputIterator& last,
     const OutputIterator& result,
-    const UnaryFunction& unary_op,
+    const UnaryFunction1& unary_op,
     const T& init,
     const bool& inclusive,
     const BinaryFunction& binary_op)
@@ -720,7 +720,7 @@ transform_scan(
 	<
     typename InputIterator,
     typename OutputIterator,
-    typename UnaryFunction,
+    typename UnaryFunction1,
     typename T,
     typename BinaryFunction 
     >
@@ -737,7 +737,7 @@ transform_scan(
     const InputIterator& first,
     const InputIterator& last,
     const OutputIterator& result,
-    const UnaryFunction& unary_op,
+    const UnaryFunction1& unary_op,
     const T& init,
     const bool& inclusive,
     const BinaryFunction& binary_op)
@@ -787,7 +787,7 @@ transform_scan(
 	<
     typename InputIterator,
     typename OutputIterator,
-    typename UnaryFunction,
+    typename UnaryFunction1,
     typename T,
     typename BinaryFunction 
 	>
@@ -804,7 +804,7 @@ transform_scan(
     const InputIterator& first,
     const InputIterator& last,
     const OutputIterator& result,
-    const UnaryFunction& unary_op,
+    const UnaryFunction1& unary_op,
     const T& init,
     const bool& inclusive,
     const BinaryFunction& binary_op)
@@ -830,14 +830,14 @@ transform_scan(
     template<
         typename InputIterator,
         typename OutputIterator,
-        typename UnaryFunction,
+        typename UnaryFunction1,
         typename BinaryFunction>
     OutputIterator
     transform_inclusive_scan(
         InputIterator first,
         InputIterator last,
         OutputIterator result,
-        UnaryFunction unary_op,
+        UnaryFunction1 unary_op,
         BinaryFunction binary_op)
     {
         using bolt::amp::transform_inclusive_scan;
@@ -854,7 +854,7 @@ transform_scan(
     template<
         typename InputIterator,
         typename OutputIterator,
-        typename UnaryFunction,
+        typename UnaryFunction1,
         typename BinaryFunction>
     OutputIterator
     transform_inclusive_scan(
@@ -862,7 +862,7 @@ transform_scan(
         InputIterator first,
         InputIterator last,
         OutputIterator result,
-        UnaryFunction unary_op,
+        UnaryFunction1 unary_op,
         BinaryFunction binary_op)
     {
         typedef typename std::iterator_traits<OutputIterator>::value_type oType;
@@ -885,7 +885,7 @@ transform_scan(
     template<
         typename InputIterator,
         typename OutputIterator,
-        typename UnaryFunction,
+        typename UnaryFunction1,
         typename T,
         typename BinaryFunction>
     OutputIterator
@@ -893,7 +893,7 @@ transform_scan(
         InputIterator first,
         InputIterator last,
         OutputIterator result,
-        UnaryFunction unary_op,
+        UnaryFunction1 unary_op,
         T init,
         BinaryFunction binary_op )
     {
@@ -912,7 +912,7 @@ transform_scan(
     template<
         typename InputIterator,
         typename OutputIterator,
-        typename UnaryFunction,
+        typename UnaryFunction1,
         typename T,
         typename BinaryFunction>
     OutputIterator
@@ -921,7 +921,7 @@ transform_scan(
         InputIterator first,
         InputIterator last,
         OutputIterator result,
-        UnaryFunction unary_op,
+        UnaryFunction1 unary_op,
         T init,
         BinaryFunction binary_op)
     {

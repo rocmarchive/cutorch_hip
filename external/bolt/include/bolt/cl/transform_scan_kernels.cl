@@ -20,14 +20,14 @@
  *****************************************************************************/
 
 //__attribute__((reqd_work_group_size(KERNEL0WORKGROUPSIZE,1,1)))
-template< typename iValueType, typename iIterType, typename oValueType, typename initType, typename UnaryFunction, typename BinaryFunction >
+template< typename iValueType, typename iIterType, typename oValueType, typename initType, typename UnaryFunction1, typename BinaryFunction >
 __kernel void perBlockTransformScan(
                 global iValueType* input_ptr,
                 iIterType input_iter,
                 initType identity,
                 const uint vecSize,
                 local oValueType* lds,
-                global UnaryFunction* unaryOp,
+                global UnaryFunction1* unaryOp,
                 global BinaryFunction* binaryOp,
                 global oValueType* preSumArray,
 				const uint load_per_wg ) 
@@ -178,7 +178,7 @@ __kernel void intraBlockInclusiveScan(
  *  Kernel 2
  *****************************************************************************/
 //__attribute__((reqd_work_group_size(KERNEL2WORKGROUPSIZE,1,1)))
-template< typename iValueType, typename iIterType, typename oValueType, typename oIterType, typename UnaryFunction, 
+template< typename iValueType, typename iIterType, typename oValueType, typename oIterType, typename UnaryFunction1, 
            typename initType, typename BinaryFunction >
 __kernel void perBlockAddition( 
                 global oValueType* output_ptr,
@@ -189,7 +189,7 @@ __kernel void perBlockAddition(
                 local oValueType* lds,
                 const uint vecSize,
 				const uint load_per_wg,
-                global UnaryFunction* unaryOp,
+                global UnaryFunction1* unaryOp,
                 global BinaryFunction* binaryOp,
                 initType identity)
 {

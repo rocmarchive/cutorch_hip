@@ -64,11 +64,11 @@ namespace bolt
 		 *  \return The end of the output sequence.
 		 *
 		 *  \tparam InputIterator is a model of InputIterator
-		 *                        and \c InputIterator's \c value_type is convertible to \c UnaryFunction's
+		 *                        and \c InputIterator's \c value_type is convertible to \c UnaryFunction1's
 		 * \c second_argument_type.
 		 *  \tparam OutputIterator is a model of OutputIterator
-		 *  \tparam UnaryFunction is a model of UnaryFunction
-		 *                              and \c UnaryFunction's \c result_type is convertible to \c OutputIterator's
+		 *  \tparam UnaryFunction1 is a model of UnaryFunction1
+		 *                              and \c UnaryFunction1's \c result_type is convertible to \c OutputIterator's
 		 * \c value_type.
 		 *
 		 *  The following code snippet demonstrates how to use \p transform.
@@ -89,15 +89,15 @@ namespace bolt
 		 *  \sa http://www.sgi.com/tech/stl/transform.html
 		 *  \sa http://www.sgi.com/tech/stl/InputIterator.html
 		 *  \sa http://www.sgi.com/tech/stl/OutputIterator.html
-		 *  \sa http://www.sgi.com/tech/stl/UnaryFunction.html
+		 *  \sa http://www.sgi.com/tech/stl/UnaryFunction1.html
 		 *  \sa http://www.sgi.com/tech/stl/BinaryFunction.html
 		 */
 
-		template<typename InputIterator, typename OutputIterator, typename UnaryFunction>
+		template<typename InputIterator, typename OutputIterator, typename UnaryFunction1>
 		void transform(InputIterator first,
 					   InputIterator last,
 					   OutputIterator result,
-					   UnaryFunction op);
+					   UnaryFunction1 op);
 
 
 
@@ -145,7 +145,7 @@ namespace bolt
 		 *  \sa http://www.sgi.com/tech/stl/transform.html
 		 *  \sa http://www.sgi.com/tech/stl/InputIterator.html
 		 *  \sa http://www.sgi.com/tech/stl/OutputIterator.html
-		 *  \sa http://www.sgi.com/tech/stl/UnaryFunction.html
+		 *  \sa http://www.sgi.com/tech/stl/UnaryFunction1.html
 		 *  \sa http://www.sgi.com/tech/stl/BinaryFunction.html
 		 */
 

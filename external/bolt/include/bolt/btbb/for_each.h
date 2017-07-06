@@ -27,11 +27,11 @@
 namespace bolt {
     namespace btbb {
 
-		template<typename InputIterator , typename UnaryFunction >   
-        void for_each (InputIterator first, InputIterator last, UnaryFunction f); 
+		template<typename InputIterator , typename UnaryFunction1 >   
+        void for_each (InputIterator first, InputIterator last, UnaryFunction1 f); 
 
-		template<typename InputIterator , typename Size , typename UnaryFunction >  
-        void for_each_n  ( InputIterator  first,  Size  n,  UnaryFunction  f); 
+		template<typename InputIterator , typename Size , typename UnaryFunction1 >  
+        void for_each_n  ( InputIterator  first,  Size  n,  UnaryFunction1  f); 
 
     };
 };

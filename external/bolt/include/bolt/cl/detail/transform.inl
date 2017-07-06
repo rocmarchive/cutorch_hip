@@ -109,14 +109,14 @@ namespace serial{
         }
     }
 
-    template<typename InputIterator, typename OutputIterator, typename UnaryFunction>
+    template<typename InputIterator, typename OutputIterator, typename UnaryFunction1>
     typename std::enable_if< 
                std::is_same< typename std::iterator_traits< OutputIterator >::iterator_category ,
                                        bolt::cl::device_vector_tag
                            >::value
                            >::type
     unary_transform( ::bolt::cl::control &ctl, InputIterator& first, InputIterator& last,
-                    OutputIterator& result, UnaryFunction& f)
+                    OutputIterator& result, UnaryFunction1& f)
     {
         size_t sz = (last - first);
         if (sz == 0)
@@ -152,13 +152,13 @@ namespace serial{
 
     }
     
-    template<typename Iterator, typename OutputIterator, typename UnaryFunction>
+    template<typename Iterator, typename OutputIterator, typename UnaryFunction1>
     typename std::enable_if< std::is_same< typename std::iterator_traits< OutputIterator >::iterator_category ,
                                        std::random_access_iterator_tag
                                      >::value
                            >::type
     unary_transform( ::bolt::cl::control &ctl, Iterator& first, Iterator& last,
-                    OutputIterator& result, UnaryFunction& f )
+                    OutputIterator& result, UnaryFunction1& f )
     {
         size_t sz = (last - first);
         if (sz == 0)
@@ -237,14 +237,14 @@ namespace btbb{
     }
 
 
-    template<typename InputIterator, typename OutputIterator, typename UnaryFunction>
+    template<typename InputIterator, typename OutputIterator, typename UnaryFunction1>
     typename std::enable_if< 
                std::is_same< typename std::iterator_traits< OutputIterator >::iterator_category ,
                                        bolt::cl::device_vector_tag
                            >::value
                            >::type
     unary_transform( ::bolt::cl::control &ctl, const InputIterator& first, const InputIterator& last,
-    const OutputIterator& result, const UnaryFunction& f)
+    const OutputIterator& result, const UnaryFunction1& f)
     {
         size_t sz = (last - first);
         if (sz == 0)
@@ -279,14 +279,14 @@ namespace btbb{
         return;
     }
     
-    template<typename InputIterator, typename OutputIterator, typename UnaryFunction>
+    template<typename InputIterator, typename OutputIterator, typename UnaryFunction1>
     typename std::enable_if< 
                std::is_same< typename std::iterator_traits< OutputIterator >::iterator_category ,
                                        std::random_access_iterator_tag
                            >::value
                            >::type
     unary_transform( ::bolt::cl::control &ctl, const InputIterator& first, const InputIterator& last,
-    const OutputIterator& result, const UnaryFunction& f )
+    const OutputIterator& result, const UnaryFunction1& f )
     {
         // TODO - Add tbb host vector code.
         bolt::btbb::transform(first, last, result, f);
@@ -299,7 +299,7 @@ namespace cl{
     enum TransformTypes {transform_iType1, transform_DVInputIterator1, transform_iType2, transform_DVInputIterator2,
                            transform_oTypeB,transform_DVOutputIteratorB, transform_BinaryFunction, transform_endB };
     enum TransformUnaryTypes {transform_iType, transform_DVInputIterator, transform_oTypeU,
-                                transform_DVOutputIteratorU, transform_UnaryFunction, transform_endU };
+                                transform_DVOutputIteratorU, transform_UnaryFunction1, transform_endU };
 
 
 
@@ -502,7 +502,7 @@ namespace cl{
                 + kps.getOutputIteratorString(typename std::iterator_traits<OutputIterator>::iterator_category(), 
                                           unaryTransformKernels[transform_DVOutputIteratorU] )
                 + "const uint length,\n"
-                "global " + unaryTransformKernels[transform_UnaryFunction] + "* userFunctor);\n\n"
+                "global " + unaryTransformKernels[transform_UnaryFunction1] + "* userFunctor);\n\n"
 
                 "// Host generates this instantiation string with user-specified value type and functor\n"
                 "template __attribute__((mangled_name("+name(1)+"Instantiated)))\n"
@@ -512,7 +512,7 @@ namespace cl{
                 + kps.getOutputIteratorString(typename std::iterator_traits<OutputIterator>::iterator_category(), 
                                           unaryTransformKernels[transform_DVOutputIteratorU])
                 + "const uint length,\n"
-                "global " +unaryTransformKernels[transform_UnaryFunction] + "* userFunctor);\n\n";
+                "global " +unaryTransformKernels[transform_UnaryFunction1] + "* userFunctor);\n\n";
 
                 return templateSpecializationString;
             }
@@ -792,13 +792,13 @@ namespace cl{
     /*! \brief This template function overload is used strictly for device_vector and OpenCL implementations. 
         \detail 
     */
-    template<typename InputIterator, typename OutputIterator, typename UnaryFunction>
+    template<typename InputIterator, typename OutputIterator, typename UnaryFunction1>
     typename std::enable_if< std::is_same< typename std::iterator_traits< OutputIterator >::iterator_category ,
                                        bolt::cl::device_vector_tag
                                      >::value
                        >::type
     unary_transform( ::bolt::cl::control &ctl, const InputIterator& first, const InputIterator& last,
-    const OutputIterator& result, const UnaryFunction& f, const std::string& user_code)
+    const OutputIterator& result, const UnaryFunction1& f, const std::string& user_code)
     {
         typename std::iterator_traits<InputIterator>::difference_type sz = bolt::cl::distance(first, last);
         if (sz == 0)
@@ -819,7 +819,7 @@ namespace cl{
         unaryTransformKernels[transform_DVInputIterator] =  TypeName< InputIterator >::get( );
         unaryTransformKernels[transform_oTypeU] = TypeName< oType >::get( );
         unaryTransformKernels[transform_DVOutputIteratorU] = TypeName< OutputIterator >::get( );
-        unaryTransformKernels[transform_UnaryFunction] = TypeName< UnaryFunction >::get( );
+        unaryTransformKernels[transform_UnaryFunction1] = TypeName< UnaryFunction1 >::get( );
 
         /**********************************************************************************
          * Type Definitions - directrly concatenated into kernel string
@@ -830,7 +830,7 @@ namespace cl{
         PUSH_BACK_UNIQUE( typeDefinitions, ClCode< iType >::get() )
         PUSH_BACK_UNIQUE( typeDefinitions, ClCode< InputIterator >::get() )
         PUSH_BACK_UNIQUE( typeDefinitions, ClCode< oType >::get() )
-        PUSH_BACK_UNIQUE( typeDefinitions, ClCode< UnaryFunction  >::get() )
+        PUSH_BACK_UNIQUE( typeDefinitions, ClCode< UnaryFunction1  >::get() )
 
 
         /**********************************************************************************
@@ -881,7 +881,7 @@ namespace cl{
         // kernels returned in same order as added in KernelTemplaceSpecializer constructor
 
         // Create buffer wrappers so we can access the host functors, for read or writing in the kernel
-        ALIGNED( 256 ) UnaryFunction aligned_binary( f );
+        ALIGNED( 256 ) UnaryFunction1 aligned_binary( f );
         control::buffPointer userFunctor = ctl.acquireBuffer( sizeof( aligned_binary ),
         CL_MEM_USE_HOST_PTR|CL_MEM_READ_ONLY, &aligned_binary );
 
@@ -940,13 +940,13 @@ namespace cl{
     /*! \brief This template function overload is used strictly std random access vectors and OpenCL implementations. 
         \detail 
     */
-    template<typename InputIterator, typename OutputIterator, typename UnaryFunction>
+    template<typename InputIterator, typename OutputIterator, typename UnaryFunction1>
     typename std::enable_if< std::is_same< typename std::iterator_traits< OutputIterator >::iterator_category ,
                                        std::random_access_iterator_tag
                                      >::value
                            >::type
     unary_transform( ::bolt::cl::control &ctl, const InputIterator& first, const InputIterator& last,
-    const OutputIterator& result, const UnaryFunction& f, const std::string& user_code )
+    const OutputIterator& result, const UnaryFunction1& f, const std::string& user_code )
     {
         //size_t sz = bolt::cl::distance(first, last);
         int sz = static_cast<int>(last - first);
@@ -1065,7 +1065,7 @@ namespace cl{
     /*! \brief This template function overload is used strictly for device vectors and std random access vectors. 
         \detail Here we branch out into the SerialCpu, MultiCore TBB or The OpenCL code paths. 
     */
-    template<typename InputIterator, typename OutputIterator, typename UnaryFunction>
+    template<typename InputIterator, typename OutputIterator, typename UnaryFunction1>
     typename std::enable_if< 
              !(std::is_same< typename std::iterator_traits< OutputIterator>::iterator_category, 
                              std::input_iterator_tag 
@@ -1074,7 +1074,7 @@ namespace cl{
                              bolt::cl::fancy_iterator_tag >::value) 
                            >::type
     unary_transform(::bolt::cl::control& ctl, InputIterator& first,
-         InputIterator& last,  OutputIterator& result,  UnaryFunction& f,
+         InputIterator& last,  OutputIterator& result,  UnaryFunction1& f,
         const std::string& user_code)
     {
         typename std::iterator_traits<InputIterator>::difference_type sz = bolt::cl::distance(first, last );
@@ -1127,7 +1127,7 @@ namespace cl{
                 We enable this overload and should result in a compilation failure.
     */
     // TODO - test the below code path
-    template<typename InputIterator, typename OutputIterator, typename UnaryFunction>
+    template<typename InputIterator, typename OutputIterator, typename UnaryFunction1>
     typename std::enable_if< 
                std::is_same< typename std::iterator_traits< OutputIterator>::iterator_category, 
                              std::input_iterator_tag 
@@ -1136,7 +1136,7 @@ namespace cl{
                              bolt::cl::fancy_iterator_tag >::value 
                            >::type
     unary_transform(::bolt::cl::control& ctl, const InputIterator& first1,
-        const InputIterator& last1, const OutputIterator& result, const UnaryFunction& f,
+        const InputIterator& last1, const OutputIterator& result, const UnaryFunction1& f,
         const std::string& user_code)
     {
         //TODO - Shouldn't we support transform for input_iterator_tag also. 
@@ -1168,18 +1168,18 @@ void transform( InputIterator1 first1, InputIterator1 last1, InputIterator2 firs
 }
 
 // one-input transform, std:: iterator
-template<typename InputIterator, typename OutputIterator, typename UnaryFunction>
+template<typename InputIterator, typename OutputIterator, typename UnaryFunction1>
 void transform( ::bolt::cl::control& ctl, InputIterator first1, InputIterator last1, OutputIterator result,
-                UnaryFunction f, const std::string& user_code )
+                UnaryFunction1 f, const std::string& user_code )
 {
     using bolt::cl::detail::unary_transform;
     detail::unary_transform( ctl, first1, last1, result, f, user_code );
 }
 
 // default control, one-input transform, std:: iterator
-template<typename InputIterator, typename OutputIterator, typename UnaryFunction>
+template<typename InputIterator, typename OutputIterator, typename UnaryFunction1>
 void transform( InputIterator first1, InputIterator last1, OutputIterator result,
-                UnaryFunction f, const std::string& user_code )
+                UnaryFunction1 f, const std::string& user_code )
 {
     using bolt::cl::transform;
     transform( control::getDefault(), first1, last1, result, f, user_code );

@@ -66,7 +66,7 @@ namespace bolt
          *  \return Nothing. Input itself is modified.
          *
          *  \tparam InputIterator is a model of InputIterator
-         *                        and \c InputIterator's \c value_type is convertible to \c UnaryFunction's
+         *                        and \c InputIterator's \c value_type is convertible to \c UnaryFunction1's
          *  \tparam T is a model of Assignable.
 		 *
          *  The following code snippet demonstrates how to use \p replace and \p replace_if.
@@ -170,7 +170,7 @@ namespace bolt
          *  \return Nothing. Input itself is modified.
          *
          *  \tparam InputIterator is a model of InputIterator
-         *                        and \c InputIterator's \c value_type is convertible to \c UnaryFunction's
+         *                        and \c InputIterator's \c value_type is convertible to \c UnaryFunction1's
          *  \tparam T is a model of Assignable.
 		 *
          *  The following code snippet demonstrates how to use \p replace_copy and \p replace_copy_if.
