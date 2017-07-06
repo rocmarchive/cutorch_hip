@@ -106,7 +106,6 @@ __global__ void set_rngstate_kernel(hiprngStateMtgp32 *state, mtgp32_kernel_para
 void THCRandom_setRNGState(THCState* state, THByteTensor *rng_state)
 {
   Generator* gen = THCRandom_getGenerator(state);
-
 #ifdef CURAND_PATH
   static const size_t states_size = MAX_NUM_BLOCKS * sizeof(curandStateMtgp32);
 #else
@@ -119,7 +118,6 @@ void THCRandom_setRNGState(THCState* state, THByteTensor *rng_state)
 
   THCudaCheck(hipMemcpy(gen->gen_states, THByteTensor_data(rng_state),
                          states_size, hipMemcpyHostToDevice));
-  printf("Set RNG kernel invoked\n");
   hipLaunchKernelGGL(
     set_rngstate_kernel,
     dim3(1),
@@ -129,7 +127,6 @@ void THCRandom_setRNGState(THCState* state, THByteTensor *rng_state)
     gen->gen_states,
     gen->kernel_params);
   
-  printf("Set RNG kernel invocation complete\n");
    memcpy(&gen->initial_seed, THByteTensor_data(rng_state) + states_size, seed_size);
 
 }
@@ -261,8 +258,7 @@ void generate_bernoulli_tensor(hc::accelerator_view accl_view, hiprngStateMtgp32
   const uint32_t* av_d_status = (s[groupId].k->d_status);
   
     for (int i = threadId; i < rounded_size; i += BLOCK_SIZE * MAX_NUM_BLOCKS) {
-        float x =0;
-     /* float x = hiprng_uniform(
+        float x = hcrng_uniform(
           av_param_tbl,
           av_temper_tbl,
           av_sh1_tbl,
@@ -272,7 +268,7 @@ void generate_bernoulli_tensor(hc::accelerator_view accl_view, hiprngStateMtgp32
           av_pos_tbl,
           av_mask,
           av_d_status,
-          tidx);*/
+          groupId, tidx.local[0]);
       if (i < size) {
         result[i] = ScalarConvert<bool, real>::to(x <= probs[i]);
       }
