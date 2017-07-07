@@ -66,8 +66,8 @@ namespace bolt {
 		 *  \tparam T The type of the result.
 		 *  \tparam InputIterator is a model of an InputIterator.
 		 *         and \c InputIterator's \c value_type is convertible to \c BinaryFunction's \c first_argument_type.
-		 *  \tparam UnaryFunction is a model of Unary Function.
-		 *          and \c UnaryFunction's \c result_type is convertible to \c InputIterator's \c value_type.
+		 *  \tparam UnaryFunction1 is a model of Unary Function.
+		 *          and \c UnaryFunction1's \c result_type is convertible to \c InputIterator's \c value_type.
 		 *  \tparam BinaryFunction is a model of Binary Function.
 		 *           and \c BinaryFunction's \c result_type is convertible to \c InputIterator's \c value_type.
 		 *
@@ -85,15 +85,15 @@ namespace bolt {
 		 *
 		 *  \sa http://www.sgi.com/tech/stl/InputIterator.html
 		 *  \sa http://www.sgi.com/tech/stl/OutputIterator.html
-		 *  \sa http://www.sgi.com/tech/stl/UnaryFunction.html
+		 *  \sa http://www.sgi.com/tech/stl/UnaryFunction1.html
 		 *  \sa http://www.sgi.com/tech/stl/BinaryFunction.html
 		 */
 
-		 template<typename InputIterator, typename UnaryFunction, typename T, typename BinaryFunction>
+		 template<typename InputIterator, typename UnaryFunction1, typename T, typename BinaryFunction>
 		T transform_reduce(
 			InputIterator first,
 			InputIterator last,
-			UnaryFunction transform_op,
+			UnaryFunction1 transform_op,
 			T init,
 			BinaryFunction reduce_op);
 

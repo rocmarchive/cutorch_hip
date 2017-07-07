@@ -139,7 +139,7 @@ namespace cl
        *  }
        *  \endcode
        */
-  template <class UnaryFunction, class Iterator, class Reference = use_default, class Value = use_default>
+  template <class UnaryFunction1, class Iterator, class Reference = use_default, class Value = use_default>
   class transform_iterator;
 
   namespace detail
@@ -209,13 +209,13 @@ namespace cl
     }
 
     template <
-        class OtherUnaryFunction
+        class OtherUnaryFunction1
       , class OtherIterator
       , class OtherReference
       , class OtherValue>
-    transform_iterator( transform_iterator<OtherUnaryFunction, OtherIterator, OtherReference, OtherValue> const& t
+    transform_iterator( transform_iterator<OtherUnaryFunction1, OtherIterator, OtherReference, OtherValue> const& t
                       , typename bolt::cl::enable_if_convertible<OtherIterator, Iterator>::type* = 0
-                      , typename bolt::cl::enable_if_convertible<OtherUnaryFunction, UnaryFunc>::type* = 0 )
+                      , typename bolt::cl::enable_if_convertible<OtherUnaryFunction1, UnaryFunc>::type* = 0 )
       : super_t(t.base()), m_f(t.functor())
    { }
 

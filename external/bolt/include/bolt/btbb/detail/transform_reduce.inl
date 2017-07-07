@@ -31,18 +31,18 @@ namespace bolt {
 			 *The imperative form of parallel_reduce is used.
 			 *
 			*/
-			template < typename InputIterator, typename UnaryFunction, typename BinaryFunction,typename T>
+			template < typename InputIterator, typename UnaryFunction1, typename BinaryFunction,typename T>
 			struct Transform_Reduce {
 				T value;
 				BinaryFunction reduce_op;
-				UnaryFunction transform_op;
+				UnaryFunction1 transform_op;
 				bool flag;
 
 				//TODO - Decide on how many threads to spawn? Usually it should be equal to th enumber of cores
 				//You might need to look at the tbb::split and there there cousin's
 				//
-				Transform_Reduce(const UnaryFunction &_opt, const BinaryFunction &_opr) : transform_op(_opt), reduce_op(_opr) ,value(0){}
-				Transform_Reduce(const UnaryFunction &_opt, const BinaryFunction &_opr, const T &init) : transform_op(_opt), reduce_op(_opr), value(init), flag(false){}
+				Transform_Reduce(const UnaryFunction1 &_opt, const BinaryFunction &_opr) : transform_op(_opt), reduce_op(_opr) ,value(0){}
+				Transform_Reduce(const UnaryFunction1 &_opt, const BinaryFunction &_opr, const T &init) : transform_op(_opt), reduce_op(_opr), value(init), flag(false){}
 
 				Transform_Reduce(): value(0) {}
 				Transform_Reduce( Transform_Reduce& s, tbb::split ):flag(true),transform_op(s.transform_op),reduce_op(s.reduce_op){}
@@ -66,18 +66,18 @@ namespace bolt {
 			};
 
 
-		 template<typename InputIterator, typename UnaryFunction, typename T, typename BinaryFunction>
+		 template<typename InputIterator, typename UnaryFunction1, typename T, typename BinaryFunction>
 		T transform_reduce(
 			InputIterator first,
 			InputIterator last,
-			UnaryFunction transform_op,
+			UnaryFunction1 transform_op,
 			T init,
 			BinaryFunction reduce_op)
 		{
 
 				  typedef typename std::iterator_traits< InputIterator >::value_type iType;
 					tbb::task_scheduler_init initialize(tbb::task_scheduler_init::automatic);
-					Transform_Reduce<InputIterator, UnaryFunction, BinaryFunction,T> transform_reduce_op(transform_op, reduce_op, init);
+					Transform_Reduce<InputIterator, UnaryFunction1, BinaryFunction,T> transform_reduce_op(transform_op, reduce_op, init);
 					tbb::parallel_reduce( tbb::blocked_range<InputIterator>( first, last), transform_reduce_op );
 					return transform_reduce_op.value;
 

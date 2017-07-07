@@ -44,11 +44,11 @@ namespace  detail {
 
 namespace serial{
 
-	template<typename InputIterator, typename UnaryFunction, typename oType, typename BinaryFunction>
+	template<typename InputIterator, typename UnaryFunction1, typename oType, typename BinaryFunction>
     oType transform_reduce(control& ctl,
             const InputIterator& first,
             const InputIterator& last,
-            const UnaryFunction& transform_op,
+            const UnaryFunction1& transform_op,
             const oType& init,
             const BinaryFunction& reduce_op,
             const std::string& user_code,
@@ -86,11 +86,11 @@ namespace serial{
 
 
 
-	template<typename InputIterator, typename UnaryFunction, typename oType, typename BinaryFunction>
+	template<typename InputIterator, typename UnaryFunction1, typename oType, typename BinaryFunction>
     oType transform_reduce(control& ctl,
            const InputIterator& first,
            const InputIterator& last,
-           const UnaryFunction& transform_op,
+           const UnaryFunction1& transform_op,
            const oType& init,
            const BinaryFunction& reduce_op,
            const std::string& user_code,
@@ -111,11 +111,11 @@ namespace serial{
 namespace btbb{
 
 	
-	template<typename InputIterator, typename UnaryFunction, typename oType, typename BinaryFunction>
+	template<typename InputIterator, typename UnaryFunction1, typename oType, typename BinaryFunction>
     oType transform_reduce(control& ctl,
             const InputIterator& first,
             const InputIterator& last,
-            const UnaryFunction& transform_op,
+            const UnaryFunction1& transform_op,
             const oType& init,
             const BinaryFunction& reduce_op,
             const std::string& user_code,
@@ -152,11 +152,11 @@ namespace btbb{
 
 
 
-	template<typename InputIterator, typename UnaryFunction, typename oType, typename BinaryFunction>
+	template<typename InputIterator, typename UnaryFunction1, typename oType, typename BinaryFunction>
     oType transform_reduce(control& ctl,
            const InputIterator& first,
            const InputIterator& last,
-           const UnaryFunction& transform_op,
+           const UnaryFunction1& transform_op,
            const oType& init,
            const BinaryFunction& reduce_op,
            const std::string& user_code,
@@ -170,7 +170,7 @@ namespace btbb{
 
 namespace cl{
 
-    enum transformReduceTypes {tr_iType, tr_iIterType, tr_oType, tr_UnaryFunction,
+    enum transformReduceTypes {tr_iType, tr_iIterType, tr_oType, tr_UnaryFunction1,
     tr_BinaryFunction, tr_end };
 
     class TransformReduce_KernelTemplateSpecializer : public KernelTemplateSpecializer
@@ -192,7 +192,7 @@ namespace cl{
                 "global " + typeNames[tr_iType] + "* input_ptr,\n"
                 + typeNames[tr_iIterType] + " iIter,\n"
                 "const int length,\n"
-                "global " + typeNames[tr_UnaryFunction] + "* transformFunctor,\n"
+                "global " + typeNames[tr_UnaryFunction1] + "* transformFunctor,\n"
                 "const " + typeNames[tr_oType] + " init,\n"
                 "global " + typeNames[tr_BinaryFunction] + "* reduceFunctor,\n"
                 "global " + typeNames[tr_oType] + "* result,\n"
@@ -202,11 +202,11 @@ namespace cl{
         }
     };
 
-	template<typename InputIterator, typename UnaryFunction, typename oType, typename BinaryFunction>
+	template<typename InputIterator, typename UnaryFunction1, typename oType, typename BinaryFunction>
     oType transform_reduce(control& ctl,
         const InputIterator& first,
         const InputIterator& last,
-        const UnaryFunction& transform_op,
+        const UnaryFunction1& transform_op,
         const oType& init,
         const BinaryFunction& reduce_op,
         const std::string& user_code,
@@ -223,7 +223,7 @@ namespace cl{
         typeNames[tr_iType] = TypeName< iType >::get( );
         typeNames[tr_iIterType] = TypeName< InputIterator >::get( );
         typeNames[tr_oType] = TypeName< oType >::get( );
-        typeNames[tr_UnaryFunction] = TypeName< UnaryFunction >::get( );
+        typeNames[tr_UnaryFunction1] = TypeName< UnaryFunction1 >::get( );
         typeNames[tr_BinaryFunction] = TypeName< BinaryFunction >::get();
 
         /**********************************************************************************
@@ -233,7 +233,7 @@ namespace cl{
         PUSH_BACK_UNIQUE( typeDefinitions, ClCode< iType >::get() )
         PUSH_BACK_UNIQUE( typeDefinitions, ClCode< InputIterator >::get() )
         PUSH_BACK_UNIQUE( typeDefinitions, ClCode< oType >::get() )
-        PUSH_BACK_UNIQUE( typeDefinitions, ClCode< UnaryFunction >::get() )
+        PUSH_BACK_UNIQUE( typeDefinitions, ClCode< UnaryFunction1 >::get() )
         PUSH_BACK_UNIQUE( typeDefinitions, ClCode< BinaryFunction  >::get() )
 
         /**********************************************************************************
@@ -277,7 +277,7 @@ namespace cl{
 
 
         // Create Buffer wrappers so we can access the host functors, for read or writing in the kernel
-        ALIGNED( 256 ) UnaryFunction aligned_unary( transform_op );
+        ALIGNED( 256 ) UnaryFunction1 aligned_unary( transform_op );
         ALIGNED( 256 ) BinaryFunction aligned_binary( reduce_op );
 
         control::buffPointer transformFunctor = ctl.acquireBuffer( sizeof( aligned_unary ),
@@ -353,11 +353,11 @@ namespace cl{
 
 
 
-	template<typename InputIterator, typename UnaryFunction, typename oType, typename BinaryFunction>
+	template<typename InputIterator, typename UnaryFunction1, typename oType, typename BinaryFunction>
     oType transform_reduce(control& ctl,
         const InputIterator& first,
         const InputIterator& last,
-        const UnaryFunction& transform_op,
+        const UnaryFunction1& transform_op,
         const oType& init,
         const BinaryFunction& reduce_op,
         const std::string& user_code,
@@ -389,11 +389,11 @@ namespace cl{
 
 
 
-	template<typename InputIterator, typename UnaryFunction, typename oType, typename BinaryFunction>
+	template<typename InputIterator, typename UnaryFunction1, typename oType, typename BinaryFunction>
     oType transform_reduce(control& ctl,
         const InputIterator& first,
         const InputIterator& last,
-        const UnaryFunction& transform_op,
+        const UnaryFunction1& transform_op,
         const oType& init,
         const BinaryFunction& reduce_op,
         const std::string& user_code,
@@ -406,14 +406,14 @@ namespace cl{
 } // end of namespace cl
 
     // Wrapper that uses default control class, iterator interface
-    template<typename InputIterator, typename UnaryFunction, typename T, typename BinaryFunction>
+    template<typename InputIterator, typename UnaryFunction1, typename T, typename BinaryFunction>
 	typename std::enable_if< 
             !(std::is_same< typename std::iterator_traits< InputIterator>::iterator_category, 
                             std::input_iterator_tag 
                         >::value), T
                         >::type
     transform_reduce( control& ctl, const InputIterator& first, const InputIterator& last,
-        const UnaryFunction& transform_op,
+        const UnaryFunction1& transform_op,
         const T& init,const BinaryFunction& reduce_op,const std::string& user_code)
     {
                 typedef typename std::iterator_traits<InputIterator>::value_type iType;
@@ -464,14 +464,14 @@ namespace cl{
 
 
 
-	template<typename InputIterator, typename UnaryFunction, typename T, typename BinaryFunction>
+	template<typename InputIterator, typename UnaryFunction1, typename T, typename BinaryFunction>
     typename std::enable_if< 
             (std::is_same< typename std::iterator_traits< InputIterator>::iterator_category, 
                             std::input_iterator_tag 
                         >::value), T
                         >::type
     transform_reduce(control &ctl, const InputIterator& first, const InputIterator& last,
-        const UnaryFunction& transform_op,
+        const UnaryFunction1& transform_op,
         const T& init, const BinaryFunction& reduce_op, const std::string& user_code )
     {
                 //TODO - Shouldn't we support transform for input_iterator_tag also. 
@@ -488,18 +488,18 @@ namespace cl{
 
     // The following two functions are visible in .h file
     // Wrapper that user passes a control class
-    template<typename InputIterator, typename UnaryFunction, typename T, typename BinaryFunction>
+    template<typename InputIterator, typename UnaryFunction1, typename T, typename BinaryFunction>
     T transform_reduce( control& ctl, InputIterator first, InputIterator last,
-        UnaryFunction transform_op,
+        UnaryFunction1 transform_op,
         T init,  BinaryFunction reduce_op, const std::string& user_code )
     {
         return detail::transform_reduce( ctl, first, last, transform_op, init, reduce_op, user_code);
     };
 
     // Wrapper that generates default control class
-    template<typename InputIterator, typename UnaryFunction, typename T, typename BinaryFunction>
+    template<typename InputIterator, typename UnaryFunction1, typename T, typename BinaryFunction>
     T transform_reduce(InputIterator first, InputIterator last,
-        UnaryFunction transform_op,
+        UnaryFunction1 transform_op,
         T init,  BinaryFunction reduce_op, const std::string& user_code )
     {
         return transform_reduce( control::getDefault(), first, last, transform_op, init, reduce_op, user_code);

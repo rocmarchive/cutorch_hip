@@ -53,10 +53,10 @@ namespace amp
 *
 * \tparam InputIterator is a model of Input Iterator.
 * \tparam OutputIterator is a model of Output Iterator.
-* \tparam UnaryFunction is a model of Unary Function which takes as input \c InputIterator's \c value_type
+* \tparam UnaryFunction1 is a model of Unary Function which takes as input \c InputIterator's \c value_type
 * and whose return type is convertible to \c BinaryFunction's \c input types.
 * \tparam BinaryFunction is a model of Binary Function which takes as input two values convertible
-* from \c UnaryFunction's \c return type and whose return type
+* from \c UnaryFunction1's \c return type and whose return type
 * is convertible to \c OutputIterator's \c value_type.
 * \return result+(last-first).
 *
@@ -81,13 +81,13 @@ namespace amp
 * \sa http://www.sgi.com/tech/stl/partial_sum.html
 * \sa http://www.sgi.com/tech/stl/InputIterator.html
 * \sa http://www.sgi.com/tech/stl/OutputIterator.html
-* \sa http://www.sgi.com/tech/stl/UnaryFunction.html
+* \sa http://www.sgi.com/tech/stl/UnaryFunction1.html
 * \sa http://www.sgi.com/tech/stl/BinaryFunction.html
 */
 template<
     typename InputIterator,
     typename OutputIterator,
-    typename UnaryFunction,
+    typename UnaryFunction1,
     typename BinaryFunction>
 static
 inline
@@ -97,13 +97,13 @@ transform_inclusive_scan(
     InputIterator first,
     InputIterator last,
     OutputIterator result, 
-    UnaryFunction unary_op,
+    UnaryFunction1 unary_op,
     BinaryFunction binary_op);
 
 template<
     typename InputIterator,
     typename OutputIterator,
-    typename UnaryFunction,
+    typename UnaryFunction1,
     typename BinaryFunction>
 static
 inline
@@ -112,7 +112,7 @@ transform_inclusive_scan(
     InputIterator first,
     InputIterator last,
     OutputIterator result, 
-    UnaryFunction unary_op,
+    UnaryFunction1 unary_op,
     BinaryFunction binary_op);
 
 
@@ -130,11 +130,11 @@ transform_inclusive_scan(
 *
 * \tparam InputIterator is a model of Input Iterator.
 * \tparam OutputIterator is a model of Output Iterator.
-* \tparam UnaryFunction is a model of Unary Function which takes as input \c InputIterator's \c value_type
+* \tparam UnaryFunction1 is a model of Unary Function which takes as input \c InputIterator's \c value_type
 * and whose return type is convertible to \c BinaryFunction's \c input types.
 * \tparam T is convertible to \c OutputIterator's value_type.
 * \tparam BinaryFunction is a model of Binary Function which takes as input two values convertible
-* from \c UnaryFunction's \c return type and whose return type
+* from \c UnaryFunction1's \c return type and whose return type
 * is convertible to \c OutputIterator's \c value_type.
 * \return result+(last-first).
 *
@@ -159,13 +159,13 @@ transform_inclusive_scan(
 * \sa http://www.sgi.com/tech/stl/partial_sum.html
 * \sa http://www.sgi.com/tech/stl/InputIterator.html
 * \sa http://www.sgi.com/tech/stl/OutputIterator.html
-* \sa http://www.sgi.com/tech/stl/UnaryFunction.html
+* \sa http://www.sgi.com/tech/stl/UnaryFunction1.html
 * \sa http://www.sgi.com/tech/stl/BinaryFunction.html
 */
 template<
     typename InputIterator,
     typename OutputIterator,
-    typename UnaryFunction,
+    typename UnaryFunction1,
     typename T,
     typename BinaryFunction>
 static
@@ -176,14 +176,14 @@ transform_exclusive_scan(
     InputIterator first,
     InputIterator last,
     OutputIterator result, 
-    UnaryFunction unary_op,
+    UnaryFunction1 unary_op,
     T init,
     BinaryFunction binary_op);
 
 template<
     typename InputIterator,
     typename OutputIterator,
-    typename UnaryFunction,
+    typename UnaryFunction1,
     typename T,
     typename BinaryFunction>
 static
@@ -193,7 +193,7 @@ transform_exclusive_scan(
     InputIterator first,
     InputIterator last,
     OutputIterator result, 
-    UnaryFunction unary_op,
+    UnaryFunction1 unary_op,
     T init,
     BinaryFunction binary_op);
 

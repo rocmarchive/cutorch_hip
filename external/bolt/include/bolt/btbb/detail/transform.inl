@@ -163,16 +163,16 @@ namespace bolt
      };
 
 
-		template<typename InputIterator, typename OutputIterator, typename UnaryFunction>
+		template<typename InputIterator, typename OutputIterator, typename UnaryFunction1>
 		void transform(InputIterator first,
 					   InputIterator last,
 					   OutputIterator result,
-					   UnaryFunction op)
+					   UnaryFunction1 op)
 		{
 
 			tbb::parallel_for(
-				transformUnaryRange< InputIterator, OutputIterator, UnaryFunction >( first, last, result, op ),
-				transformUnaryRangeBody< InputIterator, OutputIterator, UnaryFunction >( ),
+				transformUnaryRange< InputIterator, OutputIterator, UnaryFunction1 >( first, last, result, op ),
+				transformUnaryRangeBody< InputIterator, OutputIterator, UnaryFunction1 >( ),
 				tbb::simple_partitioner( ) );
 
 		}

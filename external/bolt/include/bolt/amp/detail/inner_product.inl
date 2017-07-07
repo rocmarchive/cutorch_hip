@@ -31,8 +31,10 @@ TODO:
 #include <type_traits>
 #include <bolt/amp/detail/reduce.inl>
 #include <bolt/amp/detail/transform.inl>
+#include <hcc/hc_am.hpp>
 #include "bolt/amp/device_vector.h"
 #include "bolt/amp/bolt.h"
+#include "bolt/amp/iterator/ubiquitous_iterator.h"
 
 //TBB Includes
 #ifdef ENABLE_TBB
@@ -190,10 +192,13 @@ namespace amp{
         if( distVec == 0 )
             return init;
 
-        device_vector<iType> tempDV(distVec, iType(), false, ctl);
+        // device_vector<iType> tempDV(distVec, iType(), false, ctl);
+        iType* tempPtr = (iType*) hc::am_alloc(distVec*sizeof(iType), reinterpret_cast<hc::accelerator&>(ctl.getAccelerator()), amHostPinned);
+        auto tempDV = bolt::amp::make_ubiquitous_iterator(tempPtr);
 
-        detail::amp::binary_transform( ctl, first1, last1, first2, tempDV.begin() ,f2);
-        return detail::reduce( ctl, tempDV.begin(), tempDV.end(), init, f1);
+        // detail::amp::binary_transform( ctl, first1, last1, first2, tempDV.begin() ,f2);
+        detail::amp::binary_transform( ctl, first1, last1, first2, tempDV ,f2);
+        return detail::reduce( ctl, tempDV, tempDV+distVec, init, f1);
     }
 
 	template<typename InputIterator, typename OutputType, typename BinaryFunction1,typename BinaryFunction2>

@@ -44,9 +44,12 @@ if ((_IDX < _W) && ((_IDX + _W) < _LENGTH)) {\
 
 #include <algorithm>
 #include <type_traits>
+#include <hcc/hc_am.hpp>
 #include "bolt/amp/bolt.h"
 #include "bolt/amp/device_vector.h"
 #include "bolt/amp/iterator/iterator_traits.h"
+
+#include "/root/pfe2/headers/functions/pfe_v2.hpp"
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -183,24 +186,27 @@ namespace amp{
 		numTiles = static_cast< int >((szElements/REDUCE_WAVEFRONT_SIZE)>= numTiles?(numTiles):
 							(std::ceil( static_cast< float >( szElements ) / REDUCE_WAVEFRONT_SIZE) ));
 
-		concurrency::array<iType, 1> result(numTiles, ctl.getAccelerator().get_default_view());
-
-		concurrency::extent< 1 > inputExtent(length);
-        concurrency::tiled_extent< REDUCE_WAVEFRONT_SIZE > tiledExtentReduce = inputExtent.tile< REDUCE_WAVEFRONT_SIZE >();
+		// concurrency::array<iType, 1> result(numTiles, ctl.getAccelerator().get_default_view());
+                iType* result = (iType*) hc::am_alloc(numTiles*sizeof(iType), reinterpret_cast<hc::accelerator&>(ctl.getAccelerator()), amHostPinned);
+		// concurrency::extent< 1 > inputExtent(length);
+		hc::extent< 1 > inputExtent(length);
+        hc::tiled_extent< 1 > tiledExtentReduce = inputExtent.tile( REDUCE_WAVEFRONT_SIZE );
 
         // Algorithm is different from cl::reduce. We launch worksize = number of elements here.
         // AMP doesn't have APIs to get CU capacity. Launchable size is great though.
 
         try
         {
-                concurrency::parallel_for_each(ctl.getAccelerator().get_default_view(),
+                // concurrency::parallel_for_each(ctl.getAccelerator().get_default_view(),
+                pfe_v2::parallel_for_each_v2((reinterpret_cast<hc::accelerator&>(ctl.getAccelerator())).get_default_view(),
                                                tiledExtentReduce,
                                                [ first,
 											 szElements,
 											 length,
-                                                 &result,
+                                                 // &result,
+                                                 result,
                                                  binary_op ]
-                                               ( concurrency::tiled_index<REDUCE_WAVEFRONT_SIZE> t_idx ) restrict(amp)
+                                               ( auto&& t_idx ) restrict(amp)
                 {
 				int gx = t_idx.global[0];
 				int gloId = gx;
@@ -253,14 +259,19 @@ namespace amp{
                 });
 
 			iType acc = static_cast<iType>(init);
-			std::vector<iType> *cpuPointerReduce = new std::vector<iType>(numTiles);
+			// std::vector<iType> *cpuPointerReduce = new std::vector<iType>(numTiles);
+			iType *cpuPointerReduce = new iType(numTiles);
 
-			concurrency::copy(result, (*cpuPointerReduce).begin());
+			// concurrency::copy(result, (*cpuPointerReduce).begin());
+                        (reinterpret_cast<hc::accelerator&>(ctl.getAccelerator())).get_default_view().copy(
+                                result, cpuPointerReduce, numTiles*sizeof(iType));
 			for(int i = 0; i < numTiles; ++i)
 			{
-				acc = binary_op(acc, (*cpuPointerReduce)[i]);
+				// acc = binary_op(acc, (*cpuPointerReduce)[i]);
+				acc = binary_op(acc, cpuPointerReduce[i]);
 			}
-			delete cpuPointerReduce;
+			delete [] cpuPointerReduce;
+                        hc::am_free(result);
 			return acc;
             }
             catch(std::exception &e)

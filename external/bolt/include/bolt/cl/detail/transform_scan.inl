@@ -66,7 +66,7 @@ namespace serial{
 	<
     typename InputIterator,
     typename OutputIterator,
-    typename UnaryFunction,
+    typename UnaryFunction1,
     typename T,
     typename BinaryFunction 
 	>
@@ -80,7 +80,7 @@ namespace serial{
     const InputIterator& first,
     const InputIterator& last,
     const OutputIterator& result,
-    const UnaryFunction& unary_op,
+    const UnaryFunction1& unary_op,
     const T& init,
     const bool& inclusive,
     const BinaryFunction& binary_op)
@@ -153,7 +153,7 @@ namespace serial{
 	<
     typename InputIterator,
     typename OutputIterator,
-    typename UnaryFunction,
+    typename UnaryFunction1,
     typename T,
     typename BinaryFunction 
 	>
@@ -165,7 +165,7 @@ namespace serial{
     const InputIterator& first,
     const InputIterator& last,
     const OutputIterator& result,
-    const UnaryFunction& unary_op,
+    const UnaryFunction1& unary_op,
     const T& init,
     const bool& inclusive,
     const BinaryFunction& binary_op)
@@ -221,7 +221,7 @@ namespace btbb{
 	<
     typename InputIterator,
     typename OutputIterator,
-    typename UnaryFunction,
+    typename UnaryFunction1,
     typename T,
     typename BinaryFunction 
 	>
@@ -235,7 +235,7 @@ namespace btbb{
     const InputIterator& first,
     const InputIterator& last,
     const OutputIterator& result,
-    const UnaryFunction& unary_op,
+    const UnaryFunction1& unary_op,
     const T& init,
     const bool& inclusive,
     const BinaryFunction& binary_op)
@@ -284,7 +284,7 @@ namespace btbb{
 	<
     typename InputIterator,
     typename OutputIterator,
-    typename UnaryFunction,
+    typename UnaryFunction1,
     typename T,
     typename BinaryFunction 
 	>
@@ -297,7 +297,7 @@ namespace btbb{
     const InputIterator& first,
     const InputIterator& last,
     const OutputIterator& result,
-    const UnaryFunction& unary_op,
+    const UnaryFunction1& unary_op,
     const T& init,
     const bool& inclusive,
     const BinaryFunction& binary_op)
@@ -320,7 +320,7 @@ namespace btbb{
 
 namespace cl{
     enum transformScanTypes{ transformScan_iValueType, transformScan_iIterType, transformScan_oValueType,
-                             transformScan_oIterType, transformScan_initType, transformScan_UnaryFunction,
+                             transformScan_oIterType, transformScan_initType, transformScan_UnaryFunction1,
                              transformScan_BinaryFunction, transformScan_end };
 
 
@@ -346,7 +346,7 @@ namespace cl{
                 ""        + typeNames[transformScan_initType] + " identity,\n"
                 "const uint vecSize,\n"
                 "local "  + typeNames[transformScan_oValueType] + "* lds,\n"
-                "global " + typeNames[transformScan_UnaryFunction] + "* unaryOp,\n"
+                "global " + typeNames[transformScan_UnaryFunction1] + "* unaryOp,\n"
                 "global " + typeNames[transformScan_BinaryFunction] + "* binaryOp,\n"
                 "global " + typeNames[transformScan_oValueType] + "* preSumArray,\n"
 				"const uint load_per_wg\n"
@@ -375,7 +375,7 @@ namespace cl{
                 "local "  + typeNames[transformScan_oValueType] + "* lds,\n"
                 "const uint vecSize,\n"
 				"const uint load_per_wg,\n"
-                "global " + typeNames[transformScan_UnaryFunction] + "* unaryOp,\n"
+                "global " + typeNames[transformScan_UnaryFunction1] + "* unaryOp,\n"
                 "global " + typeNames[transformScan_BinaryFunction] + "* binaryOp,\n"
                 ""        + typeNames[transformScan_initType] + " identity\n"
                 ");\n\n";
@@ -390,7 +390,7 @@ namespace cl{
 	<
     typename InputIterator,
     typename OutputIterator,
-    typename UnaryFunction,
+    typename UnaryFunction1,
     typename T,
     typename BinaryFunction 
 	>
@@ -403,7 +403,7 @@ namespace cl{
     const InputIterator& first,
     const InputIterator& last,
     const OutputIterator& result,
-    const UnaryFunction& unary_op,
+    const UnaryFunction1& unary_op,
     const T& init_T,
     const bool& inclusive,
     const BinaryFunction& binary_op,
@@ -431,7 +431,7 @@ size_t k0_stepNum, k1_stepNum, k2_stepNum;
     typeNames[ transformScan_oValueType ] = TypeName< oType >::get( );
     typeNames[ transformScan_oIterType ] = TypeName< OutputIterator >::get( );
     typeNames[ transformScan_initType ] = TypeName< T >::get( );
-    typeNames[ transformScan_UnaryFunction ] = TypeName< UnaryFunction >::get();
+    typeNames[ transformScan_UnaryFunction1 ] = TypeName< UnaryFunction1 >::get();
     typeNames[ transformScan_BinaryFunction ] = TypeName< BinaryFunction >::get();
 
     /**********************************************************************************
@@ -443,7 +443,7 @@ size_t k0_stepNum, k1_stepNum, k2_stepNum;
     PUSH_BACK_UNIQUE( typeDefinitions, ClCode< oType >::get() )
     PUSH_BACK_UNIQUE( typeDefinitions, ClCode< OutputIterator >::get() )
     PUSH_BACK_UNIQUE( typeDefinitions, ClCode< T >::get() )
-    PUSH_BACK_UNIQUE( typeDefinitions, ClCode< UnaryFunction >::get() )
+    PUSH_BACK_UNIQUE( typeDefinitions, ClCode< UnaryFunction1 >::get() )
     PUSH_BACK_UNIQUE( typeDefinitions, ClCode< BinaryFunction >::get() )
 
     /**********************************************************************************
@@ -487,7 +487,7 @@ size_t k0_stepNum, k1_stepNum, k2_stepNum;
     cl_uint numElements = static_cast< cl_uint >( std::distance( first, last ) );
     
     // Create buffer wrappers so we can access the host functors, for read or writing in the kernel
-    ALIGNED( 256 ) UnaryFunction aligned_unary_op( unary_op );
+    ALIGNED( 256 ) UnaryFunction1 aligned_unary_op( unary_op );
     control::buffPointer unaryBuffer = ctl.acquireBuffer( sizeof( aligned_unary_op ),
         CL_MEM_USE_HOST_PTR|CL_MEM_READ_ONLY, &aligned_unary_op);
     ALIGNED( 256 ) BinaryFunction aligned_binary_op( binary_op );
@@ -711,7 +711,7 @@ aProfiler.setArchitecture(strDeviceName);
 	<
     typename InputIterator,
     typename OutputIterator,
-    typename UnaryFunction,
+    typename UnaryFunction1,
     typename T,
     typename BinaryFunction 
     >
@@ -724,7 +724,7 @@ aProfiler.setArchitecture(strDeviceName);
     const InputIterator& first,
     const InputIterator& last,
     const OutputIterator& result,
-    const UnaryFunction& unary_op,
+    const UnaryFunction1& unary_op,
     const T& init,
     const bool& inclusive,
     const BinaryFunction& binary_op,
@@ -765,7 +765,7 @@ aProfiler.setArchitecture(strDeviceName);
 	<
     typename InputIterator,
     typename OutputIterator,
-    typename UnaryFunction,
+    typename UnaryFunction1,
     typename T,
     typename BinaryFunction 
     >
@@ -782,7 +782,7 @@ aProfiler.setArchitecture(strDeviceName);
     const InputIterator& first,
     const InputIterator& last,
     const OutputIterator& result,
-    const UnaryFunction& unary_op,
+    const UnaryFunction1& unary_op,
     const T& init,
     const bool& inclusive,
     const BinaryFunction& binary_op,
@@ -846,7 +846,7 @@ aProfiler.setArchitecture(strDeviceName);
 	<
     typename InputIterator,
     typename OutputIterator,
-    typename UnaryFunction,
+    typename UnaryFunction1,
     typename T,
     typename BinaryFunction 
 	>
@@ -863,7 +863,7 @@ aProfiler.setArchitecture(strDeviceName);
     const InputIterator& first,
     const InputIterator& last,
     const OutputIterator& result,
-    const UnaryFunction& unary_op,
+    const UnaryFunction1& unary_op,
     const T& init,
     const bool& inclusive,
     const BinaryFunction& binary_op,
@@ -892,7 +892,7 @@ template
 <
         typename InputIterator,
         typename OutputIterator,
-        typename UnaryFunction,
+        typename UnaryFunction1,
         //typename T,
         typename BinaryFunction
 >
@@ -901,7 +901,7 @@ OutputIterator transform_inclusive_scan(
         InputIterator first,
         InputIterator last,
         OutputIterator result,
-        UnaryFunction unary_op,
+        UnaryFunction1 unary_op,
         BinaryFunction binary_op,
         const std::string& user_code )
 {
@@ -924,14 +924,14 @@ template
 <
         typename InputIterator,
         typename OutputIterator,
-        typename UnaryFunction,
+        typename UnaryFunction1,
         typename BinaryFunction
 >
 OutputIterator transform_inclusive_scan(
         InputIterator first,
         InputIterator last,
         OutputIterator result,
-        UnaryFunction unary_op,
+        UnaryFunction1 unary_op,
         BinaryFunction binary_op,
         const std::string& user_code )
 {
@@ -958,7 +958,7 @@ template
 <
         typename InputIterator,
         typename OutputIterator,
-        typename UnaryFunction,
+        typename UnaryFunction1,
         typename T,
         typename BinaryFunction
 >
@@ -967,7 +967,7 @@ OutputIterator transform_exclusive_scan(
         InputIterator first,
         InputIterator last,
         OutputIterator result,
-        UnaryFunction unary_op,
+        UnaryFunction1 unary_op,
         T init,
         BinaryFunction binary_op,
         const std::string& user_code )
@@ -990,7 +990,7 @@ template
 <
         typename InputIterator,
         typename OutputIterator,
-        typename UnaryFunction,
+        typename UnaryFunction1,
         typename T,
         typename BinaryFunction
 >
@@ -998,7 +998,7 @@ OutputIterator transform_exclusive_scan(
         InputIterator first,
         InputIterator last,
         OutputIterator result,
-        UnaryFunction unary_op,
+        UnaryFunction1 unary_op,
         T init,
         BinaryFunction binary_op,
         const std::string& user_code )

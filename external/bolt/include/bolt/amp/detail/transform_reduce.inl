@@ -49,13 +49,13 @@ namespace  detail {
 namespace serial{
 
 
-template<typename InputIterator, typename UnaryFunction, typename oType, typename BinaryFunction>
+template<typename InputIterator, typename UnaryFunction1, typename oType, typename BinaryFunction>
     static
     inline
     oType transform_reduce(control& ctl,
             const InputIterator& first,
             const InputIterator& last,
-            const UnaryFunction& transform_op,
+            const UnaryFunction1& transform_op,
             const oType& init,
             const BinaryFunction& reduce_op,
 			bolt::amp::device_vector_tag)
@@ -73,13 +73,13 @@ template<typename InputIterator, typename UnaryFunction, typename oType, typenam
 
 
 
-	template<typename InputIterator, typename UnaryFunction, typename oType, typename BinaryFunction>
+	template<typename InputIterator, typename UnaryFunction1, typename oType, typename BinaryFunction>
     static
     inline
     oType transform_reduce(control& ctl,
            const InputIterator& first,
            const InputIterator& last,
-           const UnaryFunction& transform_op,
+           const UnaryFunction1& transform_op,
            const oType& init,
            const BinaryFunction& reduce_op,
 		   std::random_access_iterator_tag)
@@ -99,13 +99,13 @@ template<typename InputIterator, typename UnaryFunction, typename oType, typenam
 namespace btbb{
 
 
-template<typename InputIterator, typename UnaryFunction, typename oType, typename BinaryFunction>
+template<typename InputIterator, typename UnaryFunction1, typename oType, typename BinaryFunction>
     static
     inline
     oType transform_reduce(control& ctl,
             const InputIterator& first,
             const InputIterator& last,
-            const UnaryFunction& transform_op,
+            const UnaryFunction1& transform_op,
             const oType& init,
             const BinaryFunction& reduce_op,
 			bolt::amp::device_vector_tag)
@@ -124,13 +124,13 @@ template<typename InputIterator, typename UnaryFunction, typename oType, typenam
 
 
 
-	template<typename InputIterator, typename UnaryFunction, typename oType, typename BinaryFunction>
+	template<typename InputIterator, typename UnaryFunction1, typename oType, typename BinaryFunction>
     static
     inline
     oType transform_reduce(control& ctl,
            const InputIterator& first,
            const InputIterator& last,
-           const UnaryFunction& transform_op,
+           const UnaryFunction1& transform_op,
            const oType& init,
            const BinaryFunction& reduce_op,
 		   std::random_access_iterator_tag)
@@ -144,13 +144,13 @@ template<typename InputIterator, typename UnaryFunction, typename oType, typenam
 
 namespace amp{
 
-	template<typename DVInputIterator, typename UnaryFunction, typename oType, typename BinaryFunction>
+	template<typename DVInputIterator, typename UnaryFunction1, typename oType, typename BinaryFunction>
     static
     inline
     oType transform_reduce(control& ctl,
         const DVInputIterator& first,
         const DVInputIterator& last,
-        const UnaryFunction& transform_op,
+        const UnaryFunction1& transform_op,
         const oType& init,
         const BinaryFunction& binary_op,
 		bolt::amp::device_vector_tag)
@@ -258,13 +258,13 @@ namespace amp{
 
 
 
-	template<typename InputIterator, typename UnaryFunction, typename oType, typename BinaryFunction>
+	template<typename InputIterator, typename UnaryFunction1, typename oType, typename BinaryFunction>
     static
     inline
     oType transform_reduce(control& ctl,
         const InputIterator& first,
         const InputIterator& last,
-        const UnaryFunction& transform_op,
+        const UnaryFunction1& transform_op,
         const oType& init,
         const BinaryFunction& reduce_op,
 		std::random_access_iterator_tag)
@@ -280,13 +280,13 @@ namespace amp{
     }
 
 
-    template<typename InputIterator, typename UnaryFunction, typename oType, typename BinaryFunction>
+    template<typename InputIterator, typename UnaryFunction1, typename oType, typename BinaryFunction>
     static
     inline
     oType transform_reduce(control& ctl,
         const InputIterator& first,
         const InputIterator& last,
-        const UnaryFunction& transform_op,
+        const UnaryFunction1& transform_op,
         const oType& init,
         const BinaryFunction& reduce_op,
 	    bolt::amp::fancy_iterator_tag)
@@ -297,7 +297,7 @@ namespace amp{
 }// end of namespace amp
 
     // Wrapper that uses default control class, iterator interface
-    template<typename InputIterator, typename UnaryFunction, typename T, typename BinaryFunction>
+    template<typename InputIterator, typename UnaryFunction1, typename T, typename BinaryFunction>
     static
     inline
 	typename std::enable_if<
@@ -306,7 +306,7 @@ namespace amp{
                         >::value), T
                         >::type
     transform_reduce( control& ctl, const InputIterator& first, const InputIterator& last,
-        const UnaryFunction& transform_op,
+        const UnaryFunction1& transform_op,
         const T& init,const BinaryFunction& reduce_op)
     {
                 typedef typename std::iterator_traits<InputIterator>::value_type iType;
@@ -342,7 +342,7 @@ namespace amp{
 
 
 
-	template<typename InputIterator, typename UnaryFunction, typename T, typename BinaryFunction>
+	template<typename InputIterator, typename UnaryFunction1, typename T, typename BinaryFunction>
         static
         inline
     typename std::enable_if<
@@ -351,7 +351,7 @@ namespace amp{
                         >::value), T
                         >::type
     transform_reduce(control &ctl, const InputIterator& first, const InputIterator& last,
-        const UnaryFunction& transform_op,
+        const UnaryFunction1& transform_op,
         const T& init, const BinaryFunction& reduce_op )
     {
                 //TODO - Shouldn't we support transform for input_iterator_tag also.
@@ -367,7 +367,7 @@ namespace amp{
 	// The following two functions are visible in .h file
     // Wrapper that user passes a control class
     template< typename InputIterator,
-              typename UnaryFunction,
+              typename UnaryFunction1,
               typename T,
               typename BinaryFunction >
     static
@@ -375,7 +375,7 @@ namespace amp{
     T transform_reduce( control& ctl,
                         InputIterator first,
                         InputIterator last,
-                        UnaryFunction transform_op,
+                        UnaryFunction1 transform_op,
                         T init,
                         BinaryFunction reduce_op )
     {
@@ -384,14 +384,14 @@ namespace amp{
 
     // Wrapper that generates default control class
     template< typename InputIterator,
-              typename UnaryFunction,
+              typename UnaryFunction1,
               typename T,
               typename BinaryFunction >
     static
     inline
     T transform_reduce( InputIterator first,
                         InputIterator last,
-                        UnaryFunction transform_op,
+                        UnaryFunction1 transform_op,
                         T init,
                         BinaryFunction reduce_op )
     {
