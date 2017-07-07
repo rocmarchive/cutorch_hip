@@ -259,16 +259,7 @@ void generate_bernoulli_tensor(hc::accelerator_view accl_view, hiprngStateMtgp32
   
     for (int i = threadId; i < rounded_size; i += BLOCK_SIZE * MAX_NUM_BLOCKS) {
         float x = hcrng_uniform(
-          av_param_tbl,
-          av_temper_tbl,
-          av_sh1_tbl,
-          av_sh2_tbl,
-          av_offset,
-          av_index,
-          av_pos_tbl,
-          av_mask,
-          av_d_status,
-          groupId, tidx.local[0]);
+          &s[tidx.tile[0]], tidx.local[0]);
       if (i < size) {
         result[i] = ScalarConvert<bool, real>::to(x <= probs[i]);
       }

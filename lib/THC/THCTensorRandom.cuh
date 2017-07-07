@@ -283,8 +283,7 @@ sampleMultinomialWithReplacement(hiprngStateMtgp32* state,
       #ifdef CURAND_PATH
         T r = ScalarConvert<float, T>::to(curand_uniform(&state[hipBlockIdx_x]));
       #else
-      //  TODO:  HIPRAND_PATH
-        T r = 0;
+        T r = ScalarConvert<float, T>::to(hcrng_uniform((&state[hipBlockIdx_x]), hipThreadIdx_x));
       #endif
 
       if (hipThreadIdx_x == 0 && sample < totalSamples) {
@@ -341,8 +340,7 @@ sampleMultinomialWithoutReplacement(hiprngStateMtgp32* state,
     // All threads must participate in this
     T r = ScalarConvert<float, T>::to(curand_uniform(&state[hipBlockIdx_x]));
 #else
-    // TODO: HIPRAND_PATH
-    T r = 0;
+    T r = ScalarConvert<float, T>::to(hcrng_uniform(&state[hipBlockIdx_x], hipThreadIdx_x));
 #endif
     if (hipThreadIdx_x == 0 && curDist < distributions) {
       // Find the bucket that a uniform sample lies in
