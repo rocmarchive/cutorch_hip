@@ -37,6 +37,8 @@
 #include "bolt/amp/iterator/iterator_traits.h"
 #include "bolt/amp/iterator/addressof.h"
 
+#include "/root/pfe2/headers/functions/pfe_v2.hpp"
+
 #ifdef ENABLE_TBB
     #include "bolt/btbb/transform.h"
 #endif
@@ -372,19 +374,22 @@ namespace amp{
                        DVInputIterator2 first2,  DVOutputIterator result,  BinaryFunction f)
 
     {
-        concurrency::accelerator_view av = ctl.getAccelerator().get_default_view();
+        // concurrency::accelerator_view av = ctl.getAccelerator().get_default_view();
+        hc::accelerator_view av = (reinterpret_cast<hc::accelerator&>(ctl.getAccelerator())).get_default_view();
 
         const int szElements =  static_cast< int >( std::distance( first1, last1 ) );
 
         const unsigned int leng =  szElements + TRANSFORM_WAVEFRNT_SIZE - (szElements % TRANSFORM_WAVEFRNT_SIZE);
 
-        concurrency::extent< 1 > inputExtent(leng);
+        // concurrency::extent< 1 > inputExtent(leng);
+        hc::extent< 1 > inputExtent(leng);
 
-		auto dvInput1_itr = bolt::amp::create_mapped_iterator(typename bolt::amp::iterator_traits< DVInputIterator1 >::iterator_category( ), first1, szElements, false, ctl );
+	auto dvInput1_itr = bolt::amp::create_mapped_iterator(typename bolt::amp::iterator_traits< DVInputIterator1 >::iterator_category( ), first1, szElements, false, ctl );
         auto dvInput2_itr = bolt::amp::create_mapped_iterator(typename bolt::amp::iterator_traits< DVInputIterator2 >::iterator_category( ), first2, szElements, false, ctl);
 
         try {
-            concurrency::parallel_for_each(av, inputExtent, [=](Concurrency::index<1> idx) restrict(amp)
+            // concurrency::parallel_for_each(av, inputExtent, [=](Concurrency::index<1> idx) restrict(amp)
+            pfe_v2::parallel_for_each_v2(av, inputExtent, [=](auto&& idx) restrict(amp)
             {
                 int globalId = idx[ 0 ];
 
