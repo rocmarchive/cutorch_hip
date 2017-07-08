@@ -198,7 +198,9 @@ namespace amp{
 
         // detail::amp::binary_transform( ctl, first1, last1, first2, tempDV.begin() ,f2);
         detail::amp::binary_transform( ctl, first1, last1, first2, tempDV ,f2);
-        return detail::reduce( ctl, tempDV, tempDV+distVec, init, f1);
+        auto rs = detail::reduce( ctl, tempDV, tempDV+distVec, init, f1);
+        hc::am_free(tempPtr); 
+        return rs;
     }
 
 	template<typename InputIterator, typename OutputType, typename BinaryFunction1,typename BinaryFunction2>
