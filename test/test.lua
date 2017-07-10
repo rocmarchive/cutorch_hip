@@ -1341,7 +1341,7 @@ function test.mean()
    checkMultiDevice(x, 'mean', 1)
 end
 
-function test.max()
+--[[function test.max()
   local sz1 = chooseInt(minsize, maxsize)
    local sz2 = chooseInt(minsize, maxsize)
    local x = torch.randperm(sz1 * sz2):view(sz1, sz2):float()
@@ -1385,7 +1385,7 @@ function test.min()
    end
    checkMultiDevice(x, 'min')
    checkMultiDevice(x, 'min', 1)
-end
+end]]--
 
 function test.cmax()
   local sz1 = chooseInt(minsize, maxsize)
@@ -3721,7 +3721,7 @@ function test.scatterFill()
 end
 
 
-function test.sort()
+--[[function test.sort()
    for tries = 1, 5 do
       local t = createTestTensor(2 ^ 5)
       local selectdim = chooseInt(1, t:nDimension())
@@ -3775,7 +3775,7 @@ function test.sort()
    local gather_gpu = t_gpu:gather(1, i_gpu)
 
    tester:assert(isEqual(gather_cpu, gather_gpu), 'indices mismatch')
-end
+end]]--
 
 local function explore(typename, func, t, topk, indices)
    if t:nDimension() == 1 then
@@ -3787,7 +3787,7 @@ local function explore(typename, func, t, topk, indices)
    end
 end
 
-function test.topk()
+--[[function test.topk()
    -- need to ensure unique values for index checking, so for the first pass we create Tensors
    -- with sizes less than the maximum range of values for that type
    local counts = {}
@@ -3828,8 +3828,8 @@ function test.topk()
                indices = indices:long()
                topk = topk:type(t2cpu[typename])
                for i = 1, indices:size(1) do
-                  tester:assert(t[indices[i]]==topk[i])
-               end
+                  tester:assert(t[indices[i]]--==topk[i])
+            --[[   end
             end
 
             local tt  = t:transpose(dim, t:nDimension())
@@ -3840,7 +3840,7 @@ function test.topk()
          end
       end
    end
-end
+end]]--
 
 local function verifyMode1D(tensor)
    -- We cannot rely upon comparing against CPU-Torch as the way it resolves
@@ -4133,7 +4133,7 @@ local function verifyMode3D(tensor, onlyDim)
    end -- dim
 end
 
-function test.mode()
+--[[function test.mode()
     -- Tests for 1D Tensors
 
     -- Single-element Tensor
@@ -4230,9 +4230,9 @@ function test.mode()
     -- Larger example
     local input = torch.FloatTensor(14, 22, 32):apply(function(x) return torch.random(1, 10) end)
     verifyMode3D(input)
-end
+end]]--
 
-function test.bigmode()
+--[[function test.bigmode()
     -- Examples that overflow fused-kernel
     local input = torch.IntTensor(16384):apply(function(x) return torch.random(1, 100) end)
     verifyMode1D(input)
@@ -4251,7 +4251,7 @@ function test.bigmode()
 
     local input = torch.FloatTensor(4096, 2, 2):fill(1)
     verifyMode3D(input, 1)
-end
+end]]--
 
 function test.cat()
    for k, typename in ipairs(typenames) do
@@ -4815,7 +4815,7 @@ if os.getenv('THC_CACHING_ALLOCATOR') ~= '0' then
       return 1e6 / (t:time().real * 1000)
    end
 
-   function test.cachedPinnedMemory()
+   --[[function test.cachedPinnedMemory()
      local cyclesPerMs = getCyclesPerMs()
 
       -- check that allocations are re-used after deletion
@@ -4832,7 +4832,7 @@ if os.getenv('THC_CACHING_ALLOCATOR') ~= '0' then
       t = nil; collectgarbage()
       t = cutorch.createCudaHostTensor({1})
       tester:assertne(t:data(), ptr, 'allocation re-used too soon')
-   end
+   end]]--
 
    function test.cachedPinnedMemoryMultiGPU()
       local device_count = cutorch.getDeviceCount()

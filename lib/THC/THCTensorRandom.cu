@@ -191,26 +191,26 @@ struct is_same { static const bool value = false; };
 template<typename T>
 struct is_same<T, T> { static const bool value = true; };
 
-#ifdef CURAND_PATH
 template<typename real, typename prob_type>
-__global__ void generate_bernoulli_tensor(curandStateMtgp32 *state, int size,
+__global__ void generate_bernoulli_tensor(hiprngStateMtgp32 *state, int size,
         real *result, prob_type *probs)
 {
   int idx = hipBlockIdx_x * BLOCK_SIZE + hipThreadIdx_x;
   int rounded_size = THCCeilDiv(size, BLOCK_SIZE) * BLOCK_SIZE;
   for (int i = idx; i < rounded_size; i += BLOCK_SIZE * MAX_NUM_BLOCKS) {
     if (is_same<prob_type, double>::value) {
-      double x = curand_uniform_double(&state[hipBlockIdx_x]);
+      double x = hcrng_uniform(&state[hipBlockIdx_x], hipThreadIdx_x);
       if (i < size)
         result[i] = ScalarConvert<bool, real>::to(x <= probs[i]);
     } else {
-      float x = curand_uniform(&state[hipBlockIdx_x]);
+      float x = hcrng_uniform(&state[hipBlockIdx_x], hipThreadIdx_x);
       if (i < size)
         result[i] = ScalarConvert<bool, real>::to(x <= probs[i]);
     }
   }
 }
 
+#ifdef CURAND_PATH
 GENERATE_KERNEL2(generate_uniform, float, double a, double b, float, curand_uniform, x * (b-a) + a)
 GENERATE_KERNEL2(generate_uniform, double, double a, double b, double, curand_uniform_double, x * (b-a) + a)
 
@@ -231,41 +231,6 @@ GENERATE_KERNEL2(generate_cauchy, half, double median, double sigma, float, cura
 #endif // CUDA_HALF_TENSOR
 
 #else
-
-template<typename real, typename prob_type>
-void generate_bernoulli_tensor(hc::accelerator_view accl_view, hiprngStateMtgp32 *s, int size,
-        real *&result, prob_type *probs)
-{
-  hc::accelerator accl = accl_view.get_accelerator();
-  int rounded_size = DIVUP(size, BLOCK_SIZE) * BLOCK_SIZE;
-  int blocks = std::min((int)DIVUP(size, BLOCK_SIZE), MAX_NUM_BLOCKS);
-  hc::extent<1> ext(blocks*BLOCK_SIZE);
-  hc::tiled_extent<1> t_ext = ext.tile(BLOCK_SIZE);
- hc::parallel_for_each(
-      accl_view, t_ext, [=] (const hc::tiled_index<1>& tidx) [[hc]] {
-    int threadId = tidx.global[0];
-    int groupId = tidx.tile[0];
-    if (groupId >= USER_GROUP_NUM)
-      return;
-  const uint32_t* av_param_tbl = (s[groupId].k->param_tbl);
-  const uint32_t* av_temper_tbl = (s[groupId].k->temper_tbl);
-  const uint32_t* av_sh1_tbl = (s[groupId].k->sh1_tbl);
-  const uint32_t* av_sh2_tbl = (s[groupId].k->sh2_tbl);
-  const uint32_t* av_offset = (s[groupId].k->offset);
-  const uint32_t* av_index = (s[groupId].k->index);
-  const uint32_t* av_pos_tbl = (s[groupId].k->pos_tbl);
-  const uint32_t* av_mask = (s[groupId].k->mask);
-  const uint32_t* av_d_status = (s[groupId].k->d_status);
-  
-    for (int i = threadId; i < rounded_size; i += BLOCK_SIZE * MAX_NUM_BLOCKS) {
-        float x = hcrng_uniform(
-          &s[tidx.tile[0]], tidx.local[0]);
-      if (i < size) {
-        result[i] = ScalarConvert<bool, real>::to(x <= probs[i]);
-      }
-    }
-  }).wait();
-}
 
 
 
