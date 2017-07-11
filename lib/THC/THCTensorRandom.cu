@@ -199,11 +199,11 @@ __global__ void generate_bernoulli_tensor(hiprngStateMtgp32 *state, int size,
   int rounded_size = THCCeilDiv(size, BLOCK_SIZE) * BLOCK_SIZE;
   for (int i = idx; i < rounded_size; i += BLOCK_SIZE * MAX_NUM_BLOCKS) {
     if (is_same<prob_type, double>::value) {
-      double x = hcrng_uniform(&state[hipBlockIdx_x], hipThreadIdx_x);
+      double x = hcrng_uniform(&state[hipBlockIdx_x]);
       if (i < size)
         result[i] = ScalarConvert<bool, real>::to(x <= probs[i]);
     } else {
-      float x = hcrng_uniform(&state[hipBlockIdx_x], hipThreadIdx_x);
+      float x = hcrng_uniform(&state[hipBlockIdx_x]);
       if (i < size)
         result[i] = ScalarConvert<bool, real>::to(x <= probs[i]);
     }
