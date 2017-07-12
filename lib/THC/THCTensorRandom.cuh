@@ -9,20 +9,19 @@
 #include <curand_kernel.h>
 #else
   #include <hip/hip_hcc.h>
-  #include "hiprng.h"
+  #include "hiprng_kernel.h"
 #endif
 #define MAX_NUM_BLOCKS 64
 #define BLOCK_SIZE 256
-/* Separate kernel because curand_log_normal gets extra parameters. */
+/* Separate kernel because hiprng_log_normal gets extra parameters. */
 
-#ifdef CURAND_PATH
 template <typename T>
-__global__ void generateLogNormal(curandStateMtgp32 *state, int size, T *result, double mean, double stddev)
+__global__ void generateLogNormal(hiprngStateMtgp32 *state, int size, T *result, double mean, double stddev)
 {
   int idx = hipBlockIdx_x * BLOCK_SIZE + hipThreadIdx_x;
   int rounded_size = THCCeilDiv(size, BLOCK_SIZE) * BLOCK_SIZE;
   for (int i = idx; i < rounded_size; i += BLOCK_SIZE * MAX_NUM_BLOCKS) {
-    float x = curand_log_normal(&state[hipBlockIdx_x], mean, stddev);
+    float x = hiprng_log_normal(&state[hipBlockIdx_x], mean, stddev);
     if (i < size) {
       result[i] = ScalarConvert<float, T>::to(x);
     }
@@ -30,18 +29,17 @@ __global__ void generateLogNormal(curandStateMtgp32 *state, int size, T *result,
 }
 
 template <>
-__global__ void generateLogNormal<double>(curandStateMtgp32 *state, int size, double *result, double mean, double stddev)
+__global__ void generateLogNormal<double>(hiprngStateMtgp32 *state, int size, double *result, double mean, double stddev)
 {
   int idx = hipBlockIdx_x * BLOCK_SIZE + hipThreadIdx_x;
   int rounded_size = THCCeilDiv(size, BLOCK_SIZE) * BLOCK_SIZE;
   for (int i = idx; i < rounded_size; i += BLOCK_SIZE * MAX_NUM_BLOCKS) {
-    double x = curand_log_normal_double(&state[hipBlockIdx_x], mean, stddev);
+    double x = hiprng_log_normal_double(&state[hipBlockIdx_x], mean, stddev);
     if (i < size) {
       result[i] = x;
     }
   }
 }
-#endif
 
 #undef MAX_NUM_BLOCKS
 #undef BLOCK_SIZE
@@ -49,12 +47,7 @@ __global__ void generateLogNormal<double>(curandStateMtgp32 *state, int size, do
 // Normalizes the L1 norm of every row to 1; used by multinomial
 template <typename T>
 __global__ void renormRowsL1(T* dist, long rows, long cols) {
-#ifdef CURAND_PATH
-  extern __shared__ __align__(sizeof(T)) unsigned char my_smem[];
-#else
-  // TODO: Check the vulnerability of this change
   extern __shared__ unsigned char my_smem[];
-#endif
   T *smem = reinterpret_cast<T *>(my_smem);
 
   for (long row = hipBlockIdx_x; row < rows; row += hipGridDim_x) {
@@ -115,12 +108,7 @@ sampleMultinomialOnce(long* dest,
                       int categories,
                       T* sampled,
                       T* dist) {
-#ifdef CURAND_PATH 
-  extern __shared__ __align__(sizeof(AccT)) unsigned char my_smem[];
-#else
-  // TODO: Check vulnerability of this change
   extern __shared__  unsigned char my_smem[];
-#endif
   __shared__ bool found;
 
   // Shared Memory hold blockdim.x T for holding the cumulative sum,
@@ -244,16 +232,6 @@ sampleMultinomialOnce(long* dest,
   }
 }
 
-#ifdef CURAND_PATH
-template <typename T>
-__global__ void
-sampleMultinomialWithReplacement(curandStateMtgp32* state,
-                                 int totalSamples,
-                                 long* dest,
-                                 long distributions,
-                                 int categories,
-                                 T* normDistPrefixSum) {
-#else
 template <typename T>
 __global__ void
 sampleMultinomialWithReplacement(hiprngStateMtgp32* state,
@@ -263,7 +241,6 @@ sampleMultinomialWithReplacement(hiprngStateMtgp32* state,
                                  int categories,
                                  T* normDistPrefixSum) {
 
-#endif
   // At the moment, each warp computes one sample value in the binary
   // search due to divergence. It seems possible to compute multiple
   // values and limit divergence though later on. However, no matter
@@ -280,11 +257,7 @@ sampleMultinomialWithReplacement(hiprngStateMtgp32* state,
       int sample = sampleBase + hipThreadIdx_y;
 
       // All threads participate in this
-      #ifdef CURAND_PATH
-        T r = ScalarConvert<float, T>::to(curand_uniform(&state[hipBlockIdx_x]));
-      #else
-        T r = ScalarConvert<float, T>::to(hcrng_uniform((&state[hipBlockIdx_x])));
-      #endif
+        T r = ScalarConvert<float, T>::to(hiprng_uniform((&state[hipBlockIdx_x])));
 
       if (hipThreadIdx_x == 0 && sample < totalSamples) {
         // Find the bucket that a uniform sample lies in
@@ -301,17 +274,6 @@ sampleMultinomialWithReplacement(hiprngStateMtgp32* state,
 }
 
 template <typename T>
-#ifdef CURAND_PATH
-__global__ void
-sampleMultinomialWithoutReplacement(curandStateMtgp32* state,
-                                    int totalSamples,
-                                    int sample,
-                                    long* dest,
-                                    long distributions,
-                                    int categories,
-                                    T* origDist,
-                                    T* normDistPrefixSum) {
-#else
 __global__ void
 sampleMultinomialWithoutReplacement(hiprngStateMtgp32* state,
                                     int totalSamples,
@@ -321,7 +283,6 @@ sampleMultinomialWithoutReplacement(hiprngStateMtgp32* state,
                                     int categories,
                                     T* origDist,
                                     T* normDistPrefixSum) {
-#endif
   // At the moment, each warp computes one sample value in the binary
   // search due to divergence. It seems possible to compute multiple
   // values and limit divergence though later on. However, no matter
@@ -336,12 +297,7 @@ sampleMultinomialWithoutReplacement(hiprngStateMtgp32* state,
     // The warp determines the distribution
     long curDist = curDistBase + hipThreadIdx_y;
 
-#ifdef CURAND_PATH
-    // All threads must participate in this
-    T r = ScalarConvert<float, T>::to(curand_uniform(&state[hipBlockIdx_x]));
-#else
-    T r = ScalarConvert<float, T>::to(hcrng_uniform(&state[hipBlockIdx_x]));
-#endif
+    T r = ScalarConvert<float, T>::to(hiprng_uniform(&state[hipBlockIdx_x]));
     if (hipThreadIdx_x == 0 && curDist < distributions) {
       // Find the bucket that a uniform sample lies in
       int choice = binarySearchForMultinomial<T>(

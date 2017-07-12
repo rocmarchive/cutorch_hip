@@ -14,12 +14,8 @@ THC_API void THCTensor_(uniform)(THCState* state, THCTensor *self_, double a, do
   ptrdiff_t size = THCTensor_(nElement)(state, self);
   real *data = THCTensor_(data)(state, self);
 
-#ifdef CURAND_PATH
   hipLaunchKernelGGL((generate_uniform), NUM_BLOCKS, BLOCK_SIZE, 0, THCState_getCurrentStream(state),
       gen->gen_states, size, data, a, b);
-#else
-  generate_uniform(state, gen->gen_states, size, data, a, b);
-#endif
 
   THCTensor_(freeCopyTo)(state, self, self_);
 };
@@ -31,12 +27,8 @@ THC_API void THCTensor_(normal)(THCState* state, THCTensor *self_, double mean, 
   THCTensor *self = THCTensor_(newContiguous)(state, self_);
   ptrdiff_t size = THCTensor_(nElement)(state, self);
   real *data = THCTensor_(data)(state, self);
-#ifdef CURAND_PATH
   hipLaunchKernelGGL((generate_normal), NUM_BLOCKS, BLOCK_SIZE, 0, THCState_getCurrentStream(state), 
       gen->gen_states, size, data, mean, stdv);
-#else
-   generate_normal(state, gen->gen_states, size, data, mean, stdv);
-#endif
   THCTensor_(freeCopyTo)(state, self, self_);
 };
 
@@ -59,12 +51,8 @@ THC_API void THCTensor_(logNormal)(THCState* state, THCTensor *self_, double mea
   ptrdiff_t size = THCTensor_(nElement)(state, self);
   real *data = THCTensor_(data)(state, self);
 
-#ifdef CURAND_PATH
   hipLaunchKernelGGL((generateLogNormal<real>), NUM_BLOCKS, BLOCK_SIZE, 0, THCState_getCurrentStream(state),
       gen->gen_states, size, data, mean, stdv);
-#else
-    generate_log_normal(state, gen->gen_states, size, data, mean, stdv);
-#endif
   THCTensor_(freeCopyTo)(state, self, self_);
 };
 
@@ -76,12 +64,8 @@ THC_API void THCTensor_(exponential)(THCState* state, THCTensor *self_, double l
   THCTensor *self = THCTensor_(newContiguous)(state, self_);
   ptrdiff_t size = THCTensor_(nElement)(state, self);
   real *data = THCTensor_(data)(state, self);
-#ifdef CURAND_PATH
   hipLaunchKernelGGL((generate_exponential), NUM_BLOCKS, BLOCK_SIZE, 0, THCState_getCurrentStream(state),
       gen->gen_states, size, data, lambda);
-#else
-  generate_exponential(state, gen->gen_states, size, data, lambda);
-#endif
   THCTensor_(freeCopyTo)(state, self, self_);
 };
 
@@ -93,12 +77,8 @@ THC_API void THCTensor_(cauchy)(THCState* state, THCTensor *self_, double median
   THCTensor *self = THCTensor_(newContiguous)(state, self_);
   ptrdiff_t size = THCTensor_(nElement)(state, self);
   real *data = THCTensor_(data)(state, self);
-#ifdef CURAND_PATH
   hipLaunchKernelGGL((generate_cauchy), NUM_BLOCKS, BLOCK_SIZE, 0, THCState_getCurrentStream(state),
       gen->gen_states, size, data, median, sigma);
-#else
-  generate_cauchy(state, gen->gen_states, size, data, median, sigma);
-#endif
   THCTensor_(freeCopyTo)(state, self, self_);
 };
 
@@ -227,11 +207,7 @@ THC_API void THCTensor_(multinomial)(struct THCState *state,
       //TODO: Fix below error associated with sample* kernel
       hipLaunchKernelGGL(sampleMultinomialWithReplacement, 
           grid, block, 0, THCState_getCurrentStream(state),
-#ifdef CURAND_PATH
           gen->gen_states,
-#else
-          gen->gen_states,
-#endif
           n_sample,
           THCudaLongTensor_data(state, self),
           numDist, numCategories,
@@ -264,11 +240,7 @@ THC_API void THCTensor_(multinomial)(struct THCState *state,
         // recalculate our distribution
         hipLaunchKernelGGL((sampleMultinomialWithoutReplacement), 
             grid, block, 0, THCState_getCurrentStream(state),
-#ifdef CURAND_PATH
             gen->gen_states,
-#else
-            gen->gen_states,
-#endif
             n_sample,
             sample,
             THCudaLongTensor_data(state, self),
@@ -312,14 +284,10 @@ void THCTensor_(randn)(THCState *state, THCTensor *r_, THLongStorage *size)
 
 #endif
 
-#ifdef CURAND_PATH
 #if defined(THC_REAL_IS_DOUBLE)
-GENERATE_KERNEL1(generate_bernoulli, double, double p, double, curand_uniform_double, x <= p)
+GENERATE_KERNEL1(generate_bernoulli, double, double p, double, hiprng_uniform_double, x <= p)
 #else
-GENERATE_KERNEL1(generate_bernoulli, real, double p, float, curand_uniform, (ScalarConvert<bool, real>::to(x <= p)))
-#endif
-#else
-GENERATE_KERNEL1(generate_bernoulli, real, double p, float, user_uniform, user_bernoulli_functor(p))
+GENERATE_KERNEL1(generate_bernoulli, real, double p, float, hiprng_uniform, (ScalarConvert<bool, real>::to(x <= p)))
 #endif
 
 THC_API void THCTensor_(bernoulli)(THCState* state, THCTensor *self_, double p)
@@ -330,12 +298,8 @@ THC_API void THCTensor_(bernoulli)(THCState* state, THCTensor *self_, double p)
   ptrdiff_t size = THCTensor_(nElement)(state, self);
   real *data = THCTensor_(data)(state, self);
 
-#ifdef CURAND_PATH
   hipLaunchKernelGGL((generate_bernoulli), NUM_BLOCKS, BLOCK_SIZE, 0, THCState_getCurrentStream(state), 
       gen->gen_states, size, data, p);
-#else
-  generate_bernoulli(state, gen->gen_states, size, data, p);
-#endif
   THCTensor_(freeCopyTo)(state, self, self_);
 };
 
@@ -364,15 +328,11 @@ THC_API void THCTensor_(NAME)(THCState* state,                                 \
 DEFINE_BERNOULLI_TENSOR(bernoulli_FloatTensor, THCudaTensor, float)
 DEFINE_BERNOULLI_TENSOR(bernoulli_DoubleTensor, THCudaDoubleTensor, double)
 
-#ifdef CURAND_PATH
 #if defined(THC_REAL_IS_DOUBLE)
-GENERATE_KERNEL1(generate_geometric, double, double p, double, curand_uniform_double, ceil(log(x) / log(1-p)))
+GENERATE_KERNEL1(generate_geometric, double, double p, double, hiprng_uniform_double, ceil(log(x) / log(1-p)))
 #else
-GENERATE_KERNEL1(generate_geometric, real, double p, float, curand_uniform, (ScalarConvert<float, real>::to(ceilf(logf(x) / log(1-p)))))
+GENERATE_KERNEL1(generate_geometric, real, double p, float, hiprng_uniform, (ScalarConvert<float, real>::to(ceilf(logf(x) / log(1-p)))))
 #endif
-#else
-GENERATE_KERNEL1(generate_geometric, real, double p, double, user_uniform, user_geometric_functor(p))
-#endif // CURAND_PATH
 
 THC_API void THCTensor_(geometric)(THCState* state, THCTensor *self_, double p)
 {
@@ -382,12 +342,8 @@ THC_API void THCTensor_(geometric)(THCState* state, THCTensor *self_, double p)
   THCTensor *self = THCTensor_(newContiguous)(state, self_);
   ptrdiff_t size = THCTensor_(nElement)(state, self);
   real *data = THCTensor_(data)(state, self);
-#ifdef CURAND_PATH
   hipLaunchKernelGGL((generate_geometric), NUM_BLOCKS, BLOCK_SIZE, 0, THCState_getCurrentStream(state), 
       gen->gen_states, size, data, p);
-#else
-  generate_geometric(state, gen->gen_states, size, data, p);
-#endif
   THCTensor_(freeCopyTo)(state, self, self_);
 };
 #undef NUM_BLOCKS
