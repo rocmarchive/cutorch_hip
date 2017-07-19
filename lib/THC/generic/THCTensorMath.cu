@@ -340,6 +340,52 @@ void THCTensor_(nonzero)(THCState* state, THCudaLongTensor *tensor,
   }
 
   THCudaLongTensor_resize2d(state, tensor, num_nonzeros, num_dim);
+#else
+  self = THCTensor_(newContiguous)(state, self);
+  auto selfSize = THCTensor_(nElement)(state, self);
+  bolt::amp::Ubiquitous_iterator<real> self_data = bolt::amp::make_ubiquitous_iterator<real>(THCTensor_(data)(state, self));
+
+  int num_dim = THCTensor_(nDimension)(state, self);
+  long N = THCTensor_(nElement)(state, self);
+
+  THCudaLongTensor_resize2d(state, tensor, N, num_dim);
+  tensor = THCudaLongTensor_newContiguous(state, tensor);
+  auto tensor_data = bolt::amp::make_ubiquitous_iterator<long>(THCudaLongTensor_data(state, tensor));
+  
+
+  bolt::amp::counting_iterator<long> idxfirst(0);
+  bolt::amp::counting_iterator<long> idxlast = idxfirst + N;
+
+  typedef bolt::amp::Ubiquitous_iterator<long> Iter;
+  strided_range<Iter> strided_tensor(tensor_data,
+                                     tensor_data+N*num_dim, num_dim);
+
+  hipStream_t stream = THCState_getCurrentStream(state);
+
+ /*strided_range<Iter>::iterator dend = bolt::amp::copy_if(
+    idxfirst,
+    idxlast,
+    self_data,
+    strided_tensor.begin(),
+    NonZeroOp<real>()
+  );
+
+  long num_nonzeros = 10; //std::distance(strided_tensor.begin(), dend);
+
+  long div = 1;
+  for (int dim = num_dim-1; dim >= 0; dim--) {
+    strided_range<Iter> stride_dim(tensor_data+dim,
+                                   tensor_data+N*num_dim, num_dim);
+    bolt::amp::transform(
+      strided_tensor.begin(),
+      strided_tensor.end(),
+      stride_dim.begin(),
+      idx_functor(div, self->size[dim])
+    );
+    div *= self->size[dim];
+  }
+
+  THCudaLongTensor_resize2d(state, tensor, num_nonzeros, num_dim);*/
 #endif
 
   THCTensor_(free)(state, self);

@@ -26,6 +26,8 @@
 #include <bolt/amp/iterator/iterator_traits.h>
 #include <bolt/amp/transform.h>
 #include <bolt/amp/functional.h>
+#include <bolt/amp/copy.h>
+#include <bolt/amp/device_vector.h>
 #ifdef __HCC__
 #include "hip/hcc_detail/device_functions.h"
 #endif

@@ -64,12 +64,16 @@ namespace bolt
 
             T* p_;
         public:
+            
+            typedef typename std::iterator<device_vector_tag, T>::difference_type difference_type;
+            // Public member variable 
+            difference_type m_Index;
             Ubiquitous_iterator() [[cpu]][[hc]] = default;
             explicit
-            Ubiquitous_iterator(T* p) [[cpu]][[hc]] : p_{p} {}
+            Ubiquitous_iterator(T* p) [[cpu]][[hc]] : p_{p}, m_Index{0}{}
 
             T& operator[](std::ptrdiff_t dx) const [[cpu]][[hc]]
-            {
+            { 
                 return p_[dx];
             }
             T& operator[](std::ptrdiff_t dx) [[cpu]][[hc]] { return p_[dx]; }
@@ -79,17 +83,25 @@ namespace bolt
 
             Ubiquitous_iterator& operator+=(std::ptrdiff_t dx) [[cpu]][[hc]]
             {
-                p_ += dx;
+                advance(dx);
                 return *this;
             }
 
             Ubiquitous_iterator& operator++() [[cpu]][[hc]]
             {
-                p_ += 1;
+                advance(1);
                 return *this;
             }
+            void advance(difference_type n) {
+               m_Index += n;
+               p_ += m_Index;
+            }
+            difference_type getIndex() const
+            {
+               return m_Index;
+            }
+
             // Bolt glue.
-            std::ptrdiff_t m_Index = 0;
             const Ubiquitous_iterator& getContainer() const { return *this; }
             Ubiquitous_iterator& getContainer() { return *this; }
 
