@@ -3721,7 +3721,7 @@ function test.scatterFill()
 end
 
 
---[[function test.sort()
+function test.sort()
    for tries = 1, 5 do
       local t = createTestTensor(2 ^ 5)
       local selectdim = chooseInt(1, t:nDimension())
@@ -3743,7 +3743,7 @@ end
    -- Since the sorting mechanism is not guaranteed to be the
    -- same between GPU and CPU, we have to be careful when comparing
    -- the indices
-   local t_cpu = torch.FloatTensor(500, 500):uniform()
+   local t_cpu = torch.FloatTensor(500, 100):uniform()
    local t_gpu = t_cpu:cuda()
 
    local v_cpu, i_cpu = torch.sort(t_cpu, 2)
@@ -3760,7 +3760,7 @@ end
    tester:assert(isEqual(gather_cpu, gather_gpu), 'indices mismatch')
 
    -- Test a large tensors whose total size exceeds 2^24
-   local t_cpu = torch.FloatTensor(2^25):uniform()
+   local t_cpu = torch.FloatTensor(2^22):uniform()
    local t_gpu = t_cpu:cuda()
 
    local v_cpu, i_cpu = torch.sort(t_cpu, 1)
@@ -3775,7 +3775,7 @@ end
    local gather_gpu = t_gpu:gather(1, i_gpu)
 
    tester:assert(isEqual(gather_cpu, gather_gpu), 'indices mismatch')
-end]]--
+end
 
 local function explore(typename, func, t, topk, indices)
    if t:nDimension() == 1 then
