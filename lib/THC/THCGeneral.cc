@@ -168,9 +168,7 @@ void THCudaShutdown(THCState* state)
     }
     /* Free user defined sparse handles */
     for (int i = 0; i < res->numSparseHandles; ++i) {
-#ifdef CUSPARSE_PATH
-      THCusparseCheck(cusparseDestroy(res->sparseHandles[i]));
-#endif
+      THCusparseCheck(hipsparseDestroy(res->sparseHandles[i]));
     }
     /* Free per-stream scratch space; starts at 0 because there is space for
        the default stream as well*/
@@ -182,9 +180,7 @@ void THCudaShutdown(THCState* state)
 
     free(res->streams);
     free(res->blasHandles);
-#ifdef CUSPARSE_PATH
     free(res->sparseHandles);
-#endif
     free(res->devScratchSpacePerStream);
     THCStream_free((THCStream*)THCThreadLocal_get(state->currentStreams[dev]));
     THCThreadLocal_free(state->currentStreams[dev]);
@@ -412,16 +408,14 @@ void THCState_reserveDeviceSparseHandles(THCState* state, int device, int numSpa
   THCudaCheck(hipGetDevice(&prevDev));
   THCudaCheck(hipSetDevice(device));
 
-#ifdef CUSPARSE_PATH
-  size_t size = numSparseHandles * sizeof(cusparseHandle_t);
-  cusparseHandle_t* handles = (cusparseHandle_t*) realloc(res->sparseHandles, size);
+  size_t size = numSparseHandles * sizeof(hipsparseHandle_t);
+  hipsparseHandle_t* handles = (hipsparseHandle_t*) realloc(res->sparseHandles, size);
   for (int i = res->numSparseHandles; i < numSparseHandles; ++i) {
     handles[i] = NULL;
-    THCusparseCheck(cusparseCreate(&handles[i]));
+    THCusparseCheck(hipsparseCreate(&handles[i]));
   }
   res->sparseHandles = handles;
   res->numSparseHandles = numSparseHandles;
-#endif
   THCudaCheck(hipSetDevice(prevDev));
 }
 
@@ -494,8 +488,7 @@ hipblasHandle_t THCState_getDeviceBlasHandle(THCState *state, int device, int ha
   return res->blasHandles[handle - 1];
 }
 
-#ifdef CUSPARSE_PATH
-cusparseHandle_t THCState_getDeviceSparseHandle(THCState *state, int device, int handle)
+hipsparseHandle_t THCState_getDeviceSparseHandle(THCState *state, int device, int handle)
 {
   if (handle <= 0 || handle > state->numUserSparseHandles) {
     THError("%d is not a valid handle, valid range is: (1, %d)",
@@ -505,7 +498,6 @@ cusparseHandle_t THCState_getDeviceSparseHandle(THCState *state, int device, int
   THCState_reserveDeviceSparseHandles(state, device, handle);
   return res->sparseHandles[handle - 1];
 }
-#endif
 
 static THCStream* THCState_getStreamOnDevice(THCState* state, int device)
 {
@@ -570,8 +562,7 @@ hipblasHandle_t THCState_getCurrentBlasHandle(THCState *state)
   return NULL;
 }
 
-#ifdef CUSPARSE_PATH
-cusparseHandle_t THCState_getCurrentSparseHandle(THCState *state)
+hipsparseHandle_t THCState_getCurrentSparseHandle(THCState *state)
 {
   /* This is called at the point of kernel execution.
      For some debugging code or improperly instrumented kernels,
@@ -586,7 +577,6 @@ cusparseHandle_t THCState_getCurrentSparseHandle(THCState *state)
   THError("THCState and sparseHandles must be set as there is no default sparseHandle");
   return NULL;
 }
-#endif
 
 int THCState_getCurrentStreamIndex(THCState *state)
 {
@@ -773,56 +763,54 @@ void __THCublasCheck(hipblasStatus_t status, const char *file, const int line)
     _THError(file, line, "hipblas runtime error : %s", errmsg);
   }
 }
-#ifdef CUSPARSE_PATH
-void __THCusparseCheck(cusparseStatus_t status, const char *file, const int line)
+void __THCusparseCheck(hipsparseStatus_t status, const char *file, const int line)
 {
-  if(status != CUSPARSE_STATUS_SUCCESS)
+  if(status != HIPSPARSE_STATUS_SUCCESS)
   {
     const char* errmsg = NULL;
 
     switch(status)
     {
-      case CUSPARSE_STATUS_NOT_INITIALIZED:
+      case HIPSPARSE_STATUS_NOT_INITIALIZED:
         errmsg = "library not initialized";
         break;
 
-      case CUSPARSE_STATUS_ALLOC_FAILED:
+      case HIPSPARSE_STATUS_ALLOC_FAILED:
         errmsg = "resource allocation failed";
         break;
 
-      case CUSPARSE_STATUS_INVALID_VALUE:
+      case HIPSPARSE_STATUS_INVALID_VALUE:
         errmsg = "an invalid numeric value was used as an argument";
         break;
 
-      case CUSPARSE_STATUS_ARCH_MISMATCH:
+      /*case HIPSPARSE_STATUS_ARCH_MISMATCH:
         errmsg = "an absent device architectural feature is required";
-        break;
+        break;*/
 
-      case CUSPARSE_STATUS_MAPPING_ERROR:
+      case HIPSPARSE_STATUS_MAPPING_ERROR:
         errmsg = "an access to GPU memory space failed";
         break;
 
-      case CUSPARSE_STATUS_EXECUTION_FAILED:
+      case HIPSPARSE_STATUS_EXECUTION_FAILED:
         errmsg = "the GPU program failed to execute";
         break;
 
-      case CUSPARSE_STATUS_INTERNAL_ERROR:
+      case HIPSPARSE_STATUS_INTERNAL_ERROR:
         errmsg = "an internal operation failed";
         break;
 
-      case CUSPARSE_STATUS_MATRIX_TYPE_NOT_SUPPORTED:
+      /*case HIPSPARSE_STATUS_MATRIX_TYPE_NOT_SUPPORTED:
         errmsg = "the matrix type is not supported by this function";
-        break;
+        break;*/
 
       default:
         errmsg = "unknown error";
         break;
     }
 
-    _THError(file, line, "cusparse runtime error : %s", errmsg);
+    _THError(file, line, "hipsparse runtime error : %s", errmsg);
   }
 }
-#endif
 
 static ptrdiff_t heapSize = 0; // not thread-local
 static const ptrdiff_t heapMaxDelta = (ptrdiff_t)1e6;
