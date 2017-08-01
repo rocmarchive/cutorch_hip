@@ -34,7 +34,8 @@ namespace bolt
             Ubiquitous_iterator operator+(
                 Ubiquitous_iterator x, std::ptrdiff_t dx) [[cpu]][[hc]]
             {
-                return x += dx;
+                Ubiquitous_iterator y(x);
+                return y += dx;
             }
 
             friend
