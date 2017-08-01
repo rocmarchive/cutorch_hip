@@ -4133,7 +4133,7 @@ local function verifyMode3D(tensor, onlyDim)
    end -- dim
 end
 
---[[function test.mode()
+function test.mode()
     -- Tests for 1D Tensors
 
     -- Single-element Tensor
@@ -4230,9 +4230,9 @@ end
     -- Larger example
     local input = torch.FloatTensor(14, 22, 32):apply(function(x) return torch.random(1, 10) end)
     verifyMode3D(input)
-end]]--
+end
 
---[[function test.bigmode()
+function test.bigmode()
     -- Examples that overflow fused-kernel
     local input = torch.IntTensor(16384):apply(function(x) return torch.random(1, 100) end)
     verifyMode1D(input)
@@ -4251,7 +4251,7 @@ end]]--
 
     local input = torch.FloatTensor(4096, 2, 2):fill(1)
     verifyMode3D(input, 1)
-end]]--
+end
 
 function test.cat()
    for k, typename in ipairs(typenames) do

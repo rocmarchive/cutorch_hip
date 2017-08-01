@@ -279,4 +279,46 @@ __global__ void computeMode(
   }
 }
 
+template <typename T>
+__global__
+void calculate_mode(T* iter, long* seq, T* keys, long* counts, T* mode, long* mode_index, long size) {
+  int gidx = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;
+  if (gidx < size)
+  {
+    seq[gidx] = gidx;
+    counts[gidx] = 0;
+  }
+
+  __syncthreads();
+
+  if (gidx < size)
+  {
+    keys[gidx] = iter[gidx];
+    for (int i = 0; i < size; i++)
+    {
+      if (iter[gidx] == iter[i])
+        counts[gidx]++;
+    }
+  }
+
+  __syncthreads();
+
+  if (gidx == 0)
+  {
+    int max = 0;
+    int max_id = 0;
+    for (int i = 0; i < size; i++)
+    {
+      if (max < counts[i])
+      {
+        max = counts[i];
+        max_id = i;
+      }
+    }
+
+    mode[0] = keys[max_id];
+    mode_index[0] = max_id;
+  }
+}
+
 #endif // THC_TENSOR_MODE_CUH

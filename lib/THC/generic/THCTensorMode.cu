@@ -23,6 +23,8 @@ THC_API void THCTensor_(calculateMode)(THCState *state,
   long nElement = THCTensor_(size)(state, input, THCTensor_(nDimension)(state, input) - 1);
   THCThrustAllocator thrustAlloc(state);
 
+
+
   // Wrap input data, sortBuffer, in Thrust device vectors
 #ifdef THRUST_PATH
   thrust::device_ptr<real> vecPtr = thrust::device_pointer_cast(data);
@@ -113,34 +115,43 @@ THC_API void THCTensor_(calculateMode)(THCState *state,
 #endif
 
 #else
-  auto iter = bolt::amp::make_ubiquitous_iterator(data);
-  auto seq = bolt::amp::make_ubiquitous_iterator(THCudaLongStorage_data(state, sortBuffer));
-  // thrust sequence equivalent
-  bolt::amp::counting_iterator<int> it(0);
-  bolt::amp::transform(it, it + nElement, seq, sequence_functor<long>(0, 1));
 
-  //TODO: Fix ambiguous call to sort_by_key when enabled
-   /*bolt::amp::sort_by_key(iter, iter + nElement, seq
-#if defined(THC_REAL_IS_HALF)
-, ThrustHalfLess()
-#endif
-);*/
+  long grid_size = (nElement - 1)/256 + 1;
+  dim3 grid(grid_size);
+  dim3 block(256);
 
-  int unique = 1 + bolt::amp::inner_product(iter, iter + (nElement - 1), iter + 1, 0, bolt::amp::plus<int>(),
-#if defined(THC_REAL_IS_HALF)
-    ThrustHalfNotEqualTo()
-#else
-    not_equal_to<real>()
+  real mode[1];
+  long mode_index[1];
+
+  real* mode_dev;
+  long* mode_index_dev;
+  real* keys_dev;
+  long* counts_dev;
+
+  hipMalloc(&mode_dev, sizeof(real));
+  hipMalloc(&mode_index_dev, sizeof(long));
+  hipMalloc(&keys_dev, sizeof(real) * nElement);
+  hipMalloc(&counts_dev, sizeof(long) * nElement);
+
+  hipLaunchKernelGGL((calculate_mode<real>),
+    grid, block, 0, THCState_getCurrentStream(state),
+    data, THCudaLongStorage_data(state, sortBuffer), keys_dev, counts_dev, mode_dev, mode_index_dev, nElement);
+
+  hipMemcpy(mode, mode_dev, sizeof(real), hipMemcpyDeviceToHost);
+  hipMemcpy(mode_index, mode_index_dev, sizeof(long), hipMemcpyDeviceToHost);
+
+  hipFree(mode_dev);
+  hipFree(mode_index_dev);
+  hipFree(keys_dev);
+  hipFree(counts_dev);
+
 #endif
-);
-  
-#endif
-  
+
 #ifdef THRUST_PATH
   THAssert(positionIter != iter.end());
   long index = TH_INDEX_BASE + seq[positionIter - iter.begin()];
 #else
-// TODO: BOLT alternative path
+  long index = TH_INDEX_BASE + mode_index[0];
 #endif
 
   // Place mode, index in output
@@ -156,7 +167,8 @@ THC_API void THCTensor_(calculateMode)(THCState *state,
   THCStorage_(set)(state, THCTensor_(storage)(state, values), valuesOffset, mode);
   THCudaLongStorage_set(state, THCudaLongTensor_storage(state, indices), indicesOffset, index);
 #else
-   //TODO: Bolt alternative path
+  THCStorage_(set)(state, THCTensor_(storage)(state, values), valuesOffset, mode[0]);
+  THCudaLongStorage_set(state, THCudaLongTensor_storage(state, indices), indicesOffset, index);
 #endif
 }
 
@@ -185,7 +197,7 @@ THC_API void THCTensor_(dimApplyMode)(THCState *state,
 }
 
 #define MAX_GRID_SIZE  65535
-#define MAX_BLOCK_SIZE 1024
+#define MAX_BLOCK_SIZE 512
 
 THC_API void THCTensor_(mode)(THCState *state,
                               THCTensor *values,
@@ -256,14 +268,13 @@ THC_API void THCTensor_(mode)(THCState *state,
 
     // The blocksize is two elements per thread, rounded up to the nearest power of 2
     long ceilPowerOf2 = nextHighestPowerOf2(sliceSize);
-
     // Macro that calls kernel --> note that we set the block dimensions here, and
     // the amount of shared memory
   #define HANDLE_MODE(SIZE) \
   { \
     dim3 blockSize(SIZE / 2); \
 \
-    int memsize = (sizeof(real) * SIZE) + (2 * SIZE * sizeof(unsigned int)); \
+    int memsize = (sizeof(real) * SIZE) + (2 * SIZE * sizeof(unsigned int));\
     hipLaunchKernelGGL((computeMode<real, SIZE>), \
         grid, blockSize, memsize, THCState_getCurrentStream(state), \
         THCTensor_(data)(state, contiguous), make_magic_wrapper(tiValues), make_magic_wrapper(tiIndices), sliceSize); \
