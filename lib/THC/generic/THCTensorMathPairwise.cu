@@ -61,10 +61,22 @@ THCTensor_(div)(THCState* state, THCTensor *self_, THCTensor *src_, real value)
 {
   THCAssertSameGPU(THCTensor_(checkGPU)(state, 2, self_, src_));
   THArgCheck(value != ScalarConvert<int, real>::to(0), 3, "divide by zero");
-  if (self_ == src_) {
+    if (self_ == src_) {
+    printf("TensorDivOp invok\n");
     if (!THC_pointwiseApply1(state, self_, TensorDivConstantOp<real>(value))) {
       THArgCheck(false, 2, CUTORCH_DIM_WARNING);
     }
+
+    // check output
+    real* d_data = self_->storage->data;
+    real* h_data = (real*)malloc(sizeof(real) * self_->storage->size);
+    hipMemcpy((void*)h_data, d_data, sizeof(real) * self_->storage->size, hipMemcpyDeviceToHost);
+
+    //print result
+    printf("DivConstOp result\n\n");
+    for (int i =0;  i< self_->storage->size; i++)
+       printf("%f\t", h_data[i]);
+
   } else {
     THCTensor_(resizeAs)(state, self_, src_);
 

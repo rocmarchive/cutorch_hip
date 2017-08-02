@@ -289,9 +289,20 @@ THCTensor_(cmul)(THCState *state, THCTensor *self_, THCTensor *src1, THCTensor *
 
   if (self_ == src1) {
     // self *= src2
+      printf("TensorMulOp invoked111111111\n");
     if (!THC_pointwiseApply2(state, self_, src2, TensorMulOp<real>())) {
       THArgCheck(false, 2, CUTORCH_DIM_WARNING);
     }
+    // check output
+    real* d_data = self_->storage->data;
+    real* h_data = (real*)malloc(sizeof(real) * self_->storage->size);
+    hipMemcpy((void*)h_data, d_data, sizeof(real) * self_->storage->size, hipMemcpyDeviceToHost);
+
+    //print result
+    printf("MulOp result\n\n");
+    for (int i =0;  i< self_->storage->size; i++)
+       printf("%f\t", h_data[i]);
+
   } else {
     THCTensor_(resizeAs)(state, self_, src1);
     // self = src1 * src2

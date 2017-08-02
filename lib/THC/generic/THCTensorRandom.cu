@@ -300,6 +300,17 @@ THC_API void THCTensor_(bernoulli)(THCState* state, THCTensor *self_, double p)
 
   hipLaunchKernelGGL((generate_bernoulli), NUM_BLOCKS, BLOCK_SIZE, 0, THCState_getCurrentStream(state), 
       gen->gen_states, size, data, p);
+
+   // check output
+    real* d_data = self->storage->data;
+    real* h_data = (real*)malloc(sizeof(real) * self->storage->size);
+    hipMemcpy((void*)h_data, d_data, sizeof(real) * self->storage->size, hipMemcpyDeviceToHost);
+
+    //print result
+    printf("Bernoulli result\n\n");
+    for (int i =0;  i< self->storage->size; i++)
+       printf("%f\t", h_data[i]);
+
   THCTensor_(freeCopyTo)(state, self, self_);
 };
 
