@@ -1,12 +1,7 @@
 #include "THCHalf.h"
 #include "THCThrustAllocator.cuh"
-#ifdef THRUST_PATH
 #include <thrust/transform.h>
 #include <thrust/execution_policy.h>
-#else
-  #include <bolt/amp/iterator/ubiquitous_iterator.h>
-  #include <bolt/amp/transform.h>
-#endif
 
 struct __half2floatOp {
   __device__ float operator()(half v) const { return __half2float(v); }
@@ -18,7 +13,6 @@ struct __float2halfOp {
 
 void THCFloat2Half(THCState *state, half *out, float *in, ptrdiff_t len) {
   
-#ifdef THRUST_PATH
   THCThrustAllocator thrustAlloc(state);
   thrust::transform(
 #if CUDA_VERSION >= 7000
@@ -27,17 +21,9 @@ void THCFloat2Half(THCState *state, half *out, float *in, ptrdiff_t len) {
     thrust::device,
 #endif
     in, in + len, out, __float2halfOp());
-#else
-    bolt::amp::transform(
-        bolt::amp::make_ubiquitous_iterator(in),
-        bolt::amp::make_ubiquitous_iterator(in + len),
-        bolt::amp::make_ubiquitous_iterator(out),
-        __float2halfOp{});
-#endif
 }
 
 void THCHalf2Float(THCState *state, float *out, half *in, ptrdiff_t len) {
-#ifdef THRUST_PATH
   THCThrustAllocator thrustAlloc(state);
   thrust::transform(
 #if CUDA_VERSION >= 7000
@@ -46,14 +32,6 @@ void THCHalf2Float(THCState *state, float *out, half *in, ptrdiff_t len) {
     thrust::device,
 #endif
     in, in + len, out, __half2floatOp());
-#else
-    bolt::amp::transform(
-        bolt::amp::make_ubiquitous_iterator(in),
-        bolt::amp::make_ubiquitous_iterator(in + len),
-        bolt::amp::make_ubiquitous_iterator(out),
-        __half2floatOp{});
-
-#endif
 }
 
 

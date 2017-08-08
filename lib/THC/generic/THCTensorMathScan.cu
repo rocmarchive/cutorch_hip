@@ -10,19 +10,19 @@ __host__ void THCTensor_(scanThrust)(
     THCTensor *src,
     BinaryFunction binary_op)
 {
-#ifdef THRUST_PATH 
+//#ifdef THRUST_PATH 
   THCThrustAllocator thrustAlloc(state);
   thrust::device_ptr<real> src_data(THCTensor_(data)(state, src));
   thrust::device_ptr<real> dst_data(THCTensor_(data)(state, dst));
   ptrdiff_t size = THCTensor_(nElement)(state, src);
-  thrust::inclusive_scan(
+/*  thrust::inclusive_scan(
 #if CUDA_VERSION >= 7000
       thrust::cuda::par(thrustAlloc).on(THCState_getCurrentStream(state)),
 #endif
       src_data, src_data + size, dst_data,
       binary_op);
 #else  // THRUST_PATH
-#endif // THRUST_PATH
+#endif // THRUST_PATH*/
 }
 #endif
 

@@ -6,7 +6,6 @@
 #include "THCTensorMath.cuh"
 #include "THCThrustAllocator.cuh"
 
-#ifdef THRUST_PATH
 #include <thrust/copy.h>
 #include <thrust/count.h>
 #include <thrust/device_ptr.h>
@@ -19,20 +18,9 @@
 #if CUDA_VERSION >= 7000
 #include <thrust/system/cuda/execution_policy.h>
 #endif
-#else  // THRUST_PATH
-#include <bolt/amp/iterator/ubiquitous_iterator.h>
-#include <bolt/amp/iterator/counting_iterator.h>
-#include <bolt/amp/iterator/transform_iterator.h>
-#include <bolt/amp/iterator/iterator_traits.h>
-#include <bolt/amp/transform.h>
-#include <bolt/amp/functional.h>
-#include <bolt/amp/copy.h>
-#include <bolt/amp/device_vector.h>
 #ifdef __HCC__
 #include "hip/hcc_detail/device_functions.h"
 #endif
-#endif // THRUST_PATH
-#include <cfloat>
 
 template <typename T>
 struct TensorFillOp {
@@ -43,7 +31,6 @@ struct TensorFillOp {
   const T val;
 };
 
-#ifdef THRUST_PATH
 // copypasta from https://github.com/thrust/thrust/blob/master/examples/strided_range.cu
 template <typename Iterator>
 class strided_range
@@ -95,59 +82,6 @@ class strided_range
   Iterator last;
   difference_type stride;
 };
-#else
-// Bolt equivalent
-template <typename Iterator>
-class strided_range
-{
- public:
-
-  typedef typename bolt::amp::iterator_traits<Iterator>::difference_type difference_type;
-
-  struct stride_functor : public bolt::amp::unary_function<difference_type,
-                                                        difference_type>
-  {
-    difference_type stride;
-
-    stride_functor(difference_type stride)
-        : stride(stride) {}
-
-    __host__ __device__
-    difference_type operator()(const difference_type& i) const
-      {
-        return stride * i;
-      }
-  };
-
-  typedef typename bolt::amp::counting_iterator<difference_type>                   CountingIterator;
-  typedef typename bolt::amp::transform_iterator<stride_functor, CountingIterator> TransformIterator;
-  typedef typename bolt::amp::permutation_iterator<Iterator,TransformIterator>     PermutationIterator;
-
-  // type of the strided_range iterator
-  typedef PermutationIterator iterator;
-
-  // construct strided_range for the range [first,last)
-  strided_range(Iterator first, Iterator last, difference_type stride)
-      : first(first), last(last), stride(stride) {}
-
-  iterator begin(void) const
-    {
-      return PermutationIterator(first,
-                                 TransformIterator(CountingIterator(0),
-                                                   stride_functor(stride)));
-    }
-
-  iterator end(void) const
-    {
-      return begin() + ((last - first) + (stride - 1)) / stride;
-    }
-
- protected:
-  Iterator first;
-  Iterator last;
-  difference_type stride;
-};
-#endif
 
 struct idx_functor
 {

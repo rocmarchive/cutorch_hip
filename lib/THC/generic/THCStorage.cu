@@ -3,23 +3,11 @@
 #define THC_GENERIC_FILE "generic/THCStorage.cu"
 #else
 
-#ifdef __HCC__
-#include <bolt/amp/fill.h>
-#include <bolt/amp/iterator/ubiquitous_iterator.h>
-#endif
-
 void THCStorage_(fill)(THCState *state, THCStorage *self, real value)
 {
-#ifdef THRUST_PATH
   thrust::device_ptr<real> self_data(self->data);
   thrust::fill(
     self_data, self_data+self->size, value);
-#else
-    bolt::amp::fill(
-        bolt::amp::make_ubiquitous_iterator(self->data),
-        bolt::amp::make_ubiquitous_iterator(self->data) + self->size,
-        value);
-#endif
 }
 
 void THCStorage_(resize)(THCState *state, THCStorage *self, ptrdiff_t size)

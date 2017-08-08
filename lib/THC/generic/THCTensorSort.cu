@@ -251,11 +251,11 @@ void sortViaThrust(
 #if defined(THRUST_PATH)
   thrust::counting_iterator<long> countIter(0);
 
-  thrust::copy(
+  /*thrust::copy(
     #if CUDA_VERSION >= 7000
     thrust::cuda::par(thrustAlloc).on(THCState_getCurrentStream(state)),
     #endif
-    countIter, countIter + totalElements, indexIter);
+    countIter, countIter + totalElements, indexIter);*/
 #else
   bolt::amp::counting_iterator<long> countIter{0};
 

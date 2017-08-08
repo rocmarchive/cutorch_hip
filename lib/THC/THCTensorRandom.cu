@@ -16,11 +16,7 @@
   #include <hiprng_kernel.h>
 #endif
 
-#ifdef THRUST_PATH
-    #include <thrust/functional.h>
-#else
-    #include <bolt/amp/functional.h>
-#endif
+#include <thrust/functional.h>
 
 
 #define MAX_NUM_BLOCKS 64

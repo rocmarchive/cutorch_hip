@@ -425,7 +425,7 @@ struct TensorCPowOp<double> {
 template <typename T>
 struct TensorDivOp {
   __device__ __forceinline__
-  void operator()(T* out, T* in) { *out /= *in; }
+  void operator()(T* out, T* in) { *out = *out / *in; }
 
   __device__ __forceinline__
   void operator()(T* out, T* in1, T* in2) { *out = *in1 / *in2; }

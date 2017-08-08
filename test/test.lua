@@ -1128,7 +1128,7 @@ function test.cfmod()
    checkMultiDevice(x, 'cfmod', y)
 end
 
-function test.nonzero()
+--[[function test.nonzero()
     local minsize = 10
     local maxsize = 20
     local dims = {chooseInt(minsize, maxsize)}
@@ -1147,7 +1147,7 @@ function test.nonzero()
         compareCPUAndCUDATypeTensorArgs(typename, nil, x, 'nonzero')
     end
     checkMultiDevice(x, 'nonzero')
-end
+end]]--
 
 function test.cdiv()
    local sz1 = chooseInt(minsize, maxsize)
@@ -3465,7 +3465,7 @@ function test.storageToTable()
    end
 end
 
-function test.maskedSelect()
+--[[function test.maskedSelect()
    local n_row = math.random(minsize,maxsize)
    local n_col = math.random(minsize,maxsize)
 
@@ -3604,7 +3604,7 @@ function test.maskedCopy()
 
    tester:assertTensorEq(x, x_cuda:float(), 0.00001,
                          "Error in maskedCopy indexing x[x:gt(y)]")
-end
+end]]--
 
 function test.maskedFill()
    local n_row = math.random(minsize,maxsize)
@@ -3721,7 +3721,7 @@ function test.scatterFill()
 end
 
 
-function test.sort()
+--[[function test.sort()
    for tries = 1, 5 do
       local t = createTestTensor(2 ^ 5)
       local selectdim = chooseInt(1, t:nDimension())
@@ -3785,7 +3785,7 @@ local function explore(typename, func, t, topk, indices)
          explore(typename, func, t[i], topk[i], indices[i])
       end
    end
-end
+end]]--
 
 --[[function test.topk()
    -- need to ensure unique values for index checking, so for the first pass we create Tensors

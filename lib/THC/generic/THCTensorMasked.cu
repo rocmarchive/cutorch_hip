@@ -75,13 +75,13 @@ THCTensor_(maskedCopy)(THCState* state,
   thrust::device_ptr<long>
     maskPrefixSumData(THCudaLongTensor_data(state, maskPrefixSum));
 
-  thrust::exclusive_scan(
+ /* thrust::exclusive_scan(
     #if CUDA_VERSION >= 7000
         thrust::cuda::par.on(THCState_getCurrentStream(state)),
     #endif
     maskData,
     maskData + THCudaLongTensor_nElement(state, maskLong),
-    maskPrefixSumData);
+    maskPrefixSumData);*/
 #else
     auto maskData = bolt::amp::make_ubiquitous_iterator(
         THCudaLongTensor_data(state, maskLong));
@@ -163,13 +163,13 @@ THCTensor_(maskedSelect)(THCState* state,
   thrust::device_ptr<long>
     maskPrefixSumData(THCudaLongTensor_data(state, maskPrefixSum));
 
-  thrust::exclusive_scan(
+  /*thrust::exclusive_scan(
 #if CUDA_VERSION >= 7000
     thrust::cuda::par.on(THCState_getCurrentStream(state)),
 #endif
     maskData,
     maskData + THCudaLongTensor_nElement(state, maskLong),
-    maskPrefixSumData);
+    maskPrefixSumData);*/
 #else
     auto maskData = bolt::amp::make_ubiquitous_iterator(
         THCudaLongTensor_data(state, maskLong));

@@ -307,9 +307,9 @@ THC_API void THCTensor_(bernoulli)(THCState* state, THCTensor *self_, double p)
     hipMemcpy((void*)h_data, d_data, sizeof(real) * self->storage->size, hipMemcpyDeviceToHost);
 
     //print result
-    printf("Bernoulli result\n\n");
-    for (int i =0;  i< self->storage->size; i++)
-       printf("%f\t", h_data[i]);
+    //printf("Bernoulli result\n\n");
+    //for (int i =0;  i< self->storage->size; i++)
+      // printf("%f\t", h_data[i]);
 
   THCTensor_(freeCopyTo)(state, self, self_);
 };
