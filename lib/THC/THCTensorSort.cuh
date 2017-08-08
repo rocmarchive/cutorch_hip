@@ -7,13 +7,11 @@
 #include "THCTensorCopy.h"
 #include "THCTensorTypeUtils.cuh"
 
-#ifdef THRUST_PATH
-    #include "THCThrustAllocator.cuh"
-    #include <thrust/device_ptr.h>
-    #include <thrust/sort.h>
-    #if CUDA_VERSION >= 7000
-        #include <thrust/system/cuda/execution_policy.h>
-    #endif
+#include "THCThrustAllocator.cuh"
+#include <thrust/device_ptr.h>
+#include <thrust/sort.h>
+#if CUDA_VERSION >= 7000
+  #include <thrust/system/cuda/execution_policy.h>
 #endif
 
 template <typename T>

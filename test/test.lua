@@ -1341,7 +1341,7 @@ function test.mean()
    checkMultiDevice(x, 'mean', 1)
 end
 
---[[function test.max()
+function test.max()
   local sz1 = chooseInt(minsize, maxsize)
    local sz2 = chooseInt(minsize, maxsize)
    local x = torch.randperm(sz1 * sz2):view(sz1, sz2):float()
@@ -1385,7 +1385,7 @@ function test.min()
    end
    checkMultiDevice(x, 'min')
    checkMultiDevice(x, 'min', 1)
-end]]--
+end
 
 function test.cmax()
   local sz1 = chooseInt(minsize, maxsize)

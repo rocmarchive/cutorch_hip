@@ -75,9 +75,7 @@ INCLUDE_DIRECTORIES(${HIPSPARSE_PATH}/include)
 
 # TODO: temporary blunt implements.
 IF (${PLATFORM} MATCHES "hcc")
-  include_directories(${CMAKE_CURRENT_SOURCE_DIR}/external/bolt/include)
   include_directories(${CMAKE_CURRENT_SOURCE_DIR}/external/Thrust)
-  include_directories(${CMAKE_CURRENT_SOURCE_DIR}/external/boost)
 ENDIF()
 ADD_SUBDIRECTORY(lib)
 

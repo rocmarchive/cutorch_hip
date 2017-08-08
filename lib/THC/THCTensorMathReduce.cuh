@@ -6,7 +6,6 @@
 #include "THCNumerics.cuh"
 #include "THCReduce.cuh"
 #include "THCReduceAll.cuh"
-#ifdef THRUST_PATH
 #include "THCThrustAllocator.cuh"
 #include <thrust/functional.h>
 #include <thrust/device_ptr.h>
@@ -15,13 +14,6 @@
 #if CUDA_VERSION >= 7000
 #include <thrust/system/cuda/execution_policy.h>
 #endif  // CUDA_VERSION
-#else   // THRUST_PATH
-    #include <bolt/amp/functional.h>
-    #include <bolt/amp/pair.h>
-    #include <bolt/amp/inner_product.h>
-    #include <bolt/amp/iterator/ubiquitous_iterator.h>
-    #include "hip/hcc_detail/hip_fp16.h"
-#endif  // THRUST_PATH
 
 
 // Reduction operators that support `half`, unlike Thrust
@@ -277,12 +269,7 @@ struct TensorDistOp
   const Tacc exponent;
 };
 
-#ifdef THRUST_PATH
   #include <thrust/functional.h>
-#else
-  #include <bolt/amp/functional.h>
-  #include <bolt/amp/pair.h>
-#endif
 
 // Given the sum of values and the sum of squares, compute the variance or standard deviation.
 template<typename Real, bool flag, bool apply_sqrt>
@@ -477,31 +464,19 @@ kernelTransformReduceOuterDimIndex(K *tgt1,
                                    unsigned num_orows,
                                    unsigned num_irows,
                                    unsigned row_size,
-                                   #if defined(THRUST_PATH)
-                                     thrust::pair<K, Index> init,
-                                   #else
-                                     bolt::amp::pair<K, Index> init,
-                                   #endif
+                                   thrust::pair<K, Index> init,
                                    BinaryFunction binary_op) {
   for (unsigned orow = hipBlockIdx_x; orow < num_orows; orow += hipGridDim_x) {
     for (unsigned irow = hipBlockIdx_y * hipBlockDim_x + hipThreadIdx_x;
          irow < num_irows;
          irow += hipGridDim_y * hipBlockDim_x) {
       K *src = src_ + orow * row_size * num_irows + irow;
-      #if defined(THRUST_PATH)
         thrust::pair<K, Index> acc = init;
-      #else
-        bolt::amp::pair<K, Index> acc = init;
-      #endif
 
       for (unsigned col = 0; col < row_size; ++col) {
         // +1 for Lua index
-        #if defined(THRUST_PATH)
           acc = binary_op(thrust::make_pair<K, Index>(*src, col + TH_INDEX_BASE),
                             acc);
-        #else
-          acc = binary_op(bolt::amp::make_pair(*src, col + TH_INDEX_BASE), acc);
-        #endif
         src += num_irows;
       }
 
@@ -520,14 +495,8 @@ THC_transformReduceOuterDimIndex(THCState *state,
                                  TensorTypeIndex *tgt2,
                                  TensorTypeK *src,
                                  long rdim,
-    #if defined(THRUST_PATH)
         const thrust::pair<typename TensorUtils<TensorTypeK>::DataType,
                                                          typename TensorUtils<TensorTypeIndex>::DataType>& init,
-    #else
-        const bolt::amp::pair<
-            typename TensorUtils<TensorTypeK>::DataType,
-            typename TensorUtils<TensorTypeIndex>::DataType>& init,
-    #endif
                                  BinaryFunction binary_op) {
   unsigned ndim = TensorUtils<TensorTypeK>::getDims(state, src);
   unsigned num_orows = 1;
@@ -572,11 +541,7 @@ kernelTransformReduceInnermostDimIndex(K *tgt1,
                                        K *src_,
                                        unsigned num_rows,
                                        unsigned row_size,
-    #if defined(THRUST_PATH)
       thrust::pair<K, Index> init,
-    #else
-      bolt::amp::pair<K, Index> init,
-    #endif
                                        BinaryFunction binary_op) {
   __shared__ K sbuf[32][16 + 1]; // avoid bank conflict
   __shared__ Index ibuf[32][16 + 1]; // avoid bank conflict
@@ -585,20 +550,12 @@ kernelTransformReduceInnermostDimIndex(K *tgt1,
        block_row < num_rows;
        block_row += hipBlockDim_y * hipGridDim_x) {
     unsigned row = block_row + hipThreadIdx_y;
-#if defined(THRUST_PATH)
     thrust::pair<K, Index> acc = init;
-#else
-    bolt::amp::pair<K, Index> acc = init;
-#endif
     if (row < num_rows) {
       K *src = src_ + row * row_size;
       // Sequential reduction within a thread.
       for (unsigned col = hipThreadIdx_x; col < row_size; col += hipBlockDim_x) {
-#if defined(THRUST_PATH)
         acc = binary_op(thrust::make_pair<K, Index>(src[col], col + TH_INDEX_BASE), acc);
-#else
-        acc = binary_op(bolt::amp::make_pair(src[col], col + TH_INDEX_BASE), acc);
-#endif
       }
     }
 
@@ -612,17 +569,9 @@ kernelTransformReduceInnermostDimIndex(K *tgt1,
     Index* iline = &ibuf[hipThreadIdx_y][0];
     for (unsigned s = 8; s > 0; s >>= 1) {
       if (row < num_rows && hipThreadIdx_x < s) {
-        #if defined(THRUST_PATH)
-          thrust::pair<K, Index> arg1{sline[hipThreadIdx_x], iline[hipThreadIdx_x]};
+        thrust::pair<K, Index> arg1{sline[hipThreadIdx_x], iline[hipThreadIdx_x]};
         thrust::pair<K, Index> arg2{sline[hipThreadIdx_x + s], iline[hipThreadIdx_x + s]};
         thrust::pair<K, Index> res = binary_op(arg1, arg2);
-        #else
-          bolt::amp::pair<K, Index> arg1{
-              sline[hipThreadIdx_x], iline[hipThreadIdx_x]};
-          bolt::amp::pair<K, Index> arg2{
-              sline[hipThreadIdx_x + s], iline[hipThreadIdx_x + s]};
-          bolt::amp::pair<K, Index> res = binary_op(arg1, arg2);
-        #endif
 
         sline[hipThreadIdx_x] = res.first;
         iline[hipThreadIdx_x] = res.second;
@@ -646,14 +595,8 @@ THC_transformReduceInnermostDimIndex(THCState *state,
                                      TensorTypeK *tgt1,
                                      TensorTypeIndex *tgt2,
                                      TensorTypeK *src,
-    #if defined(THRUST_PATH)
         const thrust::pair<typename TensorUtils<TensorTypeK>::DataType,
                                                          typename TensorUtils<TensorTypeIndex>::DataType>& init,
-    #else
-        const bolt::amp::pair<
-            typename TensorUtils<TensorTypeK>::DataType,
-            typename TensorUtils<TensorTypeIndex>::DataType>& init,
-    #endif
                                      BinaryFunction binary_op) {
   unsigned ndim = TensorUtils<TensorTypeK>::getDims(state, src);
   unsigned num_rows = 1;
@@ -685,14 +628,8 @@ THC_reduceDimIndex(THCState *state,
                    TensorTypeK *src,
                    long dimension,
                    int keepdim,
-    #if defined(THRUST_PATH)
         const thrust::pair<typename TensorUtils<TensorTypeK>::DataType,
                                            typename TensorUtils<TensorTypeIndex>::DataType>& init,
-    #else
-        const bolt::amp::pair<
-            typename TensorUtils<TensorTypeK>::DataType,
-            typename TensorUtils<TensorTypeIndex>::DataType>& init,
-    #endif
                    BinaryFunction binary_op)
 {
   THArgCheck(dimension >= 0 &&
@@ -727,39 +664,21 @@ THC_reduceDimIndex(THCState *state,
 template <typename T, typename Index>
 struct MaxValuePair {
   __host__ __device__
-  #if defined(THRUST_PATH)
     thrust::pair<T, Index> operator()(const thrust::pair<T, Index>& a,
                                     const thrust::pair<T, Index>& b) const
     {
       return THCNumerics<T>::ge(a.first, b.first) ? a : b;
     }
-  #else
-    bolt::amp::pair<T, Index> operator()(
-      const bolt::amp::pair<T, Index>& a,
-      const bolt::amp::pair<T, Index>& b) const
-    {
-      return THCNumerics<T>::ge(a.first, b.first) ? a : b;
-    }
-  #endif
 };
 
 template <typename T, typename Index>
 struct MinValuePair {
   __host__ __device__
-    #if defined(THRUST_PATH)
       thrust::pair<T, Index> operator()(const thrust::pair<T, Index>& a,
                                         const thrust::pair<T, Index>& b) const
       {
         return THCNumerics<T>::le(a.first, b.first) ? a : b;
       }
-    #else
-      bolt::amp::pair<T, Index> operator()(
-        const bolt::amp::pair<T, Index>& a,
-        const bolt::amp::pair<T, Index>& b) const
-      {
-        return THCNumerics<T>::le(a.first, b.first) ? a : b;
-      }
-    #endif
 };
 
 template <typename T>

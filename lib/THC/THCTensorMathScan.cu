@@ -6,10 +6,8 @@
 #include "THCReduce.cuh"
 #include "THCNumerics.cuh"
 #include "THCTensorMathReduce.cuh"
-#ifdef THRUST_PATH
-//#include <thrust/scan.h>
+#include <thrust/scan.h>
 #include <thrust/execution_policy.h>
-#endif
 /* Perform an inclusive scan along an outer dimension of a tensor.
  *
  * - num_orows is the size of the flattened outer dimensions;
