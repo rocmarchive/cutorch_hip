@@ -3465,7 +3465,7 @@ function test.storageToTable()
    end
 end
 
---[[function test.maskedSelect()
+function test.maskedSelect()
    local n_row = math.random(minsize,maxsize)
    local n_col = math.random(minsize,maxsize)
 
@@ -3604,7 +3604,7 @@ function test.maskedCopy()
 
    tester:assertTensorEq(x, x_cuda:float(), 0.00001,
                          "Error in maskedCopy indexing x[x:gt(y)]")
-end]]--
+end
 
 function test.maskedFill()
    local n_row = math.random(minsize,maxsize)

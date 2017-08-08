@@ -69,30 +69,18 @@ THCTensor_(maskedCopy)(THCState* state,
   THCudaLongTensor_resize(state, maskPrefixSum, maskSizes, NULL);
   THLongStorage_free(maskSizes);
 
-#ifdef THRUST_PATH
   thrust::device_ptr<long>
     maskData(THCudaLongTensor_data(state, maskLong));
   thrust::device_ptr<long>
     maskPrefixSumData(THCudaLongTensor_data(state, maskPrefixSum));
 
- /* thrust::exclusive_scan(
+  thrust::exclusive_scan(
     #if CUDA_VERSION >= 7000
         thrust::cuda::par.on(THCState_getCurrentStream(state)),
     #endif
     maskData,
     maskData + THCudaLongTensor_nElement(state, maskLong),
-    maskPrefixSumData);*/
-#else
-    auto maskData = bolt::amp::make_ubiquitous_iterator(
-        THCudaLongTensor_data(state, maskLong));
-    auto maskPrefixSumData = bolt::amp::make_ubiquitous_iterator(
-        THCudaLongTensor_data(state, maskPrefixSum));
-
-    bolt::amp::exclusive_scan(
-        maskData,
-        maskData + THCudaLongTensor_nElement(state, maskLong),
-        maskPrefixSumData);
-#endif
+    maskPrefixSumData);
 
   // We are getting elements from `src` based on an offset from
   // `maskPrefixSum`, so that should be made contiguous too
@@ -157,29 +145,18 @@ THCTensor_(maskedSelect)(THCState* state,
   THCudaLongTensor_resize(state, maskPrefixSum, maskSizes, NULL);
   THLongStorage_free(maskSizes);
 
-#ifdef THRUST_PATH
   thrust::device_ptr<long>
     maskData(THCudaLongTensor_data(state, maskLong));
   thrust::device_ptr<long>
     maskPrefixSumData(THCudaLongTensor_data(state, maskPrefixSum));
 
-  /*thrust::exclusive_scan(
+  thrust::exclusive_scan(
 #if CUDA_VERSION >= 7000
     thrust::cuda::par.on(THCState_getCurrentStream(state)),
 #endif
     maskData,
     maskData + THCudaLongTensor_nElement(state, maskLong),
-    maskPrefixSumData);*/
-#else
-    auto maskData = bolt::amp::make_ubiquitous_iterator(
-        THCudaLongTensor_data(state, maskLong));
-    auto maskPrefixSumData = bolt::amp::make_ubiquitous_iterator(
-        THCudaLongTensor_data(state, maskPrefixSum));
-    bolt::amp::exclusive_scan(
-        maskData,
-        maskData + THCudaLongTensor_nElement(state, maskLong),
-        maskPrefixSumData);
-#endif
+    maskPrefixSumData);
 
  bool status = false;
   // Then copy over the masked elements at their desired output index
