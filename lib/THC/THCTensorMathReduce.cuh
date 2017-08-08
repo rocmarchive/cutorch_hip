@@ -514,12 +514,12 @@ THC_transformReduceOuterDimIndex(THCState *state,
   dim3 grid(min(maxGridDim, num_orows),
             min(maxGridDim, THCCeilDiv(num_irows, threads.x)));
 
-  /*hipLaunchKernelGGL(kernelTransformReduceOuterDimIndex,
+  hipLaunchKernelGGL(kernelTransformReduceOuterDimIndex,
       grid, threads, 0, THCState_getCurrentStream(state),
       TensorUtils<TensorTypeK>::getData(state, tgt1),
       TensorUtils<TensorTypeIndex>::getData(state, tgt2),
       TensorUtils<TensorTypeK>::getData(state, src),
-      num_orows, num_irows, row_size, init, binary_op);*/
+      num_orows, num_irows, row_size, init, binary_op);
 
   THCudaCheck(hipGetLastError());
 }
@@ -608,12 +608,12 @@ THC_transformReduceInnermostDimIndex(THCState *state,
   dim3 threads(16, 32);
   dim3 grid(min(1024, THCCeilDiv(num_rows, threads.y)));
 
-/*  hipLaunchKernelGGL(kernelTransformReduceInnermostDimIndex,
+  hipLaunchKernelGGL(kernelTransformReduceInnermostDimIndex,
       grid, threads, 0, THCState_getCurrentStream(state),
       TensorUtils<TensorTypeK>::getData(state, tgt1),
       TensorUtils<TensorTypeIndex>::getData(state, tgt2),
       TensorUtils<TensorTypeK>::getData(state, src),
-      num_rows, row_size, init, binary_op);*/
+      num_rows, row_size, init, binary_op);
 
   THCudaCheck(hipGetLastError());
 }
