@@ -112,7 +112,7 @@ template <typename T1, typename T2>
   void swap(pair &p);
 
   // Added default destructor by Neel  
-  __host__ __device__ ~pair(void);
+  __host__ __device__ ~pair(void) {};
 }; // end pair
 
 
