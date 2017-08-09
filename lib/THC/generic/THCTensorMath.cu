@@ -341,51 +341,53 @@ void THCTensor_(nonzero)(THCState* state, THCudaLongTensor *tensor,
 
   THCudaLongTensor_resize2d(state, tensor, num_nonzeros, num_dim);
 #else
+std::cout << "inside" << std::endl;
   self = THCTensor_(newContiguous)(state, self);
-  auto selfSize = THCTensor_(nElement)(state, self);
-  bolt::amp::Ubiquitous_iterator<real> self_data = bolt::amp::make_ubiquitous_iterator<real>(THCTensor_(data)(state, self));
+//  bolt::amp::Ubiquitous_iterator<real> self_data = bolt::amp::make_ubiquitous_iterator<real>(THCTensor_(data)(state, self));
 
   int num_dim = THCTensor_(nDimension)(state, self);
   long N = THCTensor_(nElement)(state, self);
 
   THCudaLongTensor_resize2d(state, tensor, N, num_dim);
-  tensor = THCudaLongTensor_newContiguous(state, tensor);
-  auto tensor_data = bolt::amp::make_ubiquitous_iterator<long>(THCudaLongTensor_data(state, tensor));
+  //tensor = THCudaLongTensor_newContiguous(state, tensor);
+//  auto tensor_data = bolt::amp::make_ubiquitous_iterator<long>(THCudaLongTensor_data(state, tensor));
   
+//  typedef bolt::amp::Ubiquitous_iterator<long> Iter;
+//  strided_range<Iter> strided_tensor(tensor_data,
+//                                     tensor_data+N*num_dim, num_dim);
 
-  bolt::amp::counting_iterator<long> idxfirst(0);
-  bolt::amp::counting_iterator<long> idxlast = idxfirst + N;
+  long grid_size = (N - 1)/256 + 1;
+  dim3 grid(/*grid_size*/1);
+  dim3 block(/*256*/1);
 
-  typedef bolt::amp::Ubiquitous_iterator<long> Iter;
-  strided_range<Iter> strided_tensor(tensor_data,
-                                     tensor_data+N*num_dim, num_dim);
+  long num_nonzeros[1];
 
-  hipStream_t stream = THCState_getCurrentStream(state);
+  long* num_nonzeros_dev;
 
- /*strided_range<Iter>::iterator dend = bolt::amp::copy_if(
-    idxfirst,
-    idxlast,
-    self_data,
-    strided_tensor.begin(),
-    NonZeroOp<real>()
-  );
+  hipMalloc(&num_nonzeros_dev, sizeof(long));
 
-  long num_nonzeros = 10; //std::distance(strided_tensor.begin(), dend);
+  hipLaunchKernelGGL((calculate_non_zeros<real>),
+    grid, block, 0, THCState_getCurrentStream(state),
+    THCTensor_(data)(state, self), num_nonzeros_dev, N);
 
-  long div = 1;
+  hipMemcpy(num_nonzeros, num_nonzeros_dev, sizeof(long), hipMemcpyDeviceToHost);
+
+  hipFree(num_nonzeros_dev);
+
+/*  long div = 1;
   for (int dim = num_dim-1; dim >= 0; dim--) {
     strided_range<Iter> stride_dim(tensor_data+dim,
                                    tensor_data+N*num_dim, num_dim);
     bolt::amp::transform(
-      strided_tensor.begin(),
-      strided_tensor.end(),
-      stride_dim.begin(),
+      strided_tensor.begin().getBuffer(),
+      strided_tensor.end().getBuffer(),
+      stride_dim.begin().getBuffer(),
       idx_functor(div, self->size[dim])
     );
     div *= self->size[dim];
-  }
+  }*/
 
-  THCudaLongTensor_resize2d(state, tensor, num_nonzeros, num_dim);*/
+  THCudaLongTensor_resize2d(state, tensor, num_nonzeros[0], num_dim);
 #endif
 
   THCTensor_(free)(state, self);
