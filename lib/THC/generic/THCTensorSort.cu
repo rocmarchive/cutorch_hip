@@ -231,11 +231,11 @@ void sortViaThrust(
   // Fill the indices with a global index across all slices
   thrust::counting_iterator<long> countIter(0);
 
-  /*thrust::copy(
+  thrust::copy(
     #if CUDA_VERSION >= 7000
     thrust::cuda::par(thrustAlloc).on(THCState_getCurrentStream(state)),
     #endif
-    countIter, countIter + totalElements, indexIter);*/
+    countIter, countIter + totalElements, indexIter);
 
   // First, we sort globally (across all slices) according to key
   // (the values we're sorting)
