@@ -32,14 +32,6 @@ THC_API void THCTensor_(normal)(THCState* state, THCTensor *self_, double mean, 
   THCTensor_(freeCopyTo)(state, self, self_);
 };
 
-#ifdef __HIP_PLATFORM_HCC__
-void generate_log_normal(THCState* state, hiprngStateMtgp32 *rngstate, int size, real* &result, double mean, double stddev) {
-  hipStream_t currentStream = THCState_getCurrentStream(state);
-  hc::accelerator_view* current_accl_view;
-  hipHccGetAcceleratorView(currentStream, &current_accl_view);
-  user_log_normal_kernel(*current_accl_view, rngstate, result, mean, stddev, size);
-}
-#endif
 
 THC_API void THCTensor_(logNormal)(THCState* state, THCTensor *self_, double mean, double stdv)
 {
