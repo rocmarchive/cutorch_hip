@@ -24,7 +24,7 @@ THC_API void THCTensor_(calculateMode)(THCState *state,
   THCThrustAllocator thrustAlloc(state);
 
 
-/*
+
   // Wrap input data, sortBuffer, in Thrust device vectors
   thrust::device_ptr<real> vecPtr = thrust::device_pointer_cast(data);
   thrust::device_vector<real> iter(vecPtr, vecPtr + nElement);
@@ -71,7 +71,7 @@ THC_API void THCTensor_(calculateMode)(THCState *state,
   // Count frequency of each element
   thrust::device_vector<real> keys(unique);
   thrust::device_vector<int> counts(unique);
-  thrust::reduce_by_key(
+/*  thrust::reduce_by_key(
 #if CUDA_VERSION >= 7000
     thrust::cuda::par(thrustAlloc).on(THCState_getCurrentStream(state)),
 #else
@@ -82,7 +82,7 @@ THC_API void THCTensor_(calculateMode)(THCState *state,
 #if defined(THC_REAL_IS_HALF)
     , ThrustHalfEqualTo()
 #endif
-  );
+  ); */
 
   // Find index of maximum count
   thrust::device_vector<int>::iterator it = thrust::max_element(
@@ -126,7 +126,7 @@ THC_API void THCTensor_(calculateMode)(THCState *state,
     indicesOffset += THCudaLongTensor_stride(state, indices, i) * pos;
   }
   THCStorage_(set)(state, THCTensor_(storage)(state, values), valuesOffset, mode);
-  THCudaLongStorage_set(state, THCudaLongTensor_storage(state, indices), indicesOffset, index);*/
+  THCudaLongStorage_set(state, THCudaLongTensor_storage(state, indices), indicesOffset, index);
 }
 
 // this probably could be a loop, not a recursive algorithm
@@ -244,18 +244,18 @@ THC_API void THCTensor_(mode)(THCState *state,
       case 1024:
       case 512:
       case 256:
-        //HANDLE_MODE(1024)
+        HANDLE_MODE(1024)
         break;
       case 128:
       case 64:
-        //HANDLE_MODE(128)
+        HANDLE_MODE(128)
         break;
       case 32:
       case 16:
       case 8:
       case 4:
       case 2:
-        //HANDLE_MODE(32)
+        HANDLE_MODE(32)
         break;
       case 1:
       default:
