@@ -254,6 +254,7 @@ INSTALL(FILES
           THCTensor.h
           THCTensorCopy.h
           THCTensorRandom.h
+          THCThrustAllocator.cuh
           THCTensorMath.h
           THCTensorConv.h
           THCTensorTopK.h
