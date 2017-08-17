@@ -405,9 +405,7 @@ void THCTensor_(linspace)(THCState *state, THCTensor *r_, real a, real b, long n
                                        ScalarConvert<long,real>::to(n - 1));
     LinspaceOp<real> linspace_method(a, step);
     thrust::device_ptr<real> data_(THCTensor_(data)(state, r));
-    //thrust::tabulate(data_, data_ + n, linspace_method);
-    thrust::counting_iterator<int> iter(0);
-    thrust::transform(iter, iter + n , data_, linspace_method); 
+    thrust::tabulate(data_, data_ + n, linspace_method);
     if (!THCTensor_(isContiguous)(state, r_)) { // We need to move data back to r_
       THCTensor_(freeCopyTo)(state, r, r_);
     }
