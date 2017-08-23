@@ -27,7 +27,7 @@
 
 // Manual Serialization strategy to bypass the serialization attempted by compiler
 #if defined(__HIP_PLATFORM_HCC__)
-  #include <hip/hip_hcc.h>
+/*  #include <hip/hip_hcc.h>
 
   template<typename T>
     class Magic_wrapper {
@@ -49,8 +49,10 @@
   Magic_wrapper<T> make_magic_wrapper(const T& x)
   {
     return Magic_wrapper<T>{x};
-  }
-  #define reference_to_const(...) __VA_ARGS__ const&
+  }*/
+  #define make_magic_wrapper(x) x
+  #define reference_to_const(...) __VA_ARGS__
+//  #define reference_to_const(...) __VA_ARGS__ const&
 #else
   #define make_magic_wrapper(x) x
   #define reference_to_const(...) __VA_ARGS__
