@@ -97,4 +97,67 @@ struct GlobalIndexToPerSliceIndex {
 
 void THCudaLongTensor_fillSliceWithIndex(
     THCState* state, THCudaLongTensor* t, int dim);
+
+template <typename T>
+long partition (T* arr, long* indices, int low, int high, long stride)
+{
+    T pivot = arr[high * stride];    // pivot
+    long i = (low - 1);  // Index of smaller element
+
+    T t1;
+    long t2;
+
+    for (long j = low; j <= high- 1; j++)
+    {
+        if (arr[j * stride] <= pivot)
+        {
+            i++;
+            t1 = arr[i * stride];
+            arr[i * stride] = arr[j * stride];
+            arr[j * stride] = t1;
+
+            t2 = indices[i * stride];
+            indices[i * stride] = indices[j * stride];
+            indices[j * stride] = t2;
+        }
+    }
+    t1 = arr[(i + 1) * stride];
+    arr[(i + 1) * stride] = arr[high * stride];
+    arr[high * stride] = t1;
+
+    t2 = indices[(i + 1) * stride];
+    indices[(i + 1) * stride] = indices[high * stride];
+    indices[high * stride] = t2;
+    return (i + 1);
+}
+
+template <typename T>
+void quick_sort (T* arr, long* indices, int l, int h, long stride) {
+    long stack[ h - l + 1 ];
+
+    long top = -1;
+
+    stack[ ++top ] = l;
+    stack[ ++top ] = h;
+
+    while ( top >= 0 )
+    {
+        h = stack[ top-- ];
+        l = stack[ top-- ];
+
+        long p = partition<T>( arr, indices, l, h, stride );
+
+        if (p-1 > l)
+        {
+            stack[ ++top ] = l;
+            stack[ ++top ] = p - 1;
+        }
+
+        if (p+1 < h)
+        {
+            stack[ ++top ] = p + 1;
+            stack[ ++top ] = h;
+        }
+    }
+}
 #endif // THC_TENSORSORT_CUH
