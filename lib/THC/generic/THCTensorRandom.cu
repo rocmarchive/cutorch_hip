@@ -277,9 +277,9 @@ void THCTensor_(randn)(THCState *state, THCTensor *r_, THLongStorage *size)
 #endif
 
 #if defined(THC_REAL_IS_DOUBLE)
-GENERATE_KERNEL1(generate_bernoulli, double, double p, double, hiprng_uniform_double, x <= p)
+GENERATE_KERNEL1(generate_bernoulli, double, double p, double, hiprand_uniform_double, x <= p)
 #else
-GENERATE_KERNEL1(generate_bernoulli, real, double p, float, hiprng_uniform, (ScalarConvert<bool, real>::to(x <= p)))
+GENERATE_KERNEL1(generate_bernoulli, real, double p, float, hiprand_uniform, (ScalarConvert<bool, real>::to(x <= p)))
 #endif
 
 THC_API void THCTensor_(bernoulli)(THCState* state, THCTensor *self_, double p)
@@ -332,9 +332,9 @@ DEFINE_BERNOULLI_TENSOR(bernoulli_FloatTensor, THCudaTensor, float)
 DEFINE_BERNOULLI_TENSOR(bernoulli_DoubleTensor, THCudaDoubleTensor, double)
 
 #if defined(THC_REAL_IS_DOUBLE)
-GENERATE_KERNEL1(generate_geometric, double, double p, double, hiprng_uniform_double, ceil(log(x) / log(1-p)))
+GENERATE_KERNEL1(generate_geometric, double, double p, double, hiprand_uniform_double, ceil(log(x) / log(1-p)))
 #else
-GENERATE_KERNEL1(generate_geometric, real, double p, float, hiprng_uniform, (ScalarConvert<float, real>::to(ceilf(logf(x) / log(1-p)))))
+GENERATE_KERNEL1(generate_geometric, real, double p, float, hiprand_uniform, (ScalarConvert<float, real>::to(ceilf(logf(x) / log(1-p)))))
 #endif
 
 THC_API void THCTensor_(geometric)(THCState* state, THCTensor *self_, double p)

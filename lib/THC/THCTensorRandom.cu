@@ -12,8 +12,9 @@
   #include <curand_mtgp32_host.h>
   #include <curand_mtgp32dc_p_11213.h>
 #else
-  #include <hiprng.h>
-  #include <hiprng_kernel.h>
+  #include <hiprand.h>
+  #include <hiprand_kernel.h>
+  #include <rocrand_mtgp32_11213.h>
 #endif
 
 #include <thrust/functional.h>
@@ -28,19 +29,19 @@ Generator* THCRandom_getGenerator(THCState* state);
 /* Sets up generator. Allocates but does not create the generator states. */
 void initializeGenerator(THCState *state, Generator* gen)
 {
-  THCudaCheck(THCudaMalloc(state, (void**)&gen->gen_states, MAX_NUM_BLOCKS * sizeof(hiprngStateMtgp32)));
-  THCudaCheck(THCudaMalloc(state, (void**)&gen->kernel_params, sizeof(mtgp32_kernel_params)));
+  THCudaCheck(THCudaMalloc(state, (void**)&gen->gen_states, MAX_NUM_BLOCKS * sizeof(hiprandStateMtgp32_t)));
+  THCudaCheck(THCudaMalloc(state, (void**)&gen->kernel_params, sizeof(mtgp32_kernel_params_t)));
 }
 
 /* Creates a new generator state given the seed. */
 void createGeneratorState(THCState* state, Generator* gen, unsigned long long seed)
 {
-  if (hiprngMakeMTGP32Constants(mtgp32_params_fast_11213, gen->kernel_params) != HIPRNG_STATUS_SUCCESS)
+  if (hiprandMakeMTGP32Constants(mtgp32dc_params_fast_11213, gen->kernel_params) != HIPRAND_STATUS_SUCCESS)
   {
     THError("Creating MTGP constants failed.");
   }
-  if (hiprngMakeMTGP32KernelState(gen->gen_states, mtgp32_params_fast_11213,
-                                  gen->kernel_params, MAX_NUM_BLOCKS, seed) != HIPRNG_STATUS_SUCCESS)
+  if (hiprandMakeMTGP32KernelState(gen->gen_states, mtgp32dc_params_fast_11213,
+                                  gen->kernel_params, MAX_NUM_BLOCKS, seed) != HIPRAND_STATUS_SUCCESS)
   {
     THError("Creating MTGP kernel state failed.");
   }
@@ -51,7 +52,7 @@ void THCRandom_getRNGState(THCState* state, THByteTensor *rng_state)
   Generator* gen = THCRandom_getGenerator(state);
 
   // The RNG state comprises the MTPG32 states and the seed.
-  static const size_t states_size = MAX_NUM_BLOCKS * sizeof(hiprngStateMtgp32);
+  static const size_t states_size = MAX_NUM_BLOCKS * sizeof(hiprandStateMtgp32_t);
   static const size_t seed_size = sizeof(unsigned long);
   static const size_t total_size = states_size + seed_size;
   THByteTensor_resize1d(rng_state, total_size);
@@ -64,16 +65,16 @@ void THCRandom_getRNGState(THCState* state, THByteTensor *rng_state)
 
 }
 
-__global__ void set_rngstate_kernel(hiprngStateMtgp32 *state, mtgp32_kernel_params *kernel)
+__global__ void set_rngstate_kernel(hiprandStateMtgp32_t *state, mtgp32_kernel_params_t *kernel)
 {
-  state[hipThreadIdx_x].k = kernel;
+  //state[hipThreadIdx_x].k = kernel;
 }
 
 
 void THCRandom_setRNGState(THCState* state, THByteTensor *rng_state)
 {
   Generator* gen = THCRandom_getGenerator(state);
-  static const size_t states_size = MAX_NUM_BLOCKS * sizeof(hiprngStateMtgp32);
+  static const size_t states_size = MAX_NUM_BLOCKS * sizeof(hiprandStateMtgp32_t);
   static const size_t seed_size = sizeof(unsigned long);
   static const size_t total_size = states_size + seed_size;
   THArgCheck(THByteTensor_nElement(rng_state) == total_size, 1, "RNG state is wrong size");
@@ -98,7 +99,7 @@ void THCRandom_setRNGState(THCState* state, THByteTensor *rng_state)
 
 
 #define GENERATE_KERNEL1(NAME, T, ARG1, CURAND_T, CURAND_FUNC, TRANSFORM)      \
-__global__ void NAME(hiprngStateMtgp32 *state, int size, T *result, ARG1)      \
+__global__ void NAME(hiprandStateMtgp32_t *state, int size, T *result, ARG1)      \
 {                                                                              \
   int idx = hipBlockIdx_x * BLOCK_SIZE + hipThreadIdx_x;                             \
   int rounded_size = THCCeilDiv(size, BLOCK_SIZE) * BLOCK_SIZE;                \
@@ -112,7 +113,7 @@ __global__ void NAME(hiprngStateMtgp32 *state, int size, T *result, ARG1)      \
 }
 
 #define GENERATE_KERNEL2(NAME, T, ARG1, ARG2, CURAND_T, CURAND_FUNC, TRANSFORM)      \
-__global__ void NAME(hiprngStateMtgp32 *state, int size, T *result, ARG1, ARG2)      \
+__global__ void NAME(hiprandStateMtgp32_t *state, int size, T *result, ARG1, ARG2)      \
 {                                                                                    \
   int idx = hipBlockIdx_x * BLOCK_SIZE + hipThreadIdx_x;                                   \
   int rounded_size = THCCeilDiv(size, BLOCK_SIZE) * BLOCK_SIZE;                      \
@@ -133,41 +134,41 @@ template<typename T>
 struct is_same<T, T> { static const bool value = true; };
 
 template<typename real, typename prob_type>
-__global__ void generate_bernoulli_tensor(hiprngStateMtgp32 *state, int size,
+__global__ void generate_bernoulli_tensor(hiprandStateMtgp32_t *state, int size,
         real *result, prob_type *probs)
 {
   int idx = hipBlockIdx_x * BLOCK_SIZE + hipThreadIdx_x;
   int rounded_size = THCCeilDiv(size, BLOCK_SIZE) * BLOCK_SIZE;
   for (int i = idx; i < rounded_size; i += BLOCK_SIZE * MAX_NUM_BLOCKS) {
     if (is_same<prob_type, double>::value) {
-      double x = hiprng_uniform(&state[hipBlockIdx_x]);
+      double x = hiprand_uniform(&state[hipBlockIdx_x]);
       if (i < size)
         result[i] = ScalarConvert<bool, real>::to(x <= probs[i]);
     } else {
-      float x = hiprng_uniform(&state[hipBlockIdx_x]);
+      float x = hiprand_uniform(&state[hipBlockIdx_x]);
       if (i < size)
         result[i] = ScalarConvert<bool, real>::to(x <= probs[i]);
     }
   }
 }
 
-GENERATE_KERNEL2(generate_uniform, float, double a, double b, float, hiprng_uniform, x * (b-a) + a)
-GENERATE_KERNEL2(generate_uniform, double, double a, double b, double, hiprng_uniform_double, x * (b-a) + a)
+GENERATE_KERNEL2(generate_uniform, float, double a, double b, float, hiprand_uniform, x * (b-a) + a)
+GENERATE_KERNEL2(generate_uniform, double, double a, double b, double, hiprand_uniform_double, x * (b-a) + a)
 
-GENERATE_KERNEL2(generate_normal, float, double mean, double stdv, float, hiprng_normal, (x * stdv) + mean)
-GENERATE_KERNEL2(generate_normal, double, double mean, double stdv, double, hiprng_normal_double, (x * stdv) + mean)
+GENERATE_KERNEL2(generate_normal, float, double mean, double stdv, float, hiprand_normal, (x * stdv) + mean)
+GENERATE_KERNEL2(generate_normal, double, double mean, double stdv, double, hiprand_normal_double, (x * stdv) + mean)
 
-GENERATE_KERNEL1(generate_exponential, float, double lambda, float, hiprng_uniform, (float)(-1. / lambda * log(1-x)))
-GENERATE_KERNEL1(generate_exponential, double, double lambda, double, hiprng_uniform_double, (double)(-1. / lambda * log(1-x)))
+GENERATE_KERNEL1(generate_exponential, float, double lambda, float, hiprand_uniform, (float)(-1. / lambda * log(1-x)))
+GENERATE_KERNEL1(generate_exponential, double, double lambda, double, hiprand_uniform_double, (double)(-1. / lambda * log(1-x)))
 
-GENERATE_KERNEL2(generate_cauchy, float, double median, double sigma, float, hiprng_uniform, (float)(median + sigma * tan(M_PI*(x-0.5))))
-GENERATE_KERNEL2(generate_cauchy, double, double median, double sigma, double, hiprng_uniform_double, (double)(median + sigma * tan(M_PI*(x-0.5))))
+GENERATE_KERNEL2(generate_cauchy, float, double median, double sigma, float, hiprand_uniform, (float)(median + sigma * tan(M_PI*(x-0.5))))
+GENERATE_KERNEL2(generate_cauchy, double, double median, double sigma, double, hiprand_uniform_double, (double)(median + sigma * tan(M_PI*(x-0.5))))
 
 #ifdef CUDA_HALF_TENSOR
-GENERATE_KERNEL2(generate_uniform, half, double a, double b, float, hiprng_uniform, (ScalarConvert<float, half>::to(x * (b-a) + a)))
-GENERATE_KERNEL2(generate_normal, half, double mean, double stdv, float, hiprng_normal, (ScalarConvert<float, half>::to((x * stdv) + mean)))
-GENERATE_KERNEL1(generate_exponential, half, double lambda, float, hiprng_uniform, (ScalarConvert<float, half>::to((float)(-1. / lambda * log(1-x)))))
-GENERATE_KERNEL2(generate_cauchy, half, double median, double sigma, float, hiprng_uniform, (ScalarConvert<float, half>::to((float)(median + sigma * tan(M_PI*(x-0.5))))))
+GENERATE_KERNEL2(generate_uniform, half, double a, double b, float, hiprand_uniform, (ScalarConvert<float, half>::to(x * (b-a) + a)))
+GENERATE_KERNEL2(generate_normal, half, double mean, double stdv, float, hiprand_normal, (ScalarConvert<float, half>::to((x * stdv) + mean)))
+GENERATE_KERNEL1(generate_exponential, half, double lambda, float, hiprand_uniform, (ScalarConvert<float, half>::to((float)(-1. / lambda * log(1-x)))))
+GENERATE_KERNEL2(generate_cauchy, half, double median, double sigma, float, hiprand_uniform, (ScalarConvert<float, half>::to((float)(median + sigma * tan(M_PI*(x-0.5))))))
 #endif // CUDA_HALF_TENSOR
 
 

@@ -9,19 +9,19 @@
 #include <curand_kernel.h>
 #else
   #include <hip/hip_hcc.h>
-  #include "hiprng_kernel.h"
+  #include "hiprand_kernel.h"
 #endif
 #define MAX_NUM_BLOCKS 64
 #define BLOCK_SIZE 256
-/* Separate kernel because hiprng_log_normal gets extra parameters. */
+/* Separate kernel because hiprand_log_normal gets extra parameters. */
 
 template <typename T>
-__global__ void generateLogNormal(hiprngStateMtgp32 *state, int size, T *result, double mean, double stddev)
+__global__ void generateLogNormal(hiprandStateMtgp32_t *state, int size, T *result, double mean, double stddev)
 {
   int idx = hipBlockIdx_x * BLOCK_SIZE + hipThreadIdx_x;
   int rounded_size = THCCeilDiv(size, BLOCK_SIZE) * BLOCK_SIZE;
   for (int i = idx; i < rounded_size; i += BLOCK_SIZE * MAX_NUM_BLOCKS) {
-    float x = hiprng_log_normal(&state[hipBlockIdx_x], mean, stddev);
+    float x = hiprand_log_normal(&state[hipBlockIdx_x], mean, stddev);
     if (i < size) {
       result[i] = ScalarConvert<float, T>::to(x);
     }
@@ -29,12 +29,12 @@ __global__ void generateLogNormal(hiprngStateMtgp32 *state, int size, T *result,
 }
 
 template <>
-__global__ void generateLogNormal<double>(hiprngStateMtgp32 *state, int size, double *result, double mean, double stddev)
+__global__ void generateLogNormal<double>(hiprandStateMtgp32_t *state, int size, double *result, double mean, double stddev)
 {
   int idx = hipBlockIdx_x * BLOCK_SIZE + hipThreadIdx_x;
   int rounded_size = THCCeilDiv(size, BLOCK_SIZE) * BLOCK_SIZE;
   for (int i = idx; i < rounded_size; i += BLOCK_SIZE * MAX_NUM_BLOCKS) {
-    double x = hiprng_log_normal_double(&state[hipBlockIdx_x], mean, stddev);
+    double x = hiprand_log_normal_double(&state[hipBlockIdx_x], mean, stddev);
     if (i < size) {
       result[i] = x;
     }
@@ -234,7 +234,7 @@ sampleMultinomialOnce(long* dest,
 
 template <typename T>
 __global__ void
-sampleMultinomialWithReplacement(hiprngStateMtgp32* state,
+sampleMultinomialWithReplacement(hiprandStateMtgp32_t* state,
                                  int totalSamples,
                                  long* dest,
                                  long distributions,
@@ -257,7 +257,7 @@ sampleMultinomialWithReplacement(hiprngStateMtgp32* state,
       int sample = sampleBase + hipThreadIdx_y;
 
       // All threads participate in this
-        T r = ScalarConvert<float, T>::to(hiprng_uniform((&state[hipBlockIdx_x])));
+        T r = ScalarConvert<float, T>::to(hiprand_uniform((&state[hipBlockIdx_x])));
 
       if (hipThreadIdx_x == 0 && sample < totalSamples) {
         // Find the bucket that a uniform sample lies in
@@ -275,7 +275,7 @@ sampleMultinomialWithReplacement(hiprngStateMtgp32* state,
 
 template <typename T>
 __global__ void
-sampleMultinomialWithoutReplacement(hiprngStateMtgp32* state,
+sampleMultinomialWithoutReplacement(hiprandStateMtgp32_t* state,
                                     int totalSamples,
                                     int sample,
                                     long* dest,
@@ -297,7 +297,7 @@ sampleMultinomialWithoutReplacement(hiprngStateMtgp32* state,
     // The warp determines the distribution
     long curDist = curDistBase + hipThreadIdx_y;
 
-    T r = ScalarConvert<float, T>::to(hiprng_uniform(&state[hipBlockIdx_x]));
+    T r = ScalarConvert<float, T>::to(hiprand_uniform(&state[hipBlockIdx_x]));
     if (hipThreadIdx_x == 0 && curDist < distributions) {
       // Find the bucket that a uniform sample lies in
       int choice = binarySearchForMultinomial<T>(
