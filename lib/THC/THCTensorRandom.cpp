@@ -4,7 +4,7 @@
 #ifdef CURAND_PATH
 #include <curand.h>
 #else
-#include <hiprand.h>
+#include <hiprng.h>
 #endif
 
 
@@ -89,7 +89,7 @@ Generator* THCRandom_getGenerator(THCState* state)
 #ifdef CURAND_PATH
 struct curandStateMtgp32* THCRandom_generatorStates(struct THCState* state)
 #else
-hiprandStateMtgp32_t* THCRandom_generatorStates(struct THCState* state)
+hiprngStateMtgp32* THCRandom_generatorStates(struct THCState* state)
 #endif
 {
 #ifdef CURAND_PATH
