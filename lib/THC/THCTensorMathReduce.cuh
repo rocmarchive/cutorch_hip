@@ -683,14 +683,14 @@ struct MinValuePair {
 
 template <typename T>
 struct AddOp {
-  __host__ __device__ __forceinline__ T operator()(T const &lhs, T const &rhs) {
+  __device__ __forceinline__ T operator()(T const &lhs, T const &rhs) {
     return THCNumerics<T>::add(lhs, rhs);
   }
 };
 
 template <typename T>
 struct MulOp {
-  __host__ __device__ __forceinline__ T operator()(T const &lhs, T const &rhs) {
+  __device__ __forceinline__ T operator()(T const &lhs, T const &rhs) {
     return THCNumerics<T>::mul(lhs, rhs);
   }
 };

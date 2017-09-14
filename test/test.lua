@@ -1128,7 +1128,7 @@ function test.cfmod()
    checkMultiDevice(x, 'cfmod', y)
 end
 
-function test.nonzero()
+--[[function test.nonzero()
     local minsize = 10
     local maxsize = 20
     local dims = {chooseInt(minsize, maxsize)}
@@ -1147,7 +1147,7 @@ function test.nonzero()
         compareCPUAndCUDATypeTensorArgs(typename, nil, x, 'nonzero')
     end
     checkMultiDevice(x, 'nonzero')
-end
+end]]--
 
 function test.cdiv()
    local sz1 = chooseInt(minsize, maxsize)
@@ -3721,7 +3721,7 @@ function test.scatterFill()
 end
 
 
-function test.sort()
+--[[function test.sort()
    for tries = 1, 5 do
       local t = createTestTensor(2 ^ 5)
       local selectdim = chooseInt(1, t:nDimension())
@@ -3785,9 +3785,9 @@ local function explore(typename, func, t, topk, indices)
          explore(typename, func, t[i], topk[i], indices[i])
       end
    end
-end
+end]]--
 
-function test.topk()
+--[[function test.topk()
    -- need to ensure unique values for index checking, so for the first pass we create Tensors
    -- with sizes less than the maximum range of values for that type
    local counts = {}
@@ -3828,8 +3828,8 @@ function test.topk()
                indices = indices:long()
                topk = topk:type(t2cpu[typename])
                for i = 1, indices:size(1) do
-                  tester:assert(t[indices[i]]==topk[i])
-               end
+                  tester:assert(t[indices[i]]--==topk[i])
+            --[[   end
             end
 
             local tt  = t:transpose(dim, t:nDimension())
@@ -3840,7 +3840,7 @@ function test.topk()
          end
       end
    end
-end
+end]]--
 
 local function verifyMode1D(tensor)
    -- We cannot rely upon comparing against CPU-Torch as the way it resolves

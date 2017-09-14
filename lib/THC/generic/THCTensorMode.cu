@@ -40,7 +40,7 @@ THC_API void THCTensor_(calculateMode)(THCState *state,
     seq.begin(), seq.end());
 
   // Sort the input data. The original indices of the data are stored in seq
-/*  thrust::sort_by_key(
+  thrust::sort_by_key(
 #if CUDA_VERSION >= 7000
     thrust::cuda::par(thrustAlloc).on(THCState_getCurrentStream(state)),
 #else
@@ -50,9 +50,9 @@ THC_API void THCTensor_(calculateMode)(THCState *state,
 #if defined(THC_REAL_IS_HALF)
     , ThrustHalfLess()
 #endif
-  );*/
+  );
 
-/*  // Count # of unique elements via an inner product between adjacent elements.
+  // Count # of unique elements via an inner product between adjacent elements.
   // Add 1 if two neighboring element are not equal.
   int unique = 1 + thrust::inner_product(
 #if CUDA_VERSION >= 7000
@@ -66,11 +66,11 @@ THC_API void THCTensor_(calculateMode)(THCState *state,
 #else
     thrust::not_equal_to<real>()
 #endif
-  );*/
+  );
 
   // Count frequency of each element
-//  thrust::device_vector<real> keys(unique);
-//  thrust::device_vector<int> counts(unique);
+  thrust::device_vector<real> keys(unique);
+  thrust::device_vector<int> counts(unique);
 /*  thrust::reduce_by_key(
 #if CUDA_VERSION >= 7000
     thrust::cuda::par(thrustAlloc).on(THCState_getCurrentStream(state)),
@@ -83,7 +83,7 @@ THC_API void THCTensor_(calculateMode)(THCState *state,
     , ThrustHalfEqualTo()
 #endif
   ); */
-/*
+
   // Find index of maximum count
   thrust::device_vector<int>::iterator it = thrust::max_element(
 #if CUDA_VERSION >= 7000
@@ -126,7 +126,7 @@ THC_API void THCTensor_(calculateMode)(THCState *state,
     indicesOffset += THCudaLongTensor_stride(state, indices, i) * pos;
   }
   THCStorage_(set)(state, THCTensor_(storage)(state, values), valuesOffset, mode);
-  THCudaLongStorage_set(state, THCudaLongTensor_storage(state, indices), indicesOffset, index);*/
+  THCudaLongStorage_set(state, THCudaLongTensor_storage(state, indices), indicesOffset, index);
 }
 
 // this probably could be a loop, not a recursive algorithm

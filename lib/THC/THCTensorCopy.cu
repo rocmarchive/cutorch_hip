@@ -94,8 +94,6 @@ THC_copyTensor(THCState* state, TensorTypeDst* dst, TensorTypeSrc* src) {
                   sizeof(typename TensorUtils<TensorTypeDst>::DataType),
                   hipMemcpyDeviceToDevice,
                   copyStream));
-
-    hipStreamSynchronize(copyStream);
   } else {
     // Non-contiguous copy or a type-conversion copy
 

@@ -298,7 +298,7 @@ void THCTensor_(nonzero)(THCState* state, THCudaLongTensor *tensor,
   tensor = THCudaLongTensor_newContiguous(state, tensor);
   thrust::device_ptr<long> tensor_data(THCudaLongTensor_data(state, tensor));
 
-/*  thrust::counting_iterator<long> idxfirst(0);
+  thrust::counting_iterator<long> idxfirst(0);
   thrust::counting_iterator<long> idxlast = idxfirst + N;
 
   typedef thrust::device_ptr<long> Iter;
@@ -341,7 +341,7 @@ void THCTensor_(nonzero)(THCState* state, THCudaLongTensor *tensor,
   THCudaLongTensor_resize2d(state, tensor, num_nonzeros, num_dim);
 
   THCTensor_(free)(state, self);
-  THCudaLongTensor_free(state, tensor);*/
+  THCudaLongTensor_free(state, tensor);
 
   THCudaCheck(hipGetLastError());
 }
