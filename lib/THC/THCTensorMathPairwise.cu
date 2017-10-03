@@ -236,12 +236,12 @@ template <>
 struct TensorDivConstantOp<float> {
   __host__ __device__
   explicit
-  TensorDivConstantOp(float v) : val(1.f / v) {}
+  TensorDivConstantOp(float v) : val(v) {}
   __device__ __forceinline__
-  void operator()(float* out, float* in) { *out = *in * val; }
+  void operator()(float* out, float* in) { *out = *in / val; }
 
   __device__ __forceinline__
-  void operator()(float* v) { *v *= val; }
+  void operator()(float* v) { *v /= val; }
 
   __host__ __device__
   ~TensorDivConstantOp() {}
@@ -253,13 +253,13 @@ template <>
 struct TensorDivConstantOp<double> {
   __host__ __device__
   explicit
-  TensorDivConstantOp(double v) : val(1. / v) {}
+  TensorDivConstantOp(double v) : val(v) {}
 
   __device__ __forceinline__
   void operator()(double* out, double* in) { *out = *in * val; }
 
   __device__ __forceinline__
-  void operator()(double* v) { *v *= val; }
+  void operator()(double* v) { *v /= val; }
 
   __host__ __device__
   ~TensorDivConstantOp() {}
