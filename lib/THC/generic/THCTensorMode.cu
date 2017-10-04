@@ -24,7 +24,7 @@ THC_API void THCTensor_(calculateMode)(THCState *state,
   THCThrustAllocator thrustAlloc(state);
 
 
-
+#if 0//THRUST_PATH
   // Wrap input data, sortBuffer, in Thrust device vectors
   thrust::device_ptr<real> vecPtr = thrust::device_pointer_cast(data);
   thrust::device_vector<real> iter(vecPtr, vecPtr + nElement);
@@ -112,9 +112,44 @@ THC_API void THCTensor_(calculateMode)(THCState *state,
 #endif
     iter.begin(), iter.end(), mode);
 #endif
+#else
+  long grid_size = (nElement - 1)/256 + 1;
+  dim3 grid(grid_size);
+  dim3 block(256);
 
+  real mode[1];
+  long mode_index[1];
+
+  real* mode_dev;
+  long* mode_index_dev;
+  real* keys_dev;
+  long* counts_dev;
+
+  hipMalloc(&mode_dev, sizeof(real));
+  hipMalloc(&mode_index_dev, sizeof(long));
+  hipMalloc(&keys_dev, sizeof(real) * nElement);
+  hipMalloc(&counts_dev, sizeof(long) * nElement);
+
+  hipLaunchKernelGGL((calculate_mode<real>),
+    grid, block, 0, THCState_getCurrentStream(state),
+    data, THCudaLongStorage_data(state, sortBuffer), keys_dev, counts_dev, mode_dev, mode_index_dev, nElement);
+
+  hipMemcpy(mode, mode_dev, sizeof(real), hipMemcpyDeviceToHost);
+  hipMemcpy(mode_index, mode_index_dev, sizeof(long), hipMemcpyDeviceToHost);
+
+  hipFree(mode_dev);
+  hipFree(mode_index_dev);
+  hipFree(keys_dev);
+  hipFree(counts_dev);
+
+#endif
+
+#if 0// THRUST_PATH
   THAssert(positionIter != iter.end());
   long index = TH_INDEX_BASE + seq[positionIter - iter.begin()];
+#else
+  long index = TH_INDEX_BASE + mode_index[0];
+#endif
 
   // Place mode, index in output
   ptrdiff_t valuesOffset = THCTensor_(storageOffset)(state, values);
@@ -125,8 +160,14 @@ THC_API void THCTensor_(calculateMode)(THCState *state,
     valuesOffset += THCTensor_(stride)(state, values, i) * pos;
     indicesOffset += THCudaLongTensor_stride(state, indices, i) * pos;
   }
+
+#if 0// THRUST_PATH
   THCStorage_(set)(state, THCTensor_(storage)(state, values), valuesOffset, mode);
   THCudaLongStorage_set(state, THCudaLongTensor_storage(state, indices), indicesOffset, index);
+#else
+  THCStorage_(set)(state, THCTensor_(storage)(state, values), valuesOffset, mode[0]);
+  THCudaLongStorage_set(state, THCudaLongTensor_storage(state, indices), indicesOffset, index);
+#endif
 }
 
 // this probably could be a loop, not a recursive algorithm
