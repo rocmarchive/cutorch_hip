@@ -3775,7 +3775,7 @@ end
    local gather_gpu = t_gpu:gather(1, i_gpu)
 
    tester:assert(isEqual(gather_cpu, gather_gpu), 'indices mismatch')
-end
+end]]--
 
 local function explore(typename, func, t, topk, indices)
    if t:nDimension() == 1 then
@@ -3785,7 +3785,7 @@ local function explore(typename, func, t, topk, indices)
          explore(typename, func, t[i], topk[i], indices[i])
       end
    end
-end]]--
+end
 
 function test.topk()
    -- need to ensure unique values for index checking, so for the first pass we create Tensors
