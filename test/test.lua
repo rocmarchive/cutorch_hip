@@ -3787,21 +3787,21 @@ local function explore(typename, func, t, topk, indices)
    end
 end]]--
 
---[[function test.topk()
+function test.topk()
    -- need to ensure unique values for index checking, so for the first pass we create Tensors
    -- with sizes less than the maximum range of values for that type
    local counts = {}
    counts['torch.CudaByteTensor'] = 255
    counts['torch.CudaCharTensor'] = 255
-   counts['torch.CudaShortTensor'] = 65536
-   counts['torch.CudaIntTensor'] = 2 ^ 20
-   counts['torch.CudaTensor'] = 2 ^ 20
-   counts['torch.CudaLongTensor'] = 2 ^ 20
-   counts['torch.CudaDoubleTensor'] =  2 ^ 20
-   counts['torch.CudaHalfTensor'] = 32768
+   counts['torch.CudaShortTensor'] = 1024--65536
+   counts['torch.CudaIntTensor'] = 1024--2 ^ 20
+   counts['torch.CudaTensor'] = 1024--2 ^ 20
+   counts['torch.CudaLongTensor'] = 1024--2 ^ 20
+   counts['torch.CudaDoubleTensor'] =  1024--2 ^ 20
+   counts['torch.CudaHalfTensor'] = 1024--32768
 
    for _, typename in ipairs(typenames) do
-      for tries = 1, 5 do
+      for tries = 1, 1 do
          local t = createTestTensor(counts[typename]):type(typename)
          local dim = chooseInt(1, t:nDimension())
          local dimSize = t:size(dim)
@@ -3818,7 +3818,7 @@ end]]--
          table.insert(kTests, chooseInt(1, math.min(2048, dimSize)))
       end
 
-         for k = 1, #kTests do
+         for k = 1, 1 do-- #kTests do
             compareCPUAndCUDATypeTensorArgsWithLimit(typename, nil, 1, t, 'topk', kTests[k], dim, dir, true)
 
             -- verify that indices picked yield topk value in original tensor
@@ -3828,8 +3828,8 @@ end]]--
                indices = indices:long()
                topk = topk:type(t2cpu[typename])
                for i = 1, indices:size(1) do
-                  tester:assert(t[indices[i]]--==topk[i])
-            --[[   end
+                  tester:assert(t[indices[i]]==topk[i])
+               end
             end
 
             local tt  = t:transpose(dim, t:nDimension())
@@ -3840,7 +3840,7 @@ end]]--
          end
       end
    end
-end]]--
+end
 
 local function verifyMode1D(tensor)
    -- We cannot rely upon comparing against CPU-Torch as the way it resolves

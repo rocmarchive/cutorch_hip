@@ -99,4 +99,23 @@ __global__ void CatArrayBatchedCopy(
   }
 }
 
+template <typename T>
+__global__
+void calculate_non_zeros(T* data, long* num_nonzeros, long size) {
+  long gidx = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;
+
+  num_nonzeros[0] = 0;
+
+  if (gidx == 0)
+  {
+    for (int i = 0; i < size; i++)
+    {
+      if (data[i] != 0)
+      {
+        num_nonzeros[0]++;
+      }
+    }
+  }
+}
+
 #endif

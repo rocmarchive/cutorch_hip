@@ -286,6 +286,7 @@ void THCTensor_(nonzero)(THCState* state, THCudaLongTensor *tensor,
   THCAssertSameGPU(THCTensor_(checkGPU)(state, 1, self  ));
   THCAssertSameGPU(THCudaLongTensor_checkGPU(state, 1, tensor));
 
+#ifdef THRUST_PATH
   using namespace thrust::placeholders;
   THCThrustAllocator thrustAlloc(state);
   self = THCTensor_(newContiguous)(state, self);
@@ -339,6 +340,54 @@ void THCTensor_(nonzero)(THCState* state, THCudaLongTensor *tensor,
   }
 
   THCudaLongTensor_resize2d(state, tensor, num_nonzeros, num_dim);
+#else
+  self = THCTensor_(newContiguous)(state, self);
+//  bolt::amp::Ubiquitous_iterator<real> self_data = bolt::amp::make_ubiquitous_iterator<real>(THCTensor_(data)(state, self));
+
+  int num_dim = THCTensor_(nDimension)(state, self);
+  long N = THCTensor_(nElement)(state, self);
+
+  THCudaLongTensor_resize2d(state, tensor, N, num_dim);
+  //tensor = THCudaLongTensor_newContiguous(state, tensor);
+//  auto tensor_data = bolt::amp::make_ubiquitous_iterator<long>(THCudaLongTensor_data(state, tensor));
+  
+//  typedef bolt::amp::Ubiquitous_iterator<long> Iter;
+//  strided_range<Iter> strided_tensor(tensor_data,
+//                                     tensor_data+N*num_dim, num_dim);
+
+  long grid_size = (N - 1)/256 + 1;
+  dim3 grid(/*grid_size*/1);
+  dim3 block(/*256*/1);
+
+  long num_nonzeros[1];
+
+  long* num_nonzeros_dev;
+
+  hipMalloc(&num_nonzeros_dev, sizeof(long));
+
+  hipLaunchKernelGGL((calculate_non_zeros<real>),
+    grid, block, 0, THCState_getCurrentStream(state),
+    THCTensor_(data)(state, self), num_nonzeros_dev, N);
+
+  hipMemcpy(num_nonzeros, num_nonzeros_dev, sizeof(long), hipMemcpyDeviceToHost);
+
+  hipFree(num_nonzeros_dev);
+
+/*  long div = 1;
+  for (int dim = num_dim-1; dim >= 0; dim--) {
+    strided_range<Iter> stride_dim(tensor_data+dim,
+                                   tensor_data+N*num_dim, num_dim);
+    bolt::amp::transform(
+      strided_tensor.begin().getBuffer(),
+      strided_tensor.end().getBuffer(),
+      stride_dim.begin().getBuffer(),
+      idx_functor(div, self->size[dim])
+    );
+    div *= self->size[dim];
+  }*/
+
+  THCudaLongTensor_resize2d(state, tensor, num_nonzeros[0], num_dim);
+#endif
 
   THCTensor_(free)(state, self);
   THCudaLongTensor_free(state, tensor);

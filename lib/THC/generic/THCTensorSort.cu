@@ -336,9 +336,29 @@ THC_API void THCTensor_(sort)(THCState* state,
   } else {
     // Otherwise, fall back upon Thrust, which handles all other cases
     // (potentially slowly, with extra copies/memory allocations)
-    sortViaThrust(state, sorted, indices, input, dim, (bool) order);
-  }
 
+#if 0
+    sortViaThrust(state, sorted, indices, input, dim, (bool) order);
+#else
+    THCudaLongTensor_fillSliceWithIndex(state, indices, dim);
+
+    long input_size = THCTensor_(nElement)(state, input);
+    long indices_size = THCudaLongTensor_nElement(state, indices);
+    real* input_host = (real*)malloc(input_size * sizeof(real));
+    long* indices_host = (long*)malloc(indices_size * sizeof(long));
+
+    hipMemcpy(input_host, THCTensor_(data)(state, input), input_size * sizeof(real), hipMemcpyDeviceToHost);
+    hipMemcpy(indices_host, THCudaLongTensor_data(state, indices), indices_size * sizeof(long), hipMemcpyDeviceToHost);
+
+    quick_sort<real>(input_host, indices_host, 0, (input_size/input->stride[dim]) - 1, input->stride[dim]);
+
+    hipMemcpy(THCTensor_(data)(state, sorted), input_host, input_size * sizeof(real), hipMemcpyHostToDevice);
+    hipMemcpy(THCudaLongTensor_data(state, indices), indices_host, indices_size * sizeof(long), hipMemcpyHostToDevice);
+
+    free(input_host);
+    free(indices_host);
+#endif
+  }
   THCudaCheck(hipGetLastError());
 }
 

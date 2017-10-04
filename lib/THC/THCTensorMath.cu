@@ -93,7 +93,7 @@ struct idx_functor
   idx_functor(long div, long size) : div(div), size(size) {}
 
   __host__ __device__
-  long operator()(long val) {
+  long operator()(long val) const {
     return (val / div) % size + TH_INDEX_BASE;
   }
 };

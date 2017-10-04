@@ -28,6 +28,38 @@ THC_API void THCTensor_(topk)(THCState* state,
   THCudaLongTensor_resize(state, indices, topKSize, NULL);
   THLongStorage_free(topKSize);
 
+  THCTensor* input_ = THCTensor_(new)(state);
+  THCudaLongTensor *indices_ = THCudaLongTensor_new(state);
+
+  THCTensor_(sort)(state, input_, indices_, input, dim, dir);
+
+  long total_elements = 1;
+  for (int c = 0; c < input_->nDimension; c++)
+  {
+    total_elements *= input_->size[c];
+  }
+
+  long total_indices = 1;
+  for (int c = 0; c < indices_->nDimension; c++)
+  {
+    total_indices *= indices_->size[c];
+  }
+
+  for (int i = 0; i < total_elements/(input_->size[dim] * input_->stride[dim]); i++)
+  hipMemcpy(THCTensor_(data)(state, topK) + i * topK->size[dim] * topK->stride[dim],
+                           THCTensor_(data)(state, input_) + i * input_->size[dim] * input_->stride[dim],
+                           topK->size[dim] * topK->stride[dim] * sizeof(real),
+                           hipMemcpyDeviceToDevice);
+
+  for (int i = 0; i < total_indices/(indices_->size[dim] * indices_->stride[dim]); i++)
+  hipMemcpy(THCudaLongTensor_data(state, indices) + i * indices->size[dim] * indices->stride[dim],
+                           THCudaLongTensor_data(state, indices_) + i * indices_->size[dim] * indices_->stride[dim],
+                           indices->size[dim] * indices->stride[dim] * sizeof(long),
+                           hipMemcpyDeviceToDevice);
+
+  THCTensor_(free)(state, input_);
+  THCudaLongTensor_free(state, indices_);
+#if 0
 #define RUN_K(INDEX_T, DIM, DIR)                                        \
   hipLaunchKernelGGL((gatherTopK<real, INDEX_T, DIM, DIR>),                                         \
       grid, block, 0, THCState_getCurrentStream(state),             \
@@ -153,7 +185,8 @@ THC_API void THCTensor_(topk)(THCState* state,
     }
   }
 
-  THCudaCheck(hipGetLastError());
+#endif
+//  THCudaCheck(hipGetLastError());
 }
 
 #endif // THC_GENERIC_FILE
