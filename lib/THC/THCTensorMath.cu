@@ -23,6 +23,17 @@
 #include "hip/hcc_detail/device_functions.h"
 #endif
 
+
+// Addition bolt includes
+#include <bolt/amp/iterator/ubiquitous_iterator.h>
+#include <bolt/amp/iterator/counting_iterator.h>
+#include <bolt/amp/iterator/transform_iterator.h>
+#include <bolt/amp/iterator/iterator_traits.h>
+#include <bolt/amp/transform.h>
+#include <bolt/amp/functional.h>
+#include <bolt/amp/copy.h>
+#include <bolt/amp/device_vector.h>u
+
 template <typename T>
 struct TensorFillOp {
   __host__ __device__ TensorFillOp(T v) : val(v) {}
