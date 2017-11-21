@@ -173,7 +173,7 @@ inline CUB_RUNTIME_FUNCTION __forceinline__ hipError_t PtxVersion(int &ptx_versi
 /**
  * \brief Retrieves the SM version (major * 100 + minor * 10)
  */
-CUB_RUNTIME_FUNCTION __forceinline__ hipError_t SmVersion(int &sm_version, int device_ordinal)
+inline CUB_RUNTIME_FUNCTION __forceinline__ hipError_t SmVersion(int &sm_version, int device_ordinal)
 {
 #ifndef CUB_RUNTIME_ENABLED
     (void)sm_version;
