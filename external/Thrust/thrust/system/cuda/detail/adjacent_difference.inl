@@ -240,8 +240,8 @@ OutputIterator adjacent_difference(execution_policy<DerivedPolicy> &exec,
     }
   };
 
-#if __BULK_HAS_CUDART__
-  return workaround::parallel_path(exec, first, last, result, binary_op);
+#if __BULK_HAS_CUDART__ || defined(__HIP_PLATFORM_HCC__) //Workaround to solve kernel issue
+ return workaround::parallel_path(exec, first, last, result, binary_op);
 #else
   return workaround::sequential_path(exec, first, last, result, binary_op);
 #endif

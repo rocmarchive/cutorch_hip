@@ -8,8 +8,10 @@
 #include "THCTensorTypeUtils.cuh"
 
 #include "THCThrustAllocator.cuh"
+#ifdef __HIP_PLATFORM_NVCC__
 #include <thrust/device_ptr.h>
 #include <thrust/sort.h>
+#endif
 #if CUDA_VERSION >= 7000
   #include <thrust/system/cuda/execution_policy.h>
 #endif

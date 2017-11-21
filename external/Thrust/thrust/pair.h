@@ -111,8 +111,10 @@ template <typename T1, typename T2>
   inline __host__ __device__
   void swap(pair &p);
 
-  // Added default destructor by Neel  
-  __host__ __device__ ~pair(void) {};
+
+  __host__ __device__ ~pair(){}
+
+
 }; // end pair
 
 
@@ -279,7 +281,6 @@ template<typename Pair> struct tuple_size;
 
 /*! \} // utility
  */
-
 } // end thrust
 
 #include <thrust/detail/pair.inl>

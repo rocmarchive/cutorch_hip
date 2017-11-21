@@ -6,7 +6,6 @@
 #include "THCTensorMath.cuh"
 #include "THCThrustAllocator.cuh"
 
-#include <thrust/copy.h>
 #include <thrust/count.h>
 #include <thrust/device_ptr.h>
 #include <thrust/device_vector.h>
@@ -23,6 +22,9 @@
 #include "hip/hcc_detail/device_functions.h"
 #endif
 
+#ifdef __HIP_PLATFORM_NVCC__
+#include <thrust/copy.h>
+#endif
 template <typename T>
 struct TensorFillOp {
   __host__ __device__ TensorFillOp(T v) : val(v) {}
@@ -63,8 +65,8 @@ class strided_range
   typedef PermutationIterator iterator;
 
   // construct strided_range for the range [first,last)
-  strided_range(Iterator first, Iterator last, difference_type stride)
-      : first(first), last(last), stride(stride) {}
+ // strided_range(Iterator first, Iterator last, difference_type stride)
+   //   : first(first), last(last), stride(stride) {}
 
   iterator begin(void) const
     {

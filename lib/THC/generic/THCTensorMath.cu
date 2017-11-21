@@ -283,6 +283,7 @@ void THCTensor_(catArray)(THCState *state, THCTensor *result,
 void THCTensor_(nonzero)(THCState* state, THCudaLongTensor *tensor,
                           THCTensor *self)
 {
+#ifdef __HIP_PLATFORM_NVCC__
   THCAssertSameGPU(THCTensor_(checkGPU)(state, 1, self  ));
   THCAssertSameGPU(THCudaLongTensor_checkGPU(state, 1, tensor));
 
@@ -393,6 +394,7 @@ void THCTensor_(nonzero)(THCState* state, THCudaLongTensor *tensor,
   THCudaLongTensor_free(state, tensor);
 
   THCudaCheck(hipGetLastError());
+#endif
 }
 
 void THCTensor_(diag)(THCState *state, THCTensor *self_, THCTensor *src_, long k){

@@ -48,9 +48,7 @@ template<typename Function, typename Result>
   {
     // we static cast to Result to handle void Result without error
     // in case Function's result is non-void
-    #ifdef __HIP_PLATFORM_NVCC__
-    return static_cast<Result>(m_f(thrust::raw_reference_cast(x))); //need to recheck the change
-    #endif
+    return static_cast<Result>(m_f(thrust::raw_reference_cast(x)));
   }
 
   __thrust_exec_check_disable__
@@ -95,11 +93,7 @@ template<typename Function, typename Result>
   {
     // we static cast to Result to handle void Result without error
     // in case Function's result is non-void
-    #ifdef __HIP_PLATFORM_NVCC__
-        return static_cast<Result>(m_f(thrust::raw_reference_cast(x), thrust::raw_reference_cast(y)));
-    #else
-    return static_cast<Result>(m_f(thrust::raw_reference_cast(x), /*thrust::raw_reference_cast(y)*/y));
-    #endif  
+           return static_cast<Result>(m_f(thrust::raw_reference_cast(x), thrust::raw_reference_cast(y)));
 }
 }; // end wrapped_function
 

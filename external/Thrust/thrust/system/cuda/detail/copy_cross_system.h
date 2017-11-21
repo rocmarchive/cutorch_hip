@@ -33,7 +33,7 @@ template<typename System1,
          typename System2,
          typename InputIterator,
          typename OutputIterator>
-__host__ __device__  OutputIterator copy_cross_system(cross_system<System1,System2> systems,
+  OutputIterator copy_cross_system(cross_system<System1,System2> systems,
                                    InputIterator begin, 
                                    InputIterator end, 
                                    OutputIterator result);

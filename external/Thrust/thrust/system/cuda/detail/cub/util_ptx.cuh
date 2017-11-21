@@ -1,7 +1,6 @@
-#include "hip/hip_runtime.h"
 /******************************************************************************
  * Copyright (c) 2011, Duane Merrill.  All rights reserved.
- * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -32,12 +31,14 @@
  * PTX intrinsics
  */
 
+#include "hip/hip_runtime.h"
 
 #pragma once
 
 #include "util_type.cuh"
 #include "util_arch.cuh"
 #include "util_namespace.cuh"
+#include "util_debug.cuh"
 
 /// Optional outer namespace(s)
 CUB_NS_PREFIX
@@ -83,14 +84,16 @@ namespace cub {
 /**
  * \brief Shift-right then add.  Returns (\p x >> \p shift) + \p addend.
  */
-__device__ __forceinline__ unsigned int SHR_ADD(
+__device__ __forceinline__
+static
+unsigned int SHR_ADD(
     unsigned int x,
     unsigned int shift,
     unsigned int addend)
 {
     unsigned int ret;
-#if CUB_PTX_ARCH >= 200
-    asm("vshr.u32.u32.u32.clamp.add %0, %1, %2, %3;" :
+#if CUB_PTX_ARCH >= 200 && defined(__HIP_PLATFORM_NVCC__)
+    asm volatile("vshr.u32.u32.u32.clamp.add %0, %1, %2, %3;" :
         "=r"(ret) : "r"(x), "r"(shift), "r"(addend));
 #else
     ret = (x >> shift) + addend;
@@ -102,14 +105,16 @@ __device__ __forceinline__ unsigned int SHR_ADD(
 /**
  * \brief Shift-left then add.  Returns (\p x << \p shift) + \p addend.
  */
-__device__ __forceinline__ unsigned int SHL_ADD(
+__device__ __forceinline__
+static
+unsigned int SHL_ADD(
     unsigned int x,
     unsigned int shift,
     unsigned int addend)
 {
     unsigned int ret;
-#if CUB_PTX_ARCH >= 200
-    asm("vshl.u32.u32.u32.clamp.add %0, %1, %2, %3;" :
+#if CUB_PTX_ARCH >= 200 && defined(__HIP_PLATFORM_NVCC__)
+    asm volatile("vshl.u32.u32.u32.clamp.add %0, %1, %2, %3;" :
         "=r"(ret) : "r"(x), "r"(shift), "r"(addend));
 #else
     ret = (x << shift) + addend;
@@ -123,36 +128,41 @@ __device__ __forceinline__ unsigned int SHL_ADD(
  * Bitfield-extract.
  */
 template <typename UnsignedBits, int BYTE_LEN>
-__device__ __forceinline__ unsigned int BFE(
+__device__ __forceinline__
+static
+unsigned int BFE(
     UnsignedBits            source,
     unsigned int            bit_start,
     unsigned int            num_bits,
-    Int2Type<BYTE_LEN>      byte_len)
+    Int2Type<BYTE_LEN>      /*byte_len*/)
 {
     unsigned int bits;
-#if CUB_PTX_ARCH >= 200
-    asm("bfe.u32 %0, %1, %2, %3;" : "=r"(bits) : "r"((unsigned int) source), "r"(bit_start), "r"(num_bits));
+#if CUB_PTX_ARCH >= 200 && defined(__HIP_PLATFORM_NVCC__)
+    asm volatile("bfe.u32 %0, %1, %2, %3;" : "=r"(bits) : "r"((unsigned int) source), "r"(bit_start), "r"(num_bits));
 #else
-    const unsigned int MASK = (1 << num_bits) - 1;
-    bits = (source >> bit_start) & MASK;
+    const unsigned long long MASK = (1ull << num_bits) - 1;
+    return (source >> bit_start) & MASK;
 #endif
-    return bits;
 }
 
 
 /**
  * Bitfield-extract for 64-bit types.
  */
+
 template <typename UnsignedBits>
-__device__ __forceinline__ unsigned int BFE(
+__device__ __forceinline__
+static
+unsigned int BFE(
     UnsignedBits            source,
     unsigned int            bit_start,
     unsigned int            num_bits,
-    Int2Type<8>             byte_len)
+    Int2Type<8>             /*byte_len*/)
 {
     const unsigned long long MASK = (1ull << num_bits) - 1;
     return (source >> bit_start) & MASK;
 }
+
 
 #endif // DOXYGEN_SHOULD_SKIP_THIS
 
@@ -160,7 +170,9 @@ __device__ __forceinline__ unsigned int BFE(
  * \brief Bitfield-extract.  Extracts \p num_bits from \p source starting at bit-offset \p bit_start.  The input \p source may be an 8b, 16b, 32b, or 64b unsigned integer type.
  */
 template <typename UnsignedBits>
-__device__ __forceinline__ unsigned int BFE(
+__device__ __forceinline__
+static
+unsigned int BFE(
     UnsignedBits source,
     unsigned int bit_start,
     unsigned int num_bits)
@@ -172,15 +184,16 @@ __device__ __forceinline__ unsigned int BFE(
 /**
  * \brief Bitfield insert.  Inserts the \p num_bits least significant bits of \p y into \p x at bit-offset \p bit_start.
  */
-__device__ __forceinline__ void BFI(
-    unsigned int &ret,
+__device__ __forceinline__ void
+static
+BFI(unsigned int &ret,
     unsigned int x,
     unsigned int y,
     unsigned int bit_start,
     unsigned int num_bits)
 {
-#if CUB_PTX_ARCH >= 200
-    asm("bfi.b32 %0, %1, %2, %3, %4;" :
+#if CUB_PTX_ARCH >= 200 && defined(__HIP_PLATFORM_NVCC__)
+    asm volatile("bfi.b32 %0, %1, %2, %3, %4;" :
         "=r"(ret) : "r"(y), "r"(x), "r"(bit_start), "r"(num_bits));
 #else
     x <<= bit_start;
@@ -194,10 +207,12 @@ __device__ __forceinline__ void BFI(
 /**
  * \brief Three-operand add.  Returns \p x + \p y + \p z.
  */
-__device__ __forceinline__ unsigned int IADD3(unsigned int x, unsigned int y, unsigned int z)
+__device__ __forceinline__
+static
+unsigned int IADD3(unsigned int x, unsigned int y, unsigned int z)
 {
-#if CUB_PTX_ARCH >= 200
-    asm("vadd.u32.u32.u32.add %0, %1, %2, %3;" : "=r"(x) : "r"(x), "r"(y), "r"(z));
+#if CUB_PTX_ARCH >= 200 && defined(__HIP_PLATFORM_NVCC__)
+    asm volatile("vadd.u32.u32.u32.add %0, %1, %2, %3;" : "=r"(x) : "r"(x), "r"(y), "r"(z));
 #else
     x = x + y + z;
 #endif
@@ -231,10 +246,33 @@ __device__ __forceinline__ unsigned int IADD3(unsigned int x, unsigned int y, un
  * \endcode
  *
  */
-__device__ __forceinline__ int PRMT(unsigned int a, unsigned int b, unsigned int index)
+__device__ __forceinline__
+static
+int PRMT(unsigned int a, unsigned int b, unsigned int index)
 {
     int ret;
-    asm("prmt.b32 %0, %1, %2, %3;" : "=r"(ret) : "r"(a), "r"(b), "r"(index));
+#ifdef __HIP_PLATFORM_NVCC__
+    asm volatile("prmt.b32 %0, %1, %2, %3;" : "=r"(ret) : "r"(a), "r"(b), "r"(index));
+#elif defined(__HIP_PLATFORM_HCC__)
+    long tmp64 = (((long)b)<<32) | a;  // create 8 byte source with source={b,a}
+
+    int ctl[4];                        // Store the individual index values for each nibble
+    ctl[0] = (index >>  0) & 0xf;
+    ctl[1] = (index >>  4) & 0xf;
+    ctl[2] = (index >>  8) & 0xf;
+    ctl[3] = (index >> 12) & 0xf;
+
+    // Store the value pointed by index and shift to store in single variable ret
+    long res[4];
+    long val = 0x000F;
+    res[0] = ((val << (ctl[0]*8)) & tmp64)>>8;
+    res[1] = ((val << (ctl[1]*8)) & tmp64)>>16;
+    res[2] = ((val << (ctl[2]*8)) & tmp64)>>24;
+    res[3] = ((val << (ctl[3]*8)) & tmp64)>>32;
+
+    ret = (int)(res[0] | res[1] | res[2] | res[3]);
+#endif
+
     return ret;
 }
 
@@ -243,19 +281,169 @@ __device__ __forceinline__ int PRMT(unsigned int a, unsigned int b, unsigned int
 /**
  * Sync-threads barrier.
  */
-__device__ __forceinline__ void BAR(int count)
+__device__ __forceinline__ 
+static 
+void BAR(int count)
 {
     asm volatile("bar.sync 1, %0;" : : "r"(count));
 }
 
+/**
+ * CTA barrier
+ */
+__device__  __forceinline__ 
+static void CTA_SYNC()
+{
+    __syncthreads();
+}
+
+
+/**
+ * CTA barrier with predicate
+ */
+__device__  __forceinline__ 
+static int CTA_SYNC_AND(int p)
+{
+#ifdef __HIP_PLATFORM_NVCC__
+    return __syncthreads_and(p);
+#elif defined(__HIP_PLATFORM_HCC__)
+    return 0;    // TODO: Neel revert back to __syncthreads
+#endif
+}
+
+
+/**
+ * Warp barrier
+ */
+__device__  __forceinline__ 
+static void WARP_SYNC(unsigned int member_mask)
+{
+#ifdef CUB_USE_COOPERATIVE_GROUPS
+    __syncwarp(member_mask);
+#endif
+}
+
+
+/**
+ * Warp any
+ */
+__device__  __forceinline__ 
+static int WARP_ANY(int predicate, unsigned int member_mask)
+{
+#ifdef CUB_USE_COOPERATIVE_GROUPS
+    return __any_sync(member_mask, predicate);
+#else
+    return ::__any(predicate);
+#endif
+}
+
+
+/**
+ * Warp any
+ */
+__device__  __forceinline__ 
+static int WARP_ALL(int predicate, unsigned int member_mask)
+{
+#ifdef CUB_USE_COOPERATIVE_GROUPS
+    return __all_sync(member_mask, predicate);
+#else
+    return ::__all(predicate);
+#endif
+}
+
+
+/**
+ * Warp ballot
+ */
+__device__  __forceinline__ 
+static int WARP_BALLOT(int predicate, unsigned int member_mask)
+{
+#ifdef CUB_USE_COOPERATIVE_GROUPS
+    return __ballot_sync(member_mask, predicate);
+#else
+    return __ballot(predicate);
+#endif
+}
+
+/**
+ * Warp synchronous shfl_up
+ */
+__device__ __forceinline__ 
+static unsigned int SHFL_UP_SYNC(unsigned int word, int src_offset, int first_lane, unsigned int member_mask)
+{
+// TODO Neel:  Enable CUB_USE_COOPERATIVE_GROUPS section below 
+#if 0  // By Neel
+//#ifdef CUB_USE_COOPERATIVE_GROUPS // By Neel
+    asm volatile("shfl.sync.up.b32 %0, %1, %2, %3, %4;"
+        : "=r"(word) : "r"(word), "r"(src_offset), "r"(first_lane), "r"(member_mask));
+// #else
+#endif
+#ifdef __HIP_PLATFORM_NVCC__
+    asm volatile("shfl.up.b32 %0, %1, %2, %3;"
+        : "=r"(word) : "r"(word), "r"(src_offset), "r"(first_lane));
+#else
+    word = __shfl_up((int)word, (unsigned int)src_offset, first_lane);
+#endif
+    return word;
+}
+
+/**
+ * Warp synchronous shfl_down
+ */
+__device__ __forceinline__ 
+static unsigned int SHFL_DOWN_SYNC(unsigned int word, int src_offset, int last_lane, unsigned int member_mask)
+{
+// TODO Neel:  Enable CUB_USE_COOPERATIVE_GROUPS section below 
+#if 0  // By Neel
+//#ifdef CUB_USE_COOPERATIVE_GROUPS
+    asm volatile("shfl.sync.down.b32 %0, %1, %2, %3, %4;"
+        : "=r"(word) : "r"(word), "r"(src_offset), "r"(last_lane), "r"(member_mask));
+//#else
+#endif
+#ifdef __HIP_PLATFORM_NVCC__ 
+    asm volatile("shfl.down.b32 %0, %1, %2, %3;"
+        : "=r"(word) : "r"(word), "r"(src_offset), "r"(last_lane));
+#else
+    word = __shfl_down((int)word, (unsigned int)src_offset, last_lane);
+#endif
+    return word;
+}
+
+/**
+ * Warp synchronous shfl_idx
+ */
+__device__ __forceinline__ 
+static unsigned int SHFL_IDX_SYNC(unsigned int word, int src_lane, int last_lane, unsigned int member_mask)
+{
+// TODO Neel:  Enable CUB_USE_COOPERATIVE_GROUPS section below 
+#if 0  // By Neel
+//#ifdef CUB_USE_COOPERATIVE_GROUPS
+    asm volatile("shfl.sync.idx.b32 %0, %1, %2, %3, %4;"
+        : "=r"(word) : "r"(word), "r"(src_lane), "r"(last_lane), "r"(member_mask));
+//#else
+#endif
+#ifdef __HIP_PLATFORM_NVCC__
+    asm volatile("shfl.idx.b32 %0, %1, %2, %3;"
+        : "=r"(word) : "r"(word), "r"(src_lane), "r"(last_lane));
+#else
+    word = __shfl((int)word, src_lane, last_lane);
+#endif
+    return word;
+}
 
 /**
  * Floating point multiply. (Mantissa LSB rounds towards zero.)
  */
-__device__ __forceinline__ float FMUL_RZ(float a, float b)
+__device__ __forceinline__
+static
+float FMUL_RZ(float a, float b)
 {
     float d;
-    asm("mul.rz.f32 %0, %1, %2;" : "=f"(d) : "f"(a), "f"(b));
+#ifdef __HIP_PLATFORM_NVCC__
+    asm volatile("mul.rz.f32 %0, %1, %2;" : "=f"(d) : "f"(a), "f"(b));
+#elif defined(__HIP_PLATFORM_HCC__)
+   d = a * b;
+#endif
     return d;
 }
 
@@ -263,10 +451,16 @@ __device__ __forceinline__ float FMUL_RZ(float a, float b)
 /**
  * Floating point multiply-add. (Mantissa LSB rounds towards zero.)
  */
-__device__ __forceinline__ float FFMA_RZ(float a, float b, float c)
+__device__ __forceinline__
+static
+float FFMA_RZ(float a, float b, float c)
 {
     float d;
-    asm("fma.rz.f32 %0, %1, %2, %3;" : "=f"(d) : "f"(a), "f"(b), "f"(c));
+#ifdef __HIP_PLATFORM_NVCC__
+    asm volatile("fma.rz.f32 %0, %1, %2, %3;" : "=f"(d) : "f"(a), "f"(b), "f"(c));
+#elif defined(__HIP_PLATFORM_HCC__)
+    d = a * b + c;
+#endif
     return d;
 }
 
@@ -275,15 +469,29 @@ __device__ __forceinline__ float FFMA_RZ(float a, float b, float c)
 /**
  * \brief Terminates the calling thread
  */
-__device__ __forceinline__ void ThreadExit() {
-    asm("exit;");
+__device__ __forceinline__
+static
+void ThreadExit() {
+    asm volatile("exit;");
 }    
 
 
 /**
- * \brief Returns the row-major linear thread identifier for a multidimensional threadblock
+ * \brief  Abort execution and generate an interrupt to the host CPU
  */
-__device__ __forceinline__ int RowMajorTid(int block_dim_x, int block_dim_y, int block_dim_z)
+__device__ __forceinline__
+static
+void ThreadTrap() {
+    asm volatile("trap;");
+}
+
+
+/**
+ * \brief Returns the row-major linear thread identifier for a multidimensional thread block
+ */
+__device__ __forceinline__
+static
+int RowMajorTid(int block_dim_x, int block_dim_y, int block_dim_z)
 {
     return ((block_dim_z == 1) ? 0 : (hipThreadIdx_z * block_dim_x * block_dim_y)) +
             ((block_dim_y == 1) ? 0 : (hipThreadIdx_y * block_dim_x)) +
@@ -294,10 +502,18 @@ __device__ __forceinline__ int RowMajorTid(int block_dim_x, int block_dim_y, int
 /**
  * \brief Returns the warp lane ID of the calling thread
  */
-__device__ __forceinline__ unsigned int LaneId()
+__device__
+__forceinline__
+inline
+unsigned int LaneId()
 {
     unsigned int ret;
-    asm("mov.u32 %0, %%laneid;" : "=r"(ret) );
+#ifdef __HIP_PLATFORM_NVCC__
+    asm volatile("mov.u32 %0, %%laneid;" : "=r"(ret) );
+#elif defined(__HIP_PLATFORM_HCC__)
+    int Tid = (hipThreadIdx_z * hipBlockDim_x * hipBlockDim_y) + (hipThreadIdx_y * hipBlockDim_x) + hipThreadIdx_x ;
+    ret =  Tid % warpSize;
+#endif
     return ret;
 }
 
@@ -305,52 +521,111 @@ __device__ __forceinline__ unsigned int LaneId()
 /**
  * \brief Returns the warp ID of the calling thread.  Warp ID is guaranteed to be unique among warps, but may not correspond to a zero-based ranking within the thread block.
  */
-__device__ __forceinline__ unsigned int WarpId()
+__device__
+__forceinline__
+inline
+unsigned int WarpId()
 {
     unsigned int ret;
-    asm("mov.u32 %0, %%warpid;" : "=r"(ret) );
+#ifdef __HIP_PLATFORM_NVCC__
+    asm volatile("mov.u32 %0, %%warpid;" : "=r"(ret) );
+#elif defined(__HIP_PLATFORM_HCC__)
+    int Tid = (hipBlockIdx_x * hipBlockDim_x * hipBlockDim_y) + (hipThreadIdx_y * hipBlockDim_x) + hipThreadIdx_x;
+    ret =  Tid / 32;
+#endif
     return ret;
 }
 
 /**
  * \brief Returns the warp lane mask of all lanes less than the calling thread
  */
-__device__ __forceinline__ unsigned int LaneMaskLt()
+__device__ __forceinline__
+static
+unsigned int LaneMaskLt()
 {
     unsigned int ret;
-    asm("mov.u32 %0, %%lanemask_lt;" : "=r"(ret) );
+#ifdef __HIP_PLATFORM_NVCC__
+    asm volatile("mov.u32 %0, %%lanemask_lt;" : "=r"(ret) );
+#elif defined(__HIP_PLATFORM_HCC__)
+    unsigned int Tid = hipBlockIdx_x * hipBlockDim_x * hipBlockDim_y + hipThreadIdx_y * hipBlockDim_x + hipThreadIdx_x;
+    unsigned int lane = Tid % 32;
+    ret = (1 << lane) - 1;
+#endif
     return ret;
 }
 
 /**
  * \brief Returns the warp lane mask of all lanes less than or equal to the calling thread
  */
-__device__ __forceinline__ unsigned int LaneMaskLe()
+__device__ __forceinline__
+static
+unsigned int LaneMaskLe()
 {
     unsigned int ret;
-    asm("mov.u32 %0, %%lanemask_le;" : "=r"(ret) );
+#ifdef __HIP_PLATFORM_NVCC__
+    asm volatile("mov.u32 %0, %%lanemask_le;" : "=r"(ret) );
+#elif defined(__HIP_PLATFORM_HCC__)
+    unsigned int Tid = hipBlockIdx_x * hipBlockDim_x * hipBlockDim_y + hipThreadIdx_y * hipBlockDim_x + hipThreadIdx_x;
+    unsigned int lane = Tid % 32;
+    ret = (2 << lane) - 1;
+#endif
     return ret;
 }
 
 /**
  * \brief Returns the warp lane mask of all lanes greater than the calling thread
  */
-__device__ __forceinline__ unsigned int LaneMaskGt()
+#ifdef __HIP_PLATFORM_NVCC__
+__device__ __forceinline__
+static
+unsigned int LaneMaskGt()
 {
     unsigned int ret;
-    asm("mov.u32 %0, %%lanemask_gt;" : "=r"(ret) );
+    asm volatile("mov.u32 %0, %%lanemask_gt;" : "=r"(ret) );
     return ret;
 }
+#endif
+#ifdef __HIP_PLATFORM_HCC__
+__device__ __forceinline__
+static
+unsigned long long LaneMaskGt()
+{
+    unsigned long long ret;
+    const unsigned long long val = 2 ;
+    unsigned int Tid = hipBlockIdx_x * hipBlockDim_x * hipBlockDim_y + hipThreadIdx_y * hipBlockDim_x + hipThreadIdx_x;
+    unsigned int lane = Tid % warpSize;
+    ret = ~((val << lane) - 1);
+    return ret;
+}
+#endif
 
 /**
  * \brief Returns the warp lane mask of all lanes greater than or equal to the calling thread
  */
-__device__ __forceinline__ unsigned int LaneMaskGe()
+#ifdef __HIP_PLATFORM_NVCC__
+__device__ __forceinline__
+static
+unsigned int LaneMaskGe()
 {
     unsigned int ret;
-    asm("mov.u32 %0, %%lanemask_ge;" : "=r"(ret) );
+    asm volatile("mov.u32 %0, %%lanemask_ge;" : "=r"(ret) );
     return ret;
 }
+#endif
+
+#ifdef __HIP_PLATFORM_HCC__
+__device__ __forceinline__
+static
+unsigned long long LaneMaskGe()
+{
+    unsigned long long ret ;
+    const unsigned long long val = 1 ;
+    unsigned int Tid = hipBlockIdx_x * hipBlockDim_x * hipBlockDim_y + hipThreadIdx_y * hipBlockDim_x + hipThreadIdx_x;
+    unsigned int lane = Tid % warpSize;
+    ret = ~((val << lane) - 1);
+    return ret;
+}
+#endif
 
 /** @} */       // end group UtilPtx
 
@@ -377,7 +652,7 @@ __device__ __forceinline__ unsigned int LaneMaskGe()
  *     double thread_data = ...
  *
  *     // Obtain item from two ranks below
- *     double peer_data = ShuffleUp(thread_data, 2);
+ *     double peer_data = ShuffleUp(thread_data, 2, 0, 0xffffffff);
  *
  * \endcode
  * \par
@@ -386,30 +661,39 @@ __device__ __forceinline__ unsigned int LaneMaskGe()
  *
  */
 template <typename T>
-__device__ __forceinline__ T ShuffleUp(
+__device__ __forceinline__
+static
+T ShuffleUp(
     T               input,              ///< [in] The value to broadcast
-    int             src_offset)         ///< [in] The relative down-offset of the peer to read from
+    int             src_offset,         ///< [in] The relative down-offset of the peer to read from
+    int             first_lane,         ///< [in] Index of first lane in segment (typically 0)
+    unsigned int    member_mask)        ///< [in] 32-bit mask of participating warp lanes
 {
-    enum
-    {
-        SHFL_C = 0,
-    };
-
     typedef typename UnitWord<T>::ShuffleWord ShuffleWord;
 
     const int       WORDS           = (sizeof(T) + sizeof(ShuffleWord) - 1) / sizeof(ShuffleWord);
+ 
     T               output;
     ShuffleWord     *output_alias   = reinterpret_cast<ShuffleWord *>(&output);
     ShuffleWord     *input_alias    = reinterpret_cast<ShuffleWord *>(&input);
 
+    unsigned int shuffle_word;
+#ifdef __HIP_PLATFORM_NVCC__
+    shuffle_word = SHFL_UP_SYNC((unsigned int)input_alias[0], src_offset, first_lane, member_mask);
+#elif defined(__HIP_PLATFORM_HCC__)
+    shuffle_word = __shfl_up((int) input_alias[0], (unsigned int)src_offset, first_lane);
+#endif
+    output_alias[0] = shuffle_word;
+
     #pragma unroll
-    for (int WORD = 0; WORD < WORDS; ++WORD)
+    for (int WORD = 1; WORD < WORDS; ++WORD)
     {
-        unsigned int shuffle_word = input_alias[WORD];
-        asm(
-            "  shfl.up.b32 %0, %1, %2, %3;"
-            : "=r"(shuffle_word) : "r"(shuffle_word), "r"(src_offset), "r"(SHFL_C));
-        output_alias[WORD] = (ShuffleWord) shuffle_word;
+#ifdef __HIP_PLATFORM_NVCC__
+        shuffle_word       = SHFL_UP_SYNC((unsigned int)input_alias[WORD], src_offset, first_lane, member_mask);
+#elif defined(__HIP_PLATFORM_HCC__)
+        shuffle_word = __shfl_up((int) input_alias[WORD], (unsigned int)src_offset, first_lane);
+#endif
+        output_alias[WORD] = shuffle_word;
     }
 
     return output;
@@ -436,7 +720,7 @@ __device__ __forceinline__ T ShuffleUp(
  *     double thread_data = ...
  *
  *     // Obtain item from two ranks below
- *     double peer_data = ShuffleDown(thread_data, 2);
+ *     double peer_data = ShuffleDown(thread_data, 2, 31, 0xffffffff);
  *
  * \endcode
  * \par
@@ -445,74 +729,51 @@ __device__ __forceinline__ T ShuffleUp(
  *
  */
 template <typename T>
-__device__ __forceinline__ T ShuffleDown(
+__device__ __forceinline__
+static
+T ShuffleDown(
     T               input,              ///< [in] The value to broadcast
-    int             src_offset)         ///< [in] The relative up-offset of the peer to read from
+    int             src_offset,         ///< [in] The relative up-offset of the peer to read from
+    int             last_lane,          ///< [in] Index of first lane in segment (typically 31)
+    unsigned int    member_mask)        ///< [in] 32-bit mask of participating warp lanes
 {
-    enum
-    {
-        SHFL_C = CUB_PTX_WARP_THREADS - 1,
-    };
-
     typedef typename UnitWord<T>::ShuffleWord ShuffleWord;
 
     const int       WORDS           = (sizeof(T) + sizeof(ShuffleWord) - 1) / sizeof(ShuffleWord);
+
     T               output;
     ShuffleWord     *output_alias   = reinterpret_cast<ShuffleWord *>(&output);
     ShuffleWord     *input_alias    = reinterpret_cast<ShuffleWord *>(&input);
 
+    unsigned int shuffle_word;
+#ifdef __HIP_PLATFORM_NVCC__
+    shuffle_word    = SHFL_DOWN_SYNC((unsigned int)input_alias[0], src_offset, last_lane, member_mask);
+#elif defined(__HIP_PLATFORM_HCC__)
+    shuffle_word = __shfl_down((int) input_alias[0], (unsigned int)src_offset);
+
+#endif
+    output_alias[0] = shuffle_word;
+
     #pragma unroll
-    for (int WORD = 0; WORD < WORDS; ++WORD)
+    for (int WORD = 1; WORD < WORDS; ++WORD)
     {
-        unsigned int shuffle_word = input_alias[WORD];
-        asm(
-            "  shfl.down.b32 %0, %1, %2, %3;"
-            : "=r"(shuffle_word) : "r"(shuffle_word), "r"(src_offset), "r"(SHFL_C));
-        output_alias[WORD] = (ShuffleWord) shuffle_word;
+#ifdef __HIP_PLATFORM_NVCC__
+        shuffle_word       = SHFL_DOWN_SYNC((unsigned int)input_alias[WORD], src_offset, last_lane, member_mask);
+#else
+        shuffle_word = __shfl_down((int) input_alias[WORD], (unsigned int)src_offset);
+#endif
+        output_alias[WORD] = shuffle_word;
     }
 
     return output;
 }
 
-#ifndef DOXYGEN_SHOULD_SKIP_THIS    // Do not document
 
 /**
- * \brief Shuffle-broadcast for any data type.  Each <em>warp-lane<sub>i</sub></em> obtains the value \p input contributed by <em>warp-lane</em><sub><tt>src_lane</tt></sub>.  For \p src_lane < 0 or \p src_lane >= WARP_THREADS, then the thread's own \p input is returned to the thread.  ![](shfl_broadcast_logo.png)
- * \ingroup WarpModule
+ * \brief Shuffle-broadcast for any data type.  Each <em>warp-lane<sub>i</sub></em> obtains the value \p input
+ * contributed by <em>warp-lane</em><sub><tt>src_lane</tt></sub>.  For \p src_lane < 0 or \p src_lane >= WARP_THREADS,
+ * then the thread's own \p input is returned to the thread. ![](shfl_broadcast_logo.png)
  *
- * \par
- * - Available only for SM3.0 or newer
- */
-template <typename T>
-__device__ __forceinline__ T ShuffleBroadcast(
-    T               input,                                          ///< [in] The value to broadcast
-    int             src_lane,                                       ///< [in] Which warp lane is to do the broadcasting
-    int             logical_warp_threads)                           ///< [in] Number of threads per logical warp
-{
-    typedef typename UnitWord<T>::ShuffleWord ShuffleWord;
-
-    const int       WORDS           = (sizeof(T) + sizeof(ShuffleWord) - 1) / sizeof(ShuffleWord);
-    T               output;
-    ShuffleWord     *output_alias   = reinterpret_cast<ShuffleWord *>(&output);
-    ShuffleWord     *input_alias    = reinterpret_cast<ShuffleWord *>(&input);
-
-    #pragma unroll
-    for (int WORD = 0; WORD < WORDS; ++WORD)
-    {
-        unsigned int shuffle_word = input_alias[WORD];
-        asm("shfl.idx.b32 %0, %1, %2, %3;"
-            : "=r"(shuffle_word) : "r"(shuffle_word), "r"(src_lane), "r"(logical_warp_threads - 1));
-        output_alias[WORD] = (ShuffleWord) shuffle_word;
-    }
-
-    return output;
-}
-
-#endif // DOXYGEN_SHOULD_SKIP_THIS
-
-
- /**
- * \brief Shuffle-broadcast for any data type.  Each <em>warp-lane<sub>i</sub></em> obtains the value \p input contributed by <em>warp-lane</em><sub><tt>src_lane</tt></sub>.  For \p src_lane < 0 or \p src_lane >= WARP_THREADS, then the thread's own \p input is returned to the thread. ![](shfl_broadcast_logo.png)
  * \ingroup WarpModule
  *
  * \par
@@ -531,7 +792,7 @@ __device__ __forceinline__ T ShuffleBroadcast(
  *     double thread_data = ...
  *
  *     // Obtain item from thread 0
- *     double peer_data = ShuffleBroadcast(thread_data, 0);
+ *     double peer_data = ShuffleIndex(thread_data, 0, 32, 0xffffffff);
  *
  * \endcode
  * \par
@@ -540,67 +801,121 @@ __device__ __forceinline__ T ShuffleBroadcast(
  *
  */
 template <typename T>
-__device__ __forceinline__ T ShuffleBroadcast(
+__device__ __forceinline__
+static
+T ShuffleIndex(
+    T               input,                  ///< [in] The value to broadcast
+    int             src_lane,               ///< [in] Which warp lane is to do the broadcasting
+    int             logical_warp_threads,   ///< [in] Number of threads per logical warp
+    unsigned int    member_mask)            ///< [in] 32-bit mask of participating warp lanes
+{
+    typedef typename UnitWord<T>::ShuffleWord ShuffleWord;
+
+    const int       WORDS           = (sizeof(T) + sizeof(ShuffleWord) - 1) / sizeof(ShuffleWord);
+
+    T               output;
+    ShuffleWord     *output_alias   = reinterpret_cast<ShuffleWord *>(&output);
+    ShuffleWord     *input_alias    = reinterpret_cast<ShuffleWord *>(&input);
+
+    unsigned int shuffle_word;
+#ifdef __HIP_PLATFORM_NVCC__
+    shuffle_word = SHFL_IDX_SYNC((unsigned int)input_alias[0],
+                                 src_lane,
+                                 logical_warp_threads - 1,
+                                 member_mask);
+#elif defined(__HIP_PLATFORM_HCC__)
+    shuffle_word = __shfl((int) input_alias[0], src_lane);
+#endif
+
+    output_alias[0] = shuffle_word;
+
+    #pragma unroll
+    for (int WORD = 1; WORD < WORDS; ++WORD)
+    {
+#ifdef __HIP_PLATFORM_NVCC__
+        shuffle_word = SHFL_IDX_SYNC((unsigned int)input_alias[WORD],
+                                     src_lane,
+                                     logical_warp_threads - 1,
+                                     member_mask);
+#elif defined(__HIP_PLATFORM_HCC__)
+        shuffle_word = __shfl((int) input_alias[WORD], src_lane);
+#endif
+
+        output_alias[WORD] = shuffle_word;
+    }
+
+    return output;
+}
+
+template <typename T>
+__device__ __forceinline__
+static
+T ShuffleIndex(
     T               input,              ///< [in] The value to broadcast
     int             src_lane)           ///< [in] Which warp lane is to do the broadcasting
 {
-    return ShuffleBroadcast(input, src_lane, CUB_PTX_WARP_THREADS);
+    return ShuffleIndex(input, src_lane, CUB_PTX_WARP_THREADS);
 }
-
-
 
 
 
 /**
- * \brief Portable implementation of __all
- * \ingroup WarpModule
+ * Compute a 32b mask of threads having the same least-significant
+ * LABEL_BITS of \p label as the calling thread.
  */
-__device__ __forceinline__ int WarpAll(int cond)
+template <int LABEL_BITS>
+inline __device__ static unsigned int MatchAny(unsigned int label)
 {
-#if CUB_PTX_ARCH < 120
+    unsigned int retval;
 
-    __shared__ volatile int warp_signals[CUB_PTX_MAX_SM_THREADS / CUB_PTX_WARP_THREADS];
-
-    if (LaneId() == 0)
-        warp_signals[WarpId()] = 1;
-
-    if (cond == 0)
-        warp_signals[WarpId()] = 0;
-
-    return warp_signals[WarpId()];
-
+    // Extract masks of common threads for each bit
+    #pragma unroll
+    for (int BIT = 0; BIT < LABEL_BITS; ++BIT)
+    {
+        unsigned int mask;
+        unsigned int current_bit = 1 << BIT;
+        asm ("{\n"
+            "    .reg .pred p;\n"
+            "    and.b32 %0, %1, %2;"
+            "    setp.eq.u32 p, %0, %2;\n"
+#ifdef CUB_USE_COOPERATIVE_GROUPS
+            "    vote.ballot.sync.b32 %0, p, 0xffffffff;\n"
 #else
-
-    return __all(cond);
-
+            "    vote.ballot.b32 %0, p;\n"
 #endif
+            "    @!p not.b32 %0, %0;\n"
+            "}\n" : "=r"(mask) : "r"(label), "r"(current_bit));
+
+        // Remove peers who differ
+        retval = (BIT == 0) ? mask : retval & mask;
+    }
+
+    return retval;
+
+//  // VOLTA match
+//    unsigned int retval;
+//    asm ("{\n"
+//         "    match.any.sync.b32 %0, %1, 0xffffffff;\n"
+//         "}\n" : "=r"(retval) : "r"(label));
+//    return retval;
+
 }
 
 
-/**
- * \brief Portable implementation of __any
- * \ingroup WarpModule
- */
-__device__ __forceinline__ int WarpAny(int cond)
-{
-#if CUB_PTX_ARCH < 120
 
-    __shared__ volatile int warp_signals[CUB_PTX_MAX_SM_THREADS / CUB_PTX_WARP_THREADS];
 
-    if (LaneId() == 0)
-        warp_signals[WarpId()] = 0;
 
-    if (cond)
-        warp_signals[WarpId()] = 1;
 
-    return warp_signals[WarpId()];
 
-#else
 
-    return __any(cond);
 
-#endif
-}
+
+
+
+
+
+
+
 
 
 }               // CUB namespace

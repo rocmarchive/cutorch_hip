@@ -169,6 +169,7 @@ void sortViaThrust(
     int dim,
     bool dir)
 {
+#ifdef __HIP_PLATFORM_NVCC__
   long nDims = THCTensor_(nDimension)(state, input);
 
   ptrdiff_t totalElements = THCTensor_(nElement)(state, input);
@@ -282,6 +283,7 @@ void sortViaThrust(
   // Then copy back to the expected output
   THCTensor_(freeCopyTo)(state, trContigKey, sorted);
   THCudaLongTensor_freeCopyTo(state, trContigIndices, indices);
+#endif
 }
 
 THC_API void THCTensor_(sort)(THCState* state,

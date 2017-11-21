@@ -1,7 +1,6 @@
-#include "hip/hip_runtime.h"
 /******************************************************************************
  * Copyright (c) 2011, Duane Merrill.  All rights reserved.
- * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -95,7 +94,7 @@ namespace cub {
  *     int thread_data = ...
  *
  *     // Return the warp-wide sums to each lane0 (threads 0, 32, 64, and 96)
- *     int warp_id = hipThreadIdx_x / 32;
+ *     int warp_id = threadIdx.x / 32;
  *     int aggregate = WarpReduce(temp_storage[warp_id]).Sum(thread_data);
  *
  * \endcode
@@ -121,7 +120,7 @@ namespace cub {
  *     ...
  *
  *     // Only the first warp performs a reduction
- *     if (hipThreadIdx_x < 32)
+ *     if (threadIdx.x < 32)
  *     {
  *         // Obtain one input item per thread
  *         int thread_data = ...
@@ -199,7 +198,7 @@ public:
 
 
     /**
-     * \brief Collective constructor using the specified memory allocation as temporary storage.  Logical warp and lane identifiers are constructed from <tt>hipThreadIdx_x</tt>.
+     * \brief Collective constructor using the specified memory allocation as temporary storage.  Logical warp and lane identifiers are constructed from <tt>threadIdx.x</tt>.
      */
     __device__ __forceinline__ WarpReduce(
         TempStorage &temp_storage)             ///< [in] Reference to memory allocation having layout type TempStorage
@@ -239,7 +238,7 @@ public:
      *     int thread_data = ...
      *
      *     // Return the warp-wide sums to each lane0
-     *     int warp_id = hipThreadIdx_x / 32;
+     *     int warp_id = threadIdx.x / 32;
      *     int aggregate = WarpReduce(temp_storage[warp_id]).Sum(thread_data);
      *
      * \endcode
@@ -252,7 +251,7 @@ public:
     __device__ __forceinline__ T Sum(
         T                   input)              ///< [in] Calling thread's input
     {
-        return InternalWarpReduce(temp_storage).Reduce<true, 1>(input, LOGICAL_WARP_THREADS, cub::Sum());
+        return InternalWarpReduce(temp_storage).template Reduce<true, 1>(input, LOGICAL_WARP_THREADS, cub::Sum());
     }
 
     /**
@@ -279,8 +278,8 @@ public:
      *
      *     // Obtain one input item per thread if in range
      *     int thread_data;
-     *     if (hipThreadIdx_x < valid_items)
-     *         thread_data = d_data[hipThreadIdx_x];
+     *     if (threadIdx.x < valid_items)
+     *         thread_data = d_data[threadIdx.x];
      *
      *     // Return the warp-wide sums to each lane0
      *     int aggregate = WarpReduce(temp_storage).Sum(
@@ -298,7 +297,7 @@ public:
         int                 valid_items)        ///< [in] Total number of valid items in the calling thread's logical warp (may be less than \p LOGICAL_WARP_THREADS)
     {
         // Determine if we don't need bounds checking
-        return InternalWarpReduce(temp_storage).Reduce<false, 1>(input, valid_items, cub::Sum());
+        return InternalWarpReduce(temp_storage).template Reduce<false, 1>(input, valid_items, cub::Sum());
     }
 
 
@@ -341,10 +340,10 @@ public:
      *
      */
     template <
-        typename            Flag>
+        typename            FlagT>
     __device__ __forceinline__ T HeadSegmentedSum(
         T                   input,              ///< [in] Calling thread's input
-        Flag                head_flag)          ///< [in] Head flag denoting whether or not \p input is the start of a new segment
+        FlagT                head_flag)          ///< [in] Head flag denoting whether or not \p input is the start of a new segment
     {
         return HeadSegmentedReduce(input, head_flag, cub::Sum());
     }
@@ -388,10 +387,10 @@ public:
      * \tparam ReductionOp     <b>[inferred]</b> Binary reduction operator type having member <tt>T operator()(const T &a, const T &b)</tt>
      */
     template <
-        typename            Flag>
+        typename            FlagT>
     __device__ __forceinline__ T TailSegmentedSum(
         T                   input,              ///< [in] Calling thread's input
-        Flag                tail_flag)          ///< [in] Head flag denoting whether or not \p input is the start of a new segment
+        FlagT                tail_flag)          ///< [in] Head flag denoting whether or not \p input is the start of a new segment
     {
         return TailSegmentedReduce(input, tail_flag, cub::Sum());
     }
@@ -430,7 +429,7 @@ public:
      *     int thread_data = ...
      *
      *     // Return the warp-wide reductions to each lane0
-     *     int warp_id = hipThreadIdx_x / 32;
+     *     int warp_id = threadIdx.x / 32;
      *     int aggregate = WarpReduce(temp_storage[warp_id]).Reduce(
      *         thread_data, cub::Max());
      *
@@ -447,7 +446,7 @@ public:
         T                   input,              ///< [in] Calling thread's input
         ReductionOp         reduction_op)       ///< [in] Binary reduction operator
     {
-        return InternalWarpReduce(temp_storage).Reduce<true, 1>(input, LOGICAL_WARP_THREADS, reduction_op);
+        return InternalWarpReduce(temp_storage).template Reduce<true, 1>(input, LOGICAL_WARP_THREADS, reduction_op);
     }
 
     /**
@@ -476,8 +475,8 @@ public:
      *
      *     // Obtain one input item per thread if in range
      *     int thread_data;
-     *     if (hipThreadIdx_x < valid_items)
-     *         thread_data = d_data[hipThreadIdx_x];
+     *     if (threadIdx.x < valid_items)
+     *         thread_data = d_data[threadIdx.x];
      *
      *     // Return the warp-wide reductions to each lane0
      *     int aggregate = WarpReduce(temp_storage).Reduce(
@@ -497,7 +496,7 @@ public:
         ReductionOp         reduction_op,       ///< [in] Binary reduction operator
         int                 valid_items)        ///< [in] Total number of valid items in the calling thread's logical warp (may be less than \p LOGICAL_WARP_THREADS)
     {
-        return InternalWarpReduce(temp_storage).Reduce<false, 1>(input, valid_items, reduction_op);
+        return InternalWarpReduce(temp_storage).template Reduce<false, 1>(input, valid_items, reduction_op);
     }
 
 
@@ -542,10 +541,10 @@ public:
      */
     template <
         typename            ReductionOp,
-        typename            Flag>
+        typename            FlagT>
     __device__ __forceinline__ T HeadSegmentedReduce(
         T                   input,              ///< [in] Calling thread's input
-        Flag                head_flag,          ///< [in] Head flag denoting whether or not \p input is the start of a new segment
+        FlagT                head_flag,          ///< [in] Head flag denoting whether or not \p input is the start of a new segment
         ReductionOp         reduction_op)       ///< [in] Reduction operator
     {
         return InternalWarpReduce(temp_storage).template SegmentedReduce<true>(input, head_flag, reduction_op);
@@ -593,10 +592,10 @@ public:
      */
     template <
         typename            ReductionOp,
-        typename            Flag>
+        typename            FlagT>
     __device__ __forceinline__ T TailSegmentedReduce(
         T                   input,              ///< [in] Calling thread's input
-        Flag                tail_flag,          ///< [in] Tail flag denoting whether or not \p input is the end of the current segment
+        FlagT                tail_flag,          ///< [in] Tail flag denoting whether or not \p input is the end of the current segment
         ReductionOp         reduction_op)       ///< [in] Reduction operator
     {
         return InternalWarpReduce(temp_storage).template SegmentedReduce<false>(input, tail_flag, reduction_op);

@@ -1,6 +1,6 @@
 /******************************************************************************
  * Copyright (c) 2011, Duane Merrill.  All rights reserved.
- * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -66,7 +66,7 @@ namespace cub {
  * \brief A random-access input wrapper for dereferencing array values using a PTX cache load modifier.
  *
  * \par Overview
- * - CacheModifiedInputIterator is a random-access input iterator that wraps a native
+ * - CacheModifiedInputIteratorTis a random-access input iterator that wraps a native
  *   device pointer of type <tt>ValueType*</tt>. \p ValueType references are
  *   made by reading \p ValueType values through loads modified by \p MODIFIER.
  * - Can be used to load any data type from memory using PTX cache load modifiers (e.g., "LOAD_LDG",
@@ -76,7 +76,7 @@ namespace cub {
  * - Compatible with Thrust API v1.7 or newer.
  *
  * \par Snippet
- * The code snippet below illustrates the use of \p CacheModifiedInputIterator to
+ * The code snippet below illustrates the use of \p CacheModifiedInputIteratorTto
  * dereference a device array of double using the "ldg" PTX load modifier
  * (i.e., load values through texture cache).
  * \par
@@ -98,19 +98,19 @@ namespace cub {
  *
  * \tparam CacheLoadModifier    The cub::CacheLoadModifier to use when accessing data
  * \tparam ValueType            The value type of this iterator
- * \tparam Offset               The difference type of this iterator (Default: \p ptrdiff_t)
+ * \tparam OffsetT              The difference type of this iterator (Default: \p ptrdiff_t)
  */
 template <
     CacheLoadModifier   MODIFIER,
     typename            ValueType,
-    typename            Offset = ptrdiff_t>
+    typename            OffsetT = ptrdiff_t>
 class CacheModifiedInputIterator
 {
 public:
 
     // Required iterator traits
     typedef CacheModifiedInputIterator          self_type;              ///< My own type
-    typedef Offset                              difference_type;        ///< Type to express the result of subtracting one iterator from another
+    typedef OffsetT                             difference_type;        ///< Type to express the result of subtracting one iterator from another
     typedef ValueType                           value_type;             ///< The type of the element the iterator can point to
     typedef ValueType*                          pointer;                ///< The type of a pointer to an element the iterator can point to
     typedef ValueType                           reference;              ///< The type of a reference to an element the iterator can point to
@@ -128,108 +128,128 @@ public:
 #endif  // THRUST_VERSION
 
 
-private:
-
-    ValueType* ptr;
-
 public:
 
+    /// Wrapped native pointer
+    //  ValueType* ptr;
+    std::uintptr_t ptr;
+
     /// Constructor
-    __host__ __device__ __forceinline__ CacheModifiedInputIterator(
-        ValueType* ptr)     ///< Native pointer to wrap
+    template <typename QualifiedValueType>
+    __host__ __device__ __forceinline__
+    CacheModifiedInputIterator(QualifiedValueType* ptr)     ///< Native pointer to wrap
     :
-        ptr(ptr)
+        ptr(reinterpret_cast<std::uintptr_t>(ptr))//const_cast<typename RemoveQualifiers<QualifiedValueType>::Type *>(ptr))
     {}
+
+    __host__ __device__ __forceinline__
+    CacheModifiedInputIterator(const CacheModifiedInputIterator& x)
+        : ptr{x.ptr}
+    {}
+
 
     /// Postfix increment
     __host__ __device__ __forceinline__ self_type operator++(int)
     {
         self_type retval = *this;
-        ptr++;
+        ptr += sizeof(ValueType);
         return retval;
     }
 
     /// Prefix increment
     __host__ __device__ __forceinline__ self_type operator++()
     {
-        ptr++;
+        ptr += sizeof(ValueType);
         return *this;
     }
 
     /// Indirection
-    __host__ __device__ __forceinline__ reference operator*() const
+   __host__  __device__ __forceinline__ reference operator*() const
     {
-        return ThreadLoad<MODIFIER>(ptr);
+        return ThreadLoad<MODIFIER>(reinterpret_cast<ValueType*>(ptr));
     }
 
     /// Addition
     template <typename Distance>
-    __host__ __device__ __forceinline__ self_type operator+(Distance n) const
+    __host__ __device__ __forceinline__
+    self_type operator+(Distance n) const
     {
-        self_type retval(ptr + n);
+        self_type retval(reinterpret_cast<ValueType*>(ptr) + n);
         return retval;
     }
 
     /// Addition assignment
     template <typename Distance>
-    __host__ __device__ __forceinline__ self_type& operator+=(Distance n)
+    __host__ __device__ __forceinline__
+    self_type& operator+=(Distance n)
     {
-        ptr += n;
+        ptr += n * sizeof(ValueType);
         return *this;
     }
 
     /// Subtraction
     template <typename Distance>
-    __host__ __device__ __forceinline__ self_type operator-(Distance n) const
+    __host__ __device__ __forceinline__
+    self_type operator-(Distance n) const
     {
-        self_type retval(ptr - n);
+        self_type retval(reinterpret_cast<ValueType*>(ptr) - n);
         return retval;
     }
 
     /// Subtraction assignment
     template <typename Distance>
-    __host__ __device__ __forceinline__ self_type& operator-=(Distance n)
+    __host__ __device__ __forceinline__
+    self_type& operator-=(Distance n)
     {
-        ptr -= n;
+        ptr -= n * sizeof(ValueType);
         return *this;
     }
 
     /// Distance
-    __host__ __device__ __forceinline__ difference_type operator-(self_type other) const
+    __host__ __device__ __forceinline__
+    difference_type operator-(self_type other) const
     {
-        return ptr - other.ptr;
+        return reinterpret_cast<ValueType*>(ptr) -
+               reinterpret_cast<ValueType*>(other.ptr);
     }
 
     /// Array subscript
     template <typename Distance>
-    __host__ __device__ __forceinline__ reference operator[](Distance n) const
+    __device__ __forceinline__
+    reference operator[](Distance n) const
     {
-        return ThreadLoad<MODIFIER>(ptr + n);
+        return ThreadLoad<MODIFIER>(reinterpret_cast<ValueType*>(ptr) + n);
     }
 
     /// Structure dereference
-    __host__ __device__ __forceinline__ pointer operator->()
+    __device__ __forceinline__
+    pointer operator->()
     {
-        return &ThreadLoad<MODIFIER>(ptr);
+        return &ThreadLoad<MODIFIER>(reinterpret_cast<ValueType*>(ptr));
     }
 
     /// Equal to
-    __host__ __device__ __forceinline__ bool operator==(const self_type& rhs)
+    __host__ __device__ __forceinline__
+    bool operator==(const self_type& rhs)
     {
         return (ptr == rhs.ptr);
     }
 
     /// Not equal to
-    __host__ __device__ __forceinline__ bool operator!=(const self_type& rhs)
+    __host__ __device__ __forceinline__
+    bool operator!=(const self_type& rhs)
     {
         return (ptr != rhs.ptr);
     }
 
     /// ostream operator
-    friend std::ostream& operator<<(std::ostream& os, const self_type& itr)
+    friend std::ostream& operator<<(std::ostream& os, const self_type& /*itr*/)
     {
         return os;
     }
+
+    __host__ __device__
+    ~CacheModifiedInputIterator() {}
 };
 
 

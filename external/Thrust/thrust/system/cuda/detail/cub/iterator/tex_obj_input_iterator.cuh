@@ -1,6 +1,6 @@
 /******************************************************************************
  * Copyright (c) 2011, Duane Merrill.  All rights reserved.
- * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -41,6 +41,7 @@
 #include "../util_device.cuh"
 #include "../util_debug.cuh"
 #include "../util_namespace.cuh"
+#include "hip/hip_runtime_api.h"
 
 #if (THRUST_VERSION >= 100700)
     // This iterator is compatible with Thrust API 1.7 and newer
@@ -66,18 +67,18 @@ namespace cub {
  * \brief A random-access input wrapper for dereferencing array values through texture cache.  Uses newer Kepler-style texture objects.
  *
  * \par Overview
- * - TexObjInputIterator wraps a native device pointer of type <tt>ValueType*</tt>. References
+ * - TexObjInputIteratorTwraps a native device pointer of type <tt>ValueType*</tt>. References
  *   to elements are to be loaded through texture cache.
  * - Can be used to load any data type from memory through texture cache.
  * - Can be manipulated and exchanged within and between host and device
  *   functions, can only be constructed within host functions, and can only be
  *   dereferenced within device functions.
- * - With regard to nested/dynamic parallelism, TexObjInputIterator iterators may only be
+ * - With regard to nested/dynamic parallelism, TexObjInputIteratorTiterators may only be
  *   created by the host thread, but can be used by any descendant kernel.
  * - Compatible with Thrust API v1.7 or newer.
  *
  * \par Snippet
- * The code snippet below illustrates the use of \p TexRefInputIterator to
+ * The code snippet below illustrates the use of \p TexRefInputIteratorTto
  * dereference a device array of doubles through texture cache.
  * \par
  * \code
@@ -103,18 +104,18 @@ namespace cub {
  * \endcode
  *
  * \tparam T                    The value type of this iterator
- * \tparam Offset               The difference type of this iterator (Default: \p ptrdiff_t)
+ * \tparam OffsetT              The difference type of this iterator (Default: \p ptrdiff_t)
  */
 template <
     typename    T,
-    typename    Offset = ptrdiff_t>
+    typename    OffsetT = ptrdiff_t>
 class TexObjInputIterator
 {
 public:
 
     // Required iterator traits
     typedef TexObjInputIterator                 self_type;              ///< My own type
-    typedef Offset                              difference_type;        ///< Type to express the result of subtracting one iterator from another
+    typedef OffsetT                             difference_type;        ///< Type to express the result of subtracting one iterator from another
     typedef T                                   value_type;             ///< The type of the element the iterator can point to
     typedef T*                                  pointer;                ///< The type of a pointer to an element the iterator can point to
     typedef T                                   reference;              ///< The type of a reference to an element the iterator can point to
@@ -145,7 +146,11 @@ private:
 
     T*                  ptr;
     difference_type     tex_offset;
+#ifdef __HCC__
+    hipTextureObject_t tex_obj;
+#else
     cudaTextureObject_t tex_obj;
+#endif
 
 public:
 
@@ -157,35 +162,38 @@ public:
         tex_obj(0)
     {}
 
-#ifdef USE_TEXTURES
     /// Use this iterator to bind \p ptr with a texture reference
+    template <typename QualifiedT>
     hipError_t BindTexture(
-        T               *ptr,               ///< Native pointer to wrap that is aligned to hipDeviceProp_t::textureAlignment
-        size_t          bytes,              ///< Number of bytes in the range
-        size_t          tex_offset = 0)     ///< Offset (in items) from \p ptr denoting the position of the iterator
+        QualifiedT      *ptr,               ///< Native pointer to wrap that is aligned to hipDeviceProp_t::textureAlignment
+        size_t          bytes = size_t(-1),         ///< Number of bytes in the range
+        size_t          tex_offset = 0)     ///< OffsetT (in items) from \p ptr denoting the position of the iterator
     {
-        this->ptr = ptr;
+        this->ptr = const_cast<typename RemoveQualifiers<QualifiedT>::Type *>(ptr);
         this->tex_offset = tex_offset;
 
+#if 0 //Disable by Neel
         hipChannelFormatDesc   channel_desc = hipCreateChannelDesc<TextureWord>();
-        cudaResourceDesc        res_desc;
-        cudaTextureDesc         tex_desc;
-        memset(&res_desc, 0, sizeof(cudaResourceDesc));
-        memset(&tex_desc, 0, sizeof(cudaTextureDesc));
-        res_desc.resType                = cudaResourceTypeLinear;
-        res_desc.res.linear.devPtr      = ptr;
+        hipResourceDesc        res_desc;
+        hipTextureDesc         tex_desc;
+        memset(&res_desc, 0, sizeof(hipResourceDesc));
+        memset(&tex_desc, 0, sizeof(hipTextureDesc));
+        res_desc.resType                = hipResourceTypeLinear;
+        res_desc.res.linear.devPtr      = this->ptr;
         res_desc.res.linear.desc        = channel_desc;
         res_desc.res.linear.sizeInBytes = bytes;
         tex_desc.readMode               = hipReadModeElementType;
-        return cudaCreateTextureObject(&tex_obj, &res_desc, &tex_desc, NULL);
+        return hipCreateTextureObject(&tex_obj, &res_desc, &tex_desc, NULL);
+#endif
+        return hipErrorNotInitialized; 
     }
 
     /// Unbind this iterator from its texture reference
     hipError_t UnbindTexture()
     {
-        return cudaDestroyTextureObject(tex_obj);
+       // return hipDestroyTextureObject(tex_obj); Disabled by Neel
+          return hipErrorNotInitialized;
     }
-#endif
 
     /// Postfix increment
     __host__ __device__ __forceinline__ self_type operator++(int)
@@ -215,14 +223,9 @@ public:
         #pragma unroll
         for (int i = 0; i < TEXTURE_MULTIPLE; ++i)
         {
-#ifdef USE_TEXTURES
             words[i] = tex1Dfetch<TextureWord>(
                 tex_obj,
                 (tex_offset * TEXTURE_MULTIPLE) + i);
-#else
-	words[i] = ptr[(tex_offset * TEXTURE_MULTIPLE) + i]
-#endif
-
         }
 
         // Load from words
@@ -278,7 +281,8 @@ public:
     template <typename Distance>
     __host__ __device__ __forceinline__ reference operator[](Distance n) const
     {
-        return *(*this + n);
+        self_type offset = (*this) + n;
+        return *offset;
     }
 
     /// Structure dereference

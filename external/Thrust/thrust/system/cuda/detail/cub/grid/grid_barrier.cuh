@@ -1,7 +1,6 @@
-#include "hip/hip_runtime.h"
 /******************************************************************************
  * Copyright (c) 2011, Duane Merrill.  All rights reserved.
- * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -68,19 +67,24 @@ public:
     /**
      * Constructor
      */
-    GridBarrier() : d_sync(NULL) {}
-
+    __host__ __device__
+    //GridBarrier() : d_sync(NULL) {}
+    GridBarrier() : d_sync(0) {}
+    __host__ __device__
+    GridBarrier(const GridBarrier& x) : d_sync(x.d_sync) {}
 
     /**
      * Synchronize
      */
     __device__ __forceinline__ void Sync() const
     {
-        volatile SyncFlag *d_vol_sync = d_sync;
+        volatile SyncFlag *d_vol_sync = reinterpret_cast<SyncFlag*>(d_sync);
 
         // Threadfence and syncthreads to make sure global writes are visible before
         // thread-0 reports in with its sync counter
-        __threadfence();
+        #if !defined(__HIP_PLATFORM_HCC__)
+            __threadfence();
+        #endif
         __syncthreads();
 
         if (hipBlockIdx_x == 0)
@@ -91,18 +95,23 @@ public:
                 d_vol_sync[hipBlockIdx_x] = 1;
             }
 
-            __syncthreads();
+            CTA_SYNC();
 
             // Wait for everyone else to report in
             for (int peer_block = hipThreadIdx_x; peer_block < hipGridDim_x; peer_block += hipBlockDim_x)
             {
-                while (ThreadLoad<LOAD_CG>(d_sync + peer_block) == 0)
-                {
-                    __threadfence_block();
-                }
+                #if defined(__HIPCC__)
+                    // TODO: this is unsupported in HIP.
+                #else
+                    while (ThreadLoad<LOAD_CG>(reinterpret_cast<SyncFlag*>(d_sync) + peer_block) == 0)
+                    {
+                        // TODO: temporarily disabled as HIP does not support it yet.
+                        //__threadfence_block();
+                    }
+                #endif
             }
 
-            __syncthreads();
+            CTA_SYNC();
 
             // Let everyone know it's safe to proceed
             for (int peer_block = hipThreadIdx_x; peer_block < hipGridDim_x; peer_block += hipBlockDim_x)
@@ -117,16 +126,24 @@ public:
                 // Report in
                 d_vol_sync[hipBlockIdx_x] = 1;
 
-                // Wait for acknowledgment
-                while (ThreadLoad<LOAD_CG>(d_sync + hipBlockIdx_x) == 1)
-                {
-                    __threadfence_block();
-                }
+                #if defined(__HIPCC__)
+                    // TODO: this is unsupported in HIP.
+                #else
+                    // Wait for acknowledgment
+                    while (ThreadLoad<LOAD_CG>(reinterpret_cast<SyncFlag*>(d_sync) + hipBlockIdx_x) == 1)
+                    {
+                        // TODO: temporarily disabled as HIP does not support it yet.
+                        //__threadfence_block();
+                    }
+                #endif
             }
 
-            __syncthreads();
+            CTA_SYNC();
         }
     }
+
+    __host__ __device__
+    ~GridBarrier() {}
 };
 
 
@@ -159,8 +176,9 @@ public:
         hipError_t retval = hipSuccess;
         if (d_sync)
         {
-            CubDebug(retval = hipFree(d_sync));
-            d_sync = NULL;
+            CubDebug(retval = hipFree(reinterpret_cast<void*>(d_sync)));
+            //d_sync = NULL;
+	    d_sync = 0;
         }
         sync_bytes = 0;
         return retval;
@@ -189,14 +207,14 @@ public:
             {
                 if (d_sync)
                 {
-                    if (CubDebug(retval = hipFree(d_sync))) break;
+                    if (CubDebug(retval = hipFree(reinterpret_cast<void*>(d_sync)))) break;
                 }
 
                 sync_bytes = new_sync_bytes;
 
                 // Allocate and initialize to zero
                 if (CubDebug(retval = hipMalloc((void**) &d_sync, sync_bytes))) break;
-                if (CubDebug(retval = hipMemset(d_sync, 0, new_sync_bytes))) break;
+                if (CubDebug(retval = hipMemset(reinterpret_cast<void*>(d_sync), 0, new_sync_bytes))) break;
             }
         } while (0);
 

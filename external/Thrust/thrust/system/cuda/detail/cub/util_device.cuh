@@ -1,7 +1,6 @@
-#include "hip/hip_runtime.h"
 /******************************************************************************
  * Copyright (c) 2011, Duane Merrill.  All rights reserved.
- * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -34,6 +33,7 @@
 
 #pragma once
 
+#include "util_type.cuh"
 #include "util_arch.cuh"
 #include "util_debug.cuh"
 #include "util_namespace.cuh"
@@ -55,19 +55,12 @@ namespace cub {
 
 
 /**
- * Empty kernel for querying PTX manifest metadata (e.g., version) for the current device
- */
-template <typename T>
-__global__ void EmptyKernel() { }
-
-
-/**
  * Alias temporaries to externally-allocated device storage (or simply return the amount of storage needed).
  */
 template <int ALLOCATIONS>
-CUB_RUNTIME_FUNCTION __forceinline__
+__host__ __device__ __forceinline__
 hipError_t AliasTemporaries(
-    void    *d_temp_storage,                    ///< [in] %Device allocation of temporary storage.  When NULL, the required allocation size is written to \p temp_storage_bytes and no work is done.
+    void    *d_temp_storage,                    ///< [in] %Device-accessible allocation of temporary storage.  When NULL, the required allocation size is written to \p temp_storage_bytes and no work is done.
     size_t  &temp_storage_bytes,                ///< [in,out] Size in bytes of \t d_temp_storage allocation
     void*   (&allocations)[ALLOCATIONS],        ///< [in,out] Pointers to device allocations needed
     size_t  (&allocation_sizes)[ALLOCATIONS])   ///< [in] Sizes in bytes of device allocations needed
@@ -84,6 +77,7 @@ hipError_t AliasTemporaries(
         allocation_offsets[i] = bytes_needed;
         bytes_needed += allocation_bytes;
     }
+    bytes_needed += ALIGN_BYTES - 1;
 
     // Check if the caller is simply requesting the size of the storage allocation
     if (!d_temp_storage)
@@ -99,6 +93,7 @@ hipError_t AliasTemporaries(
     }
 
     // Alias
+    d_temp_storage = (void *) ((size_t(d_temp_storage) + ALIGN_BYTES - 1) & ALIGN_MASK);
     for (int i = 0; i < ALLOCATIONS; ++i)
     {
         allocations[i] = static_cast<char*>(d_temp_storage) + allocation_offsets[i];
@@ -108,20 +103,24 @@ hipError_t AliasTemporaries(
 }
 
 
+/**
+ * Empty kernel for querying PTX manifest metadata (e.g., version) for the current device
+ */
+template <typename T>
+__global__ void EmptyKernel(int dummy) { }
+
 
 #endif  // DOXYGEN_SHOULD_SKIP_THIS
-
-
 
 /**
  * \brief Retrieves the PTX version that will be used on the current device (major * 100 + minor * 10)
  */
-CUB_RUNTIME_FUNCTION __forceinline__ hipError_t PtxVersion(int &ptx_version)
+inline CUB_RUNTIME_FUNCTION __forceinline__ hipError_t PtxVersion(int &ptx_version)
 {
     struct Dummy
     {
         /// Type definition of the EmptyKernel kernel entry point
-        typedef void (*EmptyKernelPtr)();
+        typedef void (*EmptyKernelPtr)(int);
 
         /// Force EmptyKernel<void> to be generated if this class is used
         CUB_RUNTIME_FUNCTION __forceinline__
@@ -133,6 +132,7 @@ CUB_RUNTIME_FUNCTION __forceinline__ hipError_t PtxVersion(int &ptx_version)
 
 
 #ifndef CUB_RUNTIME_ENABLED
+    (void)ptx_version;
 
     // CUDA API calls not supported from this device
     return hipErrorInvalidConfiguration;
@@ -147,14 +147,25 @@ CUB_RUNTIME_FUNCTION __forceinline__ hipError_t PtxVersion(int &ptx_version)
     hipError_t error = hipSuccess;
     do
     {
-        cudaFuncAttributes empty_kernel_attrs;
-        if (CubDebug(error = (hipError_t)cudaFuncGetAttributes(&empty_kernel_attrs, EmptyKernel<void>))) break;
+#if 0  // DISABLED BY NEEL
+        hipFuncAttributes empty_kernel_attrs;
+        if (CubDebug(error = hipFuncGetAttributes(&empty_kernel_attrs, EmptyKernel<void>))) break;
         ptx_version = empty_kernel_attrs.ptxVersion * 10;
+#endif
+        //Temporary fix: TODO:(mcw) revert once PTX operations are supported in HIP
+        hipDeviceProp_t deviceProp;
+        if(error == hipSuccess) {
+          #ifdef __HIP_PLATFORM_HCC__
+            ptx_version = 520;
+          #elif defined(__HIP_PLATFORM_NVCC__)
+            error = hipGetDeviceProperties(&deviceProp, 0);
+            ptx_version = deviceProp.major * 100 + deviceProp.minor * 10;
+          #endif
+        }
+        return error;
     }
     while (0);
-
     return error;
-
 #endif
 }
 
@@ -165,6 +176,8 @@ CUB_RUNTIME_FUNCTION __forceinline__ hipError_t PtxVersion(int &ptx_version)
 CUB_RUNTIME_FUNCTION __forceinline__ hipError_t SmVersion(int &sm_version, int device_ordinal)
 {
 #ifndef CUB_RUNTIME_ENABLED
+    (void)sm_version;
+    (void)device_ordinal;
 
     // CUDA API calls not supported from this device
     return hipErrorInvalidConfiguration;
@@ -174,11 +187,13 @@ CUB_RUNTIME_FUNCTION __forceinline__ hipError_t SmVersion(int &sm_version, int d
     hipError_t error = hipSuccess;
     do
     {
+#if 0   // DISABLED BY NEEL
         // Fill in SM version
         int major, minor;
-        if (CubDebug(error = hipDeviceGetAttribute(&major, hipDeviceAttributeComputeCapabilityMajor, device_ordinal))) break;
-        if (CubDebug(error = hipDeviceGetAttribute(&minor, hipDeviceAttributeComputeCapabilityMinor, device_ordinal))) break;
+        if (CubDebug(error = hipDeviceGetAttribute(&major, hipDevAttrComputeCapabilityMajor, device_ordinal))) break;
+        if (CubDebug(error = hipDeviceGetAttribute(&minor, hipDevAttrComputeCapabilityMinor, device_ordinal))) break;
         sm_version = major * 100 + minor * 10;
+#endif
     }
     while (0);
 
@@ -199,104 +214,11 @@ static hipError_t SyncStream(hipStream_t stream)
 #if (CUB_PTX_ARCH == 0)
     return hipStreamSynchronize(stream);
 #else
+    (void)stream;
     // Device can't yet sync on a specific stream
     return hipDeviceSynchronize();
 #endif
 }
-
-
-/**
- * \brief Computes maximum SM occupancy in thread blocks for the given kernel function pointer \p kernel_ptr.
- */
-template <typename KernelPtr>
-CUB_RUNTIME_FUNCTION __forceinline__
-hipError_t MaxSmOccupancy(
-    int                 &max_sm_occupancy,          ///< [out] maximum number of thread blocks that can reside on a single SM
-    int                 sm_version,                 ///< [in] The SM architecture to run on
-    KernelPtr           kernel_ptr,                 ///< [in] Kernel pointer for which to compute SM occupancy
-    int                 block_threads)              ///< [in] Number of threads per thread block
-{
-#ifndef CUB_RUNTIME_ENABLED
-
-    // CUDA API calls not supported from this device
-    return CubDebug(hipErrorInvalidConfiguration);
-
-#else
-
-    hipError_t error = hipSuccess;
-    do
-    {
-        int warp_threads        = 1 << CUB_LOG_WARP_THREADS(sm_version);
-        int max_sm_blocks       = CUB_MAX_SM_BLOCKS(sm_version);
-        int max_sm_warps        = CUB_MAX_SM_THREADS(sm_version) / warp_threads;
-        int regs_by_block       = CUB_REGS_BY_BLOCK(sm_version);
-        int max_sm_registers    = CUB_MAX_SM_REGISTERS(sm_version);
-        int warp_alloc_unit     = CUB_WARP_ALLOC_UNIT(sm_version);
-        int smem_alloc_unit     = CUB_SMEM_ALLOC_UNIT(sm_version);
-        int reg_alloc_unit      = CUB_REG_ALLOC_UNIT(sm_version);
-        int smem_bytes          = CUB_SMEM_BYTES(sm_version);
-
-        // Get kernel attributes
-        cudaFuncAttributes kernel_attrs;
-        if (CubDebug(error = (hipError_t)cudaFuncGetAttributes(&kernel_attrs, kernel_ptr))) break;
-
-        // Number of warps per threadblock
-        int block_warps = (block_threads +  warp_threads - 1) / warp_threads;
-
-        // Max warp occupancy
-        int max_warp_occupancy = (block_warps > 0) ?
-            max_sm_warps / block_warps :
-            max_sm_blocks;
-
-        // Maximum register occupancy
-        int max_reg_occupancy;
-        if ((block_threads == 0) || (kernel_attrs.numRegs == 0))
-        {
-            // Prevent divide-by-zero
-            max_reg_occupancy = max_sm_blocks;
-        }
-        else if (regs_by_block)
-        {
-            // Allocates registers by threadblock
-            int block_regs = CUB_ROUND_UP_NEAREST(kernel_attrs.numRegs * warp_threads * block_warps, reg_alloc_unit);
-            max_reg_occupancy = max_sm_registers / block_regs;
-        }
-        else
-        {
-            // Allocates registers by warp
-            int sm_sides                = warp_alloc_unit;
-            int sm_registers_per_side   = max_sm_registers / sm_sides;
-            int regs_per_warp           = CUB_ROUND_UP_NEAREST(kernel_attrs.numRegs * warp_threads, reg_alloc_unit);
-            int warps_per_side          = sm_registers_per_side / regs_per_warp;
-            int warps                   = warps_per_side * sm_sides;
-            max_reg_occupancy           = warps / block_warps;
-        }
-
-        // Shared memory per threadblock
-        int block_allocated_smem = CUB_ROUND_UP_NEAREST(
-            (int) kernel_attrs.sharedSizeBytes,
-            smem_alloc_unit);
-
-        // Max shared memory occupancy
-        int max_smem_occupancy = (block_allocated_smem > 0) ?
-            (smem_bytes / block_allocated_smem) :
-            max_sm_blocks;
-
-        // Max occupancy
-        max_sm_occupancy = CUB_MIN(
-            CUB_MIN(max_sm_blocks, max_warp_occupancy),
-            CUB_MIN(max_smem_occupancy, max_reg_occupancy));
-
-//            printf("max_smem_occupancy(%d), max_warp_occupancy(%d), max_reg_occupancy(%d) \n", max_smem_occupancy, max_warp_occupancy, max_reg_occupancy);
-
-    } while (0);
-
-    return error;
-
-#endif  // CUB_RUNTIME_ENABLED
-}
-
-#endif  // Do not document
 
 
 /**
@@ -331,40 +253,112 @@ hipError_t MaxSmOccupancy(
  *
  */
 template <typename KernelPtr>
-CUB_RUNTIME_FUNCTION __forceinline__
+ __forceinline__
 hipError_t MaxSmOccupancy(
     int                 &max_sm_occupancy,          ///< [out] maximum number of thread blocks that can reside on a single SM
     KernelPtr           kernel_ptr,                 ///< [in] Kernel pointer for which to compute SM occupancy
-    int                 block_threads)              ///< [in] Number of threads per thread block
+    int                 block_threads,              ///< [in] Number of threads per thread block
+    int                 dynamic_smem_bytes = 0)
 {
 #ifndef CUB_RUNTIME_ENABLED
+    (void)dynamic_smem_bytes;
+    (void)block_threads;
+    (void)kernel_ptr;
+    (void)max_sm_occupancy;
 
     // CUDA API calls not supported from this device
     return CubDebug(hipErrorInvalidConfiguration);
 
 #else
-
-    hipError_t error = hipSuccess;
-    do
-    {
-        // Get device ordinal
-        int device_ordinal;
-        if (CubDebug(error = hipGetDevice(&device_ordinal))) break;
-
-        // Get device SM version
-        int sm_version;
-        if (CubDebug(error = SmVersion(sm_version, device_ordinal))) break;
-
-        // Get SM occupancy
-        if (CubDebug(error = MaxSmOccupancy(max_sm_occupancy, sm_version, kernel_ptr, block_threads))) break;
-
-    } while (0);
-
-    return error;
+#ifdef __HIP_PLATFORM_NVCC__
+    return hipOccupancyMaxActiveBlocksPerMultiprocessor (
+        &max_sm_occupancy,
+        kernel_ptr,
+        block_threads,
+        dynamic_smem_bytes);
+#elif defined(__HIP_PLATFORM_HCC__)
+    //TODO: not supported by HIP in hccbackend currently
+    hipDeviceProp_t props;
+    if (hipGetDeviceProperties(&props, 0) != hipSuccess) return hipErrorTbd;
+    max_sm_occupancy = (int)(props.maxThreadsPerMultiProcessor / block_threads);
+    return hipSuccess;
+#endif
 
 #endif  // CUB_RUNTIME_ENABLED
-
 }
+
+
+/******************************************************************************
+ * Policy management
+ ******************************************************************************/
+
+/**
+ * Kernel dispatch configuration
+ */
+struct KernelConfig
+{
+    int block_threads;
+    int items_per_thread;
+    int tile_size;
+    int sm_occupancy;
+
+    CUB_RUNTIME_FUNCTION __forceinline__
+    KernelConfig() : block_threads(0), items_per_thread(0), tile_size(0), sm_occupancy(0) {}
+
+    template <typename AgentPolicyT, typename KernelPtrT>
+     __forceinline__
+    hipError_t Init(KernelPtrT kernel_ptr)
+    {
+        block_threads        = AgentPolicyT::BLOCK_THREADS;
+        items_per_thread     = AgentPolicyT::ITEMS_PER_THREAD;
+        tile_size            = block_threads * items_per_thread;
+        hipError_t retval   = MaxSmOccupancy(sm_occupancy, kernel_ptr, block_threads);
+        return retval;
+    }
+};
+
+
+
+/// Helper for dispatching into a policy chain
+template <int PTX_VERSION, typename PolicyT, typename PrevPolicyT>
+struct ChainedPolicy
+{
+   /// The policy for the active compiler pass
+   typedef typename If<(CUB_PTX_ARCH < PTX_VERSION), typename PrevPolicyT::ActivePolicy, PolicyT>::Type ActivePolicy;
+
+   /// Specializes and dispatches op in accordance to the first policy in the chain of adequate PTX version
+   template <typename FunctorT>
+   CUB_RUNTIME_FUNCTION __forceinline__
+   static hipError_t Invoke(int ptx_version, FunctorT &op)
+   {
+       if (ptx_version < PTX_VERSION) {
+           return PrevPolicyT::Invoke(ptx_version, op);
+       }
+       return op.template Invoke<PolicyT>();
+   }
+};
+
+/// Helper for dispatching into a policy chain (end-of-chain specialization)
+template <int PTX_VERSION, typename PolicyT>
+struct ChainedPolicy<PTX_VERSION, PolicyT, PolicyT>
+{
+    /// The policy for the active compiler pass
+    typedef PolicyT ActivePolicy;
+
+    /// Specializes and dispatches op in accordance to the first policy in the chain of adequate PTX version
+    template <typename FunctorT>
+    CUB_RUNTIME_FUNCTION __forceinline__
+    static hipError_t Invoke(int /*ptx_version*/, FunctorT &op) {
+        return op.template Invoke<PolicyT>();
+    }
+};
+
+
+
+
+#endif  // Do not document
+
+
 
 
 /** @} */       // end group UtilMgmt
