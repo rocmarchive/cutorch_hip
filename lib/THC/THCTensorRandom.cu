@@ -98,10 +98,10 @@ void THCRandom_setRNGState(THCState* state, THByteTensor *rng_state)
 
 
 #define GENERATE_KERNEL1(NAME, T, ARG1, CURAND_T, CURAND_FUNC, TRANSFORM)      \
-__global__ void NAME(hiprngStateMtgp32 *state, int size, T *result, ARG1)      \
+__global__ void NAME(hiprngStateMtgp32 *state, ptrdiff_t size, T *result, ARG1)      \
 {                                                                              \
   int idx = hipBlockIdx_x * BLOCK_SIZE + hipThreadIdx_x;                             \
-  int rounded_size = THCCeilDiv(size, BLOCK_SIZE) * BLOCK_SIZE;                \
+  int rounded_size = THCCeilDiv((int)size, BLOCK_SIZE) * BLOCK_SIZE;                \
   for (int i = idx; i < rounded_size; i += BLOCK_SIZE * MAX_NUM_BLOCKS) {      \
     CURAND_T x = CURAND_FUNC(&state[hipBlockIdx_x]);                              \
     if (i < size) {                                                            \
@@ -112,10 +112,10 @@ __global__ void NAME(hiprngStateMtgp32 *state, int size, T *result, ARG1)      \
 }
 
 #define GENERATE_KERNEL2(NAME, T, ARG1, ARG2, CURAND_T, CURAND_FUNC, TRANSFORM)      \
-__global__ void NAME(hiprngStateMtgp32 *state, int size, T *result, ARG1, ARG2)      \
+__global__ void NAME(hiprngStateMtgp32 *state, ptrdiff_t size, T *result, ARG1, ARG2)      \
 {                                                                                    \
   int idx = hipBlockIdx_x * BLOCK_SIZE + hipThreadIdx_x;                                   \
-  int rounded_size = THCCeilDiv(size, BLOCK_SIZE) * BLOCK_SIZE;                      \
+  int rounded_size = THCCeilDiv((int)size, BLOCK_SIZE) * BLOCK_SIZE;                      \
   for (int i = idx; i < rounded_size; i += BLOCK_SIZE * MAX_NUM_BLOCKS) {            \
     CURAND_T x = CURAND_FUNC(&state[hipBlockIdx_x]);                                    \
     if (i < size) {                                                                  \

@@ -322,7 +322,7 @@ THC_API void THCTensor_(NAME)(THCState* state,                                 \
   THArgCheck(size == prob_size, 3, "inconsistent tensor size");                \
                                                                                \
   hipLaunchKernelGGL((generate_bernoulli_tensor), NUM_BLOCKS, BLOCK_SIZE, 0, THCState_getCurrentStream(state),  \
-      gen->gen_states, size, result_data, probs_data);                         \
+      static_cast<hiprngStateMtgp32*>(gen->gen_states), (int)size, result_data, probs_data);                         \
                                                                                \
   PROB_TYPE##_free(state, probs);                                              \
   THCTensor_(freeCopyTo)(state, self, self_);                                  \
