@@ -20,10 +20,10 @@ THCTensor_(zero)(THCState *state, THCTensor *self_)
 {
   THCAssertSameGPU(THCTensor_(checkGPU)(state, 1, self_));
   if (THCTensor_(isContiguous)(state, self_)) {
-    THCudaCheck(hipMemsetAsync(THCTensor_(data)(state, self_),
+    /*THCudaCheck(hipMemsetAsync(THCTensor_(data)(state, self_),
                                 0,
                                 sizeof(real) * THCTensor_(nElement)(state, self_),
-                                THCState_getCurrentStream(state)));
+                                THCState_getCurrentStream(state)));*/
   } else {
     if (!THC_pointwiseApply1(
           state, self_,
@@ -204,7 +204,7 @@ void THCTensor_(catArray)(THCState *state, THCTensor *result,
 
     // Template Declarations for dim = 1, 2, 3, 4
 #define HANDLE_CASE(DIMS) \
-  hipLaunchKernelGGL((CatArrayBatchedCopy<real, unsigned int, DIMS>), applyGrid, applyBlock, 0, THCState_getCurrentStream(state), data, d_inputs, make_magic_wrapper(param), cat_dimension, param.outputStride[cat_dimension]);
+  hipLaunchKernelGGL((CatArrayBatchedCopy<real, unsigned int, DIMS>), applyGrid, applyBlock, 0, THCState_getCurrentStream(state), data, d_inputs, (param), cat_dimension, param.outputStride[cat_dimension]);
     // Now we loop
     offset = 0;
     for (i = 0; i < numInputs; i += CAT_ARRAY_BATCH_SIZE) {

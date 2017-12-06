@@ -32,8 +32,8 @@ __launch_bounds__(32 * 16, 4)
 #endif
 __global__
 void kernelReduceNoncontigDim(
-    reference_to_const(TensorInfo<T, IndexType>) out,
-    reference_to_const(TensorInfo<T, IndexType>) in,
+    TensorInfo<T, IndexType> out,
+    TensorInfo<T, IndexType> in,
     IndexType reductionStride,
     IndexType reductionSize,
     IndexType totalSlices,
@@ -82,8 +82,8 @@ template <typename ModifyOp,
           int ADims, int BDims>
 __global__
 void kernelReduceContigDim(
-    reference_to_const(TensorInfo<T, IndexType>) out,
-    reference_to_const(TensorInfo<T, IndexType>) in,
+    TensorInfo<T, IndexType> out,
+    TensorInfo<T, IndexType> in,
     IndexType reductionSize,
     IndexType totalSlices,
     T init,
@@ -245,8 +245,8 @@ bool THC_reduceDim(THCState* state,
         block,\
         smemSize,\
         THCState_getCurrentStream(state),\
-        make_magic_wrapper(outInfo),\
-        make_magic_wrapper(inInfo),\
+        (outInfo),\
+        (inInfo),\
         reductionSize,\
         (TYPE) outElements,\
         init,\
@@ -265,8 +265,8 @@ bool THC_reduceDim(THCState* state,
       block,\
       0,\
       THCState_getCurrentStream(state),\
-      make_magic_wrapper(outInfo),\
-      make_magic_wrapper(inInfo),\
+      (outInfo),\
+      (inInfo),\
       reductionStride,\
       reductionSize,\
       (TYPE) outElements,\

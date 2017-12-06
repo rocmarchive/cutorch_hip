@@ -40,7 +40,7 @@ struct ThrustLTOp {
 template <typename IndexType, int Dim>
 __global__
 void fillSliceWithIndex(
-    reference_to_const(TensorInfo<long, IndexType>) out,
+    TensorInfo<long, IndexType> out,
     IndexType totalSlices,
     IndexType sliceSize,
     IndexType sliceStride)
