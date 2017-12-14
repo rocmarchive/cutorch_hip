@@ -492,7 +492,7 @@ hipsparseHandle_t THCState_getDeviceSparseHandle(THCState *state, int device, in
 {
   if (handle <= 0 || handle > state->numUserSparseHandles) {
     THError("%d is not a valid handle, valid range is: (1, %d)",
-            handle, state->numUserBlasHandles);
+            handle, state->numUserSparseHandles);
   }
   THCCudaResourcesPerDevice* res = THCState_getDeviceResourcePtr(state, device);
   THCState_reserveDeviceSparseHandles(state, device, handle);
@@ -844,12 +844,39 @@ hipError_t THCudaFree(THCState *state, void *ptr)
   return allocator->free(allocator->state, ptr);
 }
 
+void* THCudaHostAlloc(THCState *state, size_t size)
+{
+  THCudaCheck(hipGetLastError());
+  THAllocator* allocator = state->hipHostAllocator;
+  return allocator->malloc(NULL, size);
+}
+
+void THCudaHostFree(THCState *state, void *ptr)
+{
+  THAllocator* allocator = state->hipHostAllocator;
+  return allocator->free(NULL, ptr);
+}
+
+void THCudaHostRecord(THCState *state, void *ptr)
+{
+  if (state->hipHostAllocator == &THCCachingHostAllocator) {
+    THCStream* stream = THCState_getStream(state);
+    THCCachingHostAllocator_recordEvent(ptr, stream);
+  }
+}
+
 hipError_t THCudaMemGetInfo(THCState *state,  size_t* freeBytes, size_t* totalBytes)
 {
-  size_t cachedBytes = 0;
   size_t largestBlock = 0;
+  return THCudaMemGetInfoCached(state, freeBytes, totalBytes, &largestBlock);
+}
+
+hipError_t THCudaMemGetInfoCached(THCState *state,  size_t* freeBytes, size_t* totalBytes, size_t* largestBlock)
+{
+  size_t cachedBytes = 0;
   THCDeviceAllocator* allocator = state->hipDeviceAllocator;
 
+  *largestBlock = 0;
   /* get info from CUDA first */
   hipError_t ret = hipMemGetInfo(freeBytes, totalBytes);
   if (ret!= hipSuccess)
@@ -861,10 +888,10 @@ hipError_t THCudaMemGetInfo(THCState *state,  size_t* freeBytes, size_t* totalBy
     return ret;
 
   /* not always true - our optimistic guess here */
-  largestBlock = *freeBytes;
+  *largestBlock = *freeBytes;
 
   if (allocator->cacheInfo != NULL)
-    allocator->cacheInfo(allocator->state, device, &cachedBytes, &largestBlock);
+    allocator->cacheInfo(allocator->state, device, &cachedBytes, largestBlock);
 
   /* Adjust resulting free bytes number. largesBlock unused for now */
   *freeBytes += cachedBytes;

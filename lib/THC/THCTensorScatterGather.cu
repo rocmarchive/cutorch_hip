@@ -1,6 +1,7 @@
 #include "hip/hip_runtime.h"
 #include "THCTensorMath.h"
 #include "THCGeneral.h"
+#include "THCAtomics.cuh"
 #include "THCApply.cuh"
 
 // Compute the offsets into the given tensors for a linear index. For the 't2'
@@ -128,6 +129,32 @@ void THCudaTensor_scatterKernel(
     tensorOffset += indexValue * tensor.strides[dim];
 
     tensor.data[tensorOffset] = src.data[srcOffset];
+  }
+}
+
+template <typename IndexType, typename Real, int Dims>
+__global__ void THCudaTensor_scatterAddKernel(
+    reference_to_const(TensorInfo<Real, IndexType>) tensor,
+    reference_to_const(TensorInfo<Real, IndexType>) src,
+    reference_to_const(TensorInfo<long, IndexType>) index,
+    const int dim,
+    const IndexType totalElements) {
+  for (IndexType linearId = blockIdx.x * blockDim.x + threadIdx.x;
+       linearId < totalElements;
+       linearId += gridDim.x * blockDim.x) {
+    IndexType tensorOffset = 0;
+    IndexType srcOffset = 0;
+    IndexType indexOffset = 0;
+
+    IndexToScatterGatherOffsets<IndexType, Real, Dims>::compute(linearId, dim,
+                                                          index, &indexOffset,
+                                                          src, &srcOffset,
+                                                          tensor, &tensorOffset);
+
+    long indexValue = index.data[indexOffset] - TH_INDEX_BASE;
+    tensorOffset += indexValue * tensor.strides[dim];
+
+    atomicAdd(&tensor.data[tensorOffset], src.data[srcOffset]);
   }
 }
 

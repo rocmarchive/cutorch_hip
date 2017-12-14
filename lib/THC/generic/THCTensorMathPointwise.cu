@@ -36,6 +36,7 @@
 #if defined(THC_REAL_IS_FLOAT) || defined(THC_REAL_IS_DOUBLE) || defined(THC_REAL_IS_HALF)
 
 IMPLEMENT_CUDA_TENSOR_BASIC_FUNC(  log, THCNumerics<real>::log,   Real)
+IMPLEMENT_CUDA_TENSOR_BASIC_FUNC(lgamma, THCNumerics<real>::lgamma, Real)
 IMPLEMENT_CUDA_TENSOR_BASIC_FUNC(log1p, THCNumerics<real>::log1p, Real)
 IMPLEMENT_CUDA_TENSOR_BASIC_FUNC(  exp, THCNumerics<real>::exp,   Real)
 IMPLEMENT_CUDA_TENSOR_BASIC_FUNC(  cos, THCNumerics<real>::cos,   Real)
@@ -104,7 +105,7 @@ THCTensor_(cross)(THCState *state, THCTensor *self, THCTensor *x, THCTensor *y, 
 
   int i;
   long nd = THCTensor_(nDimension)(state, x);
-  ptrdiff_t nelem = THCTensor_(nElement)(state, x);
+  //ptrdiff_t nelem = THCTensor_(nElement)(state, x);
   THArgCheck(nd == THCTensor_(nDimension)(state, y), 1, "tensors must have same number of dimensions");
   for (i = 0; i < nd; i++) {
     THArgCheck(THCTensor_(size)(state, x, i) == THCTensor_(size)(state, y, i), 1, "dimension %i of x and y does not match", i);
@@ -154,13 +155,59 @@ void THCTensor_(sigmoid)(THCState* state, THCTensor* self_, THCTensor* src) {
 void THCTensor_(pow)(THCState *state, THCTensor *self_, THCTensor *src, real value) {
   THCAssertSameGPU(THCTensor_(checkGPU)(state, 2, self_, src));
   if (self_ == src) {
-    if (!THC_pointwiseApply1(state, self_, TensorPowOp<real>(value))) {
-      THArgCheck(false, 2, CUTORCH_DIM_WARNING);
+    if (THCNumerics<real>::eq(value, ScalarConvert<int, real>::to(1))) {
+      if (!THC_pointwiseApply1(state, self_, TensorPowOp<real, 1>(value))) {
+        THArgCheck(false, 2, CUTORCH_DIM_WARNING);
+      }
+    } else if (THCNumerics<real>::eq(value, ScalarConvert<int, real>::to(2))) {
+      if (!THC_pointwiseApply1(state, self_, TensorPowOp<real, 2>(value))) {
+        THArgCheck(false, 2, CUTORCH_DIM_WARNING);
+      }
+    } else if (THCNumerics<real>::eq(value, ScalarConvert<int, real>::to(3))) {
+      if (!THC_pointwiseApply1(state, self_, TensorPowOp<real, 3>(value))) {
+        THArgCheck(false, 2, CUTORCH_DIM_WARNING);
+      }
+    } else if (THCNumerics<real>::eq(value, ScalarConvert<int, real>::to(-1))) {
+      if (!THC_pointwiseApply1(state, self_, TensorPowOp<real, -1>(value))) {
+        THArgCheck(false, 2, CUTORCH_DIM_WARNING);
+      }
+    } else if (THCNumerics<real>::eq(value, ScalarConvert<int, real>::to(-2))) {
+      if (!THC_pointwiseApply1(state, self_, TensorPowOp<real, -2>(value))) {
+        THArgCheck(false, 2, CUTORCH_DIM_WARNING);
+      }
+    } else {
+      // fallback implementation using pow
+      if (!THC_pointwiseApply1(state, self_, TensorPowOp<real, -3>(value))) {
+        THArgCheck(false, 2, CUTORCH_DIM_WARNING);
+      }
     }
   } else {
     THCTensor_(resizeAs)(state, self_, src);
-    if (!THC_pointwiseApply2(state, self_, src, TensorPowOp<real>(value))) {
-      THArgCheck(false, 2, CUTORCH_DIM_WARNING);
+    if (THCNumerics<real>::eq(value, ScalarConvert<int, real>::to(1))) {
+      if (!THC_pointwiseApply2(state, self_, src, TensorPowOp<real, 1>(value))) {
+        THArgCheck(false, 2, CUTORCH_DIM_WARNING);
+      }
+    } else if (THCNumerics<real>::eq(value, ScalarConvert<int, real>::to(2))) {
+      if (!THC_pointwiseApply2(state, self_, src, TensorPowOp<real, 2>(value))) {
+        THArgCheck(false, 2, CUTORCH_DIM_WARNING);
+      }
+    } else if (THCNumerics<real>::eq(value, ScalarConvert<int, real>::to(3))) {
+      if (!THC_pointwiseApply2(state, self_, src, TensorPowOp<real, 3>(value))) {
+        THArgCheck(false, 2, CUTORCH_DIM_WARNING);
+      }
+    } else if (THCNumerics<real>::eq(value, ScalarConvert<int, real>::to(-1))) {
+      if (!THC_pointwiseApply2(state, self_, src, TensorPowOp<real, -1>(value))) {
+        THArgCheck(false, 2, CUTORCH_DIM_WARNING);
+      }
+    } else if (THCNumerics<real>::eq(value, ScalarConvert<int, real>::to(-2))) {
+      if (!THC_pointwiseApply2(state, self_, src, TensorPowOp<real, -2>(value))) {
+        THArgCheck(false, 2, CUTORCH_DIM_WARNING);
+      }
+    } else {
+      // fallback implementation using pow
+      if (!THC_pointwiseApply2(state, self_, src, TensorPowOp<real, -3>(value))) {
+        THArgCheck(false, 2, CUTORCH_DIM_WARNING);
+      }
     }
   }
 

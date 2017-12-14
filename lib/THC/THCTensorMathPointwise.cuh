@@ -298,21 +298,52 @@ struct TensorMulOp {
     };
 #endif // CUDA_HALF_TENSOR
 
-template<typename T>
+template<typename T, int StaticExp>
 struct TensorPowOp {
   __host__ __device__
   explicit
   TensorPowOp(T v) : val(v) {}
   __device__ __forceinline__
-  void operator()(T* out, T* in) { *out = powf((float) *in, (float) val); }
+  void operator()(T* out, T* in) {
+    if (StaticExp == 1) {
+      *out = *in;
+    } else if (StaticExp == 2) {
+      *out = THCNumerics<T>::mul(*in, *in);
+    } else if (StaticExp == 3) {
+      *out = THCNumerics<T>::mul(*in, *in);
+      *out = THCNumerics<T>::mul(*out, *in);
+    } else if (StaticExp == -1) {
+      *out = THCNumerics<T>::cinv(*in);
+    } else if (StaticExp == -2) {
+      *out = THCNumerics<T>::mul(*in, *in);
+      *out = THCNumerics<T>::cinv(*out);
+    } else {
+      *out = THCNumerics<T>::pow(*in, val);
+    }
+  }
 
   __device__ __forceinline__
-  void operator()(T* v) { *v = powf((float) *v, (float) val); }
+  void operator()(T* v) {
+    if (StaticExp == 1) {
+      *v = *v;
+    } else if (StaticExp == 2) {
+      *v = THCNumerics<T>::mul(*v, *v);
+    } else if (StaticExp == 3) {
+      *v = THCNumerics<T>::mul(THCNumerics<T>::mul(*v, *v), *v);
+    } else if (StaticExp == -1) {
+      *v = THCNumerics<T>::cinv(*v);
+    } else if (StaticExp == -2) {
+      *v = THCNumerics<T>::mul(*v, *v);
+      *v = THCNumerics<T>::cinv(*v);
+    } else {
+      *v = THCNumerics<T>::pow(*v, val);
+    }
+  }
 
-  T val;
+  const T val;
 };
 
-template <>
+/*template <>
 struct TensorPowOp<double> {
   __host__ __device__
   explicit
@@ -357,6 +388,7 @@ struct TensorPowOp<double> {
       half val;
     };
 #endif // CUDA_HALF_TENSOR
+*/
 
 template<typename T>
 struct TensorTPowOp {

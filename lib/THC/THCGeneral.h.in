@@ -254,7 +254,11 @@ THC_API void __THCublasCheck(hipblasStatus_t status, const char *file, const int
 THC_API void __THCusparseCheck(hipsparseStatus_t status, const char *file, const int line);
 THC_API hipError_t THCudaMalloc(THCState *state, void **ptr, size_t size);
 THC_API hipError_t THCudaFree(THCState *state, void *ptr);
+THC_API void* THCudaHostAlloc(THCState *state, size_t size);
+THC_API void THCudaHostFree(THCState *state, void *ptr);
+THC_API void THCudaHostRecord(THCState *state, void *ptr);
 THC_API hipError_t THCudaMemGetInfo(THCState *state, size_t* freeBytes, size_t* totalBytes);
+THC_API hipError_t THCudaMemGetInfoCached(THCState *state, size_t* freeBytes, size_t* totalBytes, size_t* largestBlock);
 THC_API void THCSetGCHandler(THCState *state,
                              void (*torchGCHandlerFunction)(void *data),
                              void *data );

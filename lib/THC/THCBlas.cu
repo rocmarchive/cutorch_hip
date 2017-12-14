@@ -316,9 +316,9 @@ void THCudaBlas_Hgemm(THCState *state, char transa, char transb, long m, long n,
 				  i_ldb, &fBeta, c, CUDA_R_16F, i_ldc));*/
     }
 #elif __HCC__
-      hipblasHgemm(handle, opa, opb,
+      /*hipblasHgemm(handle, opa, opb,
 				i_m, i_n, i_k, &alpha, a, i_lda, b, i_ldb,
-				&beta, c, i_ldc);
+				&beta, c, i_ldc);*/
 #endif
     return;
   }
@@ -375,6 +375,28 @@ void THCudaBlas_SgemmBatched(THCState *state, char transa, char transb, long m, 
                                    (int)batchCount));
 }
 
+void THCudaBlas_SgemmStridedBatched(THCState *state, char transa, char transb, long m, long n, long k,
+                                    float alpha, const float *a, long lda, long strideA, const float *b, long ldb, long strideB,
+                                    float beta, float *c, long ldc, long strideC, long batchCount)
+{
+  if( (m >= INT_MAX) || (n >= INT_MAX) || (k >= INT_MAX) || (lda >= INT_MAX)  || (ldb >= INT_MAX) || (ldc >= INT_MAX) || (batchCount >= INT_MAX) )
+  {
+    THError("Cublas_SgemmStridedBatched only supports m, n, k, lda, ldb, ldc, batchCount"
+            "with the bound [val] <= %d", INT_MAX);
+  }
+
+  adjustLd(transa, transb, m, n, k, &lda, &ldb, &ldc);
+  hipblasOperation_t opa = convertTransToHipblasOperation(transa);
+  hipblasOperation_t opb = convertTransToHipblasOperation(transb);
+
+  hipblasHandle_t handle = THCState_getCurrentBlasHandle(state);
+  hipblasSetStream(handle, THCState_getCurrentStream(state));
+  THCublasCheck(hipblasSgemmStridedBatched(handle,
+                                   opa, opb, (int)m, (int)n, (int)k,
+                                   &alpha, a, (int)lda, strideA, b, (int)ldb, strideB, &beta, c, (int)ldc, strideC,
+                                   (int)batchCount));
+}
+
 void THCudaBlas_DgemmBatched(THCState *state, char transa, char transb, long m, long n, long k,
                              double alpha, const double *a[], long lda, const double *b[], long ldb,
                              double beta, double *c[], long ldc, long batchCount)
@@ -394,6 +416,28 @@ void THCudaBlas_DgemmBatched(THCState *state, char transa, char transb, long m, 
   THCublasCheck(hipblasDgemmBatched(handle,
                                    opa, opb, (int)m, (int)n, (int)k,
                                    &alpha, a, (int)lda, b, (int)ldb, &beta, c, (int)ldc,
+                                   (int)batchCount));
+}
+
+void THCudaBlas_DgemmStridedBatched(THCState *state, char transa, char transb, long m, long n, long k,
+                             double alpha, const double *a, long lda, long strideA, const double *b, long ldb, long strideB,
+                             double beta, double *c, long ldc, long strideC, long batchCount)
+{
+  if( (m >= INT_MAX) || (n >= INT_MAX) || (k >= INT_MAX) || (lda >= INT_MAX)  || (ldb >= INT_MAX) || (ldc >= INT_MAX) || (batchCount >= INT_MAX) )
+  {
+    THError("Cublas_DgemmBatched only supports m, n, k, lda, ldb, ldc, batchCount"
+            "with the bound [val] <= %d", INT_MAX);
+  }
+
+  adjustLd(transa, transb, m, n, k, &lda, &ldb, &ldc);
+  hipblasOperation_t opa = convertTransToHipblasOperation(transa);
+  hipblasOperation_t opb = convertTransToHipblasOperation(transb);
+
+  hipblasHandle_t handle = THCState_getCurrentBlasHandle(state);
+  hipblasSetStream(handle, THCState_getCurrentStream(state));
+  THCublasCheck(hipblasDgemmStridedBatched(handle,
+                                   opa, opb, (int)m, (int)n, (int)k,
+                                   &alpha, a, (int)lda, strideA, b, (int)ldb, strideB, &beta, c, (int)ldc, strideC,
                                    (int)batchCount));
 }
 
