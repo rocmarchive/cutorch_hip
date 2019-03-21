@@ -1,4 +1,4 @@
-cutorch
+cutorch - Deprecated Software
 =======
 ** [NOTE on API changes and versioning](#api-changes-and-versioning) **
 
